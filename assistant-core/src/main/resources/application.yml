@@ -1,0 +1,48 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
+    username: dba
+    password: dbaPass
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+techno:
+  assistant:
+    name: ТехноПомощник
+    personality: >
+      Вы - технический эксперт по ремонту оборудования.
+      Отвечайте профессионально, но дружелюбно.
+      НЕ включайте в ответ размышления в тегах <think>.
+      Давайте только финальный ответ без промежуточных рассуждений.
+    ollama:
+      url: http://localhost:11434/api
+      model: deepseek-r1
+    telegram:
+      enabled: true
+      bot-name: TechnoRepairBot
+      token: ${7086789672:AAEOnxfD5SiwEkuFiZssPlw5TgX8Pc4zpiw}
+    web:
+      upload-dir: ./uploads
+
+logging:
+  level:
+    ru.georgdeveloper.assistantcore: DEBUG

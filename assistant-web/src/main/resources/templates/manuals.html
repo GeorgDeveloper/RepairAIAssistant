@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мануалы - Repair AI Assistant</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+</head>
+<body>
+    <div class="container">
+        <h1>Мануалы</h1>
+        
+        <div class="upload-section">
+            <h2>Загрузить мануал</h2>
+            <form th:action="@{/manuals/upload}" method="post" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".pdf" required>
+                <button type="submit">Загрузить</button>
+            </form>
+        </div>
+        
+        <div class="search-section">
+            <h2>Поиск мануалов</h2>
+            <input type="text" id="searchInput" placeholder="Поиск по мануалам...">
+            <button onclick="searchManuals()">Найти</button>
+            <div id="searchResults"></div>
+        </div>
+        
+        <a href="/" class="btn">На главную</a>
+    </div>
+    <script th:src="@{/static/js/manuals.js}"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+server:
+  port: 8081
+
+techno:
+  assistant:
+    name: ТехноПомощник
+    personality: >
+      Вы - технический эксперт по ремонту оборудования.
+      Отвечайте профессионально, но дружелюбно.
+    ollama:
+      url: http://localhost:11434/api
+      model: deepseek-r1
+    telegram:
+      enabled: true
+      bot-name: TechnoRepairBot
+      token: ${7086789672:AAEOnxfD5SiwEkuFiZssPlw5TgX8Pc4zpiw}
+    web:
+      upload-dir: ./uploads
+
+core:
+  service:
+    url: http://localhost:8080/api
+
+logging:
+  level:
+    ru.georgdeveloper.assistantweb: DEBUG
