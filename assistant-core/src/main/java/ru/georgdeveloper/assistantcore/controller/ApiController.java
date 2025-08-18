@@ -6,14 +6,11 @@ import ru.georgdeveloper.assistantcore.service.RepairAssistantService;
 
 /**
  * REST API контроллер для взаимодействия между модулями системы.
- * 
  * Архитектура взаимодействия модулей:
  * assistant-telegram -> HTTP запрос -> assistant-core -> БД + AI -> ответ
  * assistant-web -> HTTP запрос -> assistant-core -> БД + AI -> ответ
- * 
  * Основные эндпоинты:
  * POST /api/analyze - анализ запросов пользователей через AI
- * 
  * Особенности:
  * - Поддержка UTF-8 кодировки для корректной работы с кириллицей
  * - Логирование входящих запросов и исходящих ответов

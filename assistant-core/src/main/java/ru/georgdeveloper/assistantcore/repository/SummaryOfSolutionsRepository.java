@@ -1,4 +1,8 @@
 package ru.georgdeveloper.assistantcore.repository;
 
-public interface SummaryOfSolutionsRepository {
+import org.springframework.data.jpa.repository.JpaRepository;
+import ru.georgdeveloper.assistantcore.model.SummaryOfSolutions;
+
+
+public interface SummaryOfSolutionsRepository extends JpaRepository<SummaryOfSolutions, String> {
 }
