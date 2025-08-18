@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 public class CommandHandler {
     
     public String handleStart(Long chatId) {
-        return "🔧 Добро пожаловать в ТехноПомощник!\n\n" +
+        return "🔧 Добро пожаловать в Kvant AI!\n\n" +
                "Я помогу вам с вопросами по ремонту оборудования.\n\n" +
                "Вы можете:\n" +
                "• Задать вопрос о ремонте\n" +

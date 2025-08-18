@@ -5,10 +5,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
+/**
+ * Конфигурация основных компонентов AI ассистента
+ */
 @Configuration
 @EnableConfigurationProperties(AssistantProperties.class)
 public class AssistantConfig {
     
+    /**
+     * HTTP клиент для внешних API запросов
+     */
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();

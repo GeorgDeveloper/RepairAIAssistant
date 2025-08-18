@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistanttelegram.handler.MessageHandler;
 import ru.georgdeveloper.assistanttelegram.handler.CommandHandler;
-import ru.georgdeveloper.assistanttelegram.config.BotProperties;
+
 
 @Service
 public class TelegramBotService {
@@ -15,8 +15,7 @@ public class TelegramBotService {
     @Autowired
     private CommandHandler commandHandler;
     
-    @Autowired
-    private BotProperties botProperties;
+
     
     public void processUpdate(String message, Long chatId) {
         String response;

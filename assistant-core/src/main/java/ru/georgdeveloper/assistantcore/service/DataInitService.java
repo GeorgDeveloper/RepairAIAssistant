@@ -3,16 +3,11 @@ package ru.georgdeveloper.assistantcore.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
-import ru.georgdeveloper.assistantcore.repository.RepairRecordRepository;
+
 import ru.georgdeveloper.assistantcore.repository.EquipmentMaintenanceRepository;
 import ru.georgdeveloper.assistantcore.repository.BreakdownReportRepository;
-import java.time.LocalDateTime;
-
 @Service
 public class DataInitService implements CommandLineRunner {
-    
-    @Autowired
-    private RepairRecordRepository repairRecordRepository;
     
     @Autowired
     private EquipmentMaintenanceRepository equipmentMaintenanceRepository;

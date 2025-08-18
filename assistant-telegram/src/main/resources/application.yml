@@ -1,26 +1,11 @@
+# Конфигурация для assistant-telegram
 server:
-  port: 8082
+  port: ${server.telegram.port:8082}
 
-techno:
-  assistant:
-    name: ТехноПомощник
-    personality: >
-      Вы - технический эксперт по ремонту оборудования.
-      Отвечайте профессионально, но дружелюбно.
-    ollama:
-      url: http://localhost:11434/api
-      model: deepseek-r1
-    telegram:
-      enabled: true
-      bot-name: js_mai_bot
-      token: ${7086789672:AAEOnxfD5SiwEkuFiZssPlw5TgX8Pc4zpiw}
-    web:
-      upload-dir: ./uploads
+spring:
+  config:
+    import: file:../application.yml
 
 core:
   service:
-    url: http://localhost:8080/api
-
-logging:
-  level:
-    ru.georgdeveloper.assistanttelegram: DEBUG
+    url: http://localhost:${server.core.port:8080}/api

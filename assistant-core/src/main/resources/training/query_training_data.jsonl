@@ -1,0 +1,31 @@
+{"input": "Кто ты", "output": "SIMPLE_ANSWER: Я Kvant AI - AI-ассистент для анализа данных о ремонте промышленного оборудования."}
+{"input": "описание таблицы", "output": "SIMPLE_ANSWER: Работаю с таблицей equipment_maintenance_records. Основные поля: id (ключ), machine_name (название оборудования), mechanism_node (узел), description (проблема), status (статус), start_bd_t1 (начало поломки), machine_downtime (время простоя), ttr (время ремонта), maintainers (ремонтники), comments (комментарии), failure_type (тип неисправности), area (зона), date (дата), month_name (месяц), shift (смена)."}
+{"input": "структура данных", "output": "SIMPLE_ANSWER: Таблица equipment_maintenance_records содержит полную информацию о ремонтах: временные метки (t1-t4), длительности (downtime, ttr), персонал (maintainers, staff), классификацию (failure_type, cause), локацию (area), временные периоды (date, week_number, month_name, shift)."}
+{"input": "что ты умеешь", "output": "SIMPLE_ANSWER: Я умею анализировать данные о ремонтах, находить топ самых продолжительных ремонтов, подсчитывать статистику по статусам, искать информацию по конкретным машинам."}
+{"input": "что ты можешь", "output": "SIMPLE_ANSWER: Я могу помочь с анализом ремонтов оборудования, поиском статистики и данных по поломкам."}
+{"input": "привет", "output": "SIMPLE_ANSWER: Привет! Я готов помочь с анализом данных о ремонте оборудования."}
+{"input": "как дела", "output": "SIMPLE_ANSWER: Отлично! Готов анализировать данные о ремонтах. Задавайте вопросы!"}
+{"input": "топ 5 самых продолжительных ремонтов", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=NONE|LIMIT=5|ORDER_BY_TTR=true"}
+{"input": "выведи топ 5 ремонтов за май", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=NONE|LIMIT=5|ORDER_BY_TTR=true|MONTH=Май"}
+{"input": "найти самые продолжительные ремонты", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=NONE|LIMIT=3|ORDER_BY_TTR=true"}
+{"input": "найти самые продолжительные ремонты за май месяц", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=NONE|LIMIT=3|ORDER_BY_TTR=true|MONTH=Май"}
+{"input": "самые долгие ремонты", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=NONE|LIMIT=3|ORDER_BY_TTR=true"}
+{"input": "утечка азота", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=NONE|LIMIT=100|SEARCH_COMMENTS=утечка азота"}
+{"input": "напиши инструкцию по устранению утечки азота", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=NONE|LIMIT=100|SEARCH_COMMENTS=утечка азота"}
+{"input": "сколько ремонтов со статусом закрыто", "output": "NEED_DATABASE: STATUS=Закрыто|MACHINE=NONE|LIMIT=1000|COUNT=true"}
+{"input": "ремонты со статусом временно закрыто", "output": "NEED_DATABASE: STATUS=Временно закрыто|MACHINE=NONE|LIMIT=100|ORDER_BY_DATE=true"}
+{"input": "информация по станку GK270", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=GK270|LIMIT=50|ORDER_BY_DATE=true"}
+{"input": "статистика поломок за месяц", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=NONE|LIMIT=1000|PERIOD=месяц|STATISTICS=true"}
+{"input": "последние 10 ремонтов", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=NONE|LIMIT=10|ORDER_BY_DATE=true"}
+{"input": "ремонты пресса", "output": "NEED_DATABASE: STATUS=NONE|MACHINE=пресс|LIMIT=100|ORDER_BY_DATE=true"}
+{"input": "открытые заявки", "output": "NEED_DATABASE: STATUS=Открыто|MACHINE=NONE|LIMIT=100|ORDER_BY_DATE=true"}
+{"input": "поля таблицы equipment_maintenance_records", "output": "SIMPLE_ANSWER: id (INT, ключ), machine_name (название оборудования), mechanism_node (узел), additional_kit (доп.оборудование), description (описание проблемы), code (код события), hp_bd (тип события), start_bd_t1 (начало поломки), start_maint_t2 (начало ремонта), stop_maint_t3 (конец ремонта), stop_bd_t4 (конец поломки), machine_downtime (время простоя), ttr (время ремонта), t2_minus_t1 (время реакции), status (статус), maintainers (ремонтники), comments (комментарии), cause (причина), failure_type (тип неисправности), area (зона), created_at (создано), date (дата), week_number (неделя), month_name (месяц), shift (смена), staff (сотрудник), crew (бригада), crew_de_facto (факт.бригада)."}
+{"input": "важные поля для анализа", "output": "SIMPLE_ANSWER: Очень важные: machine_name, mechanism_node, description, failure_type. Высокие: start_bd_t1, machine_downtime, ttr, maintainers, comments, cause, area, date. Средние: code, status, week_number, shift, staff."}
+{"input": "утечка пара напиши инструкцию по устранению утечки пара", "output": "SIMPLE_ANSWER: Инструкция по устранению утечки пара:\n1. Остановите оборудование и дождитесь снижения давления\n2. Проверьте состояние трубопроводов и соединений\n3. Осмотрите прокладки и уплотнения\n4. Замените поврежденные элементы\n5. Проверьте затяжку болтовых соединений\n6. Запустите оборудование и проверьте отсутствие утечек"}
+{"input": "утечка масла что делать", "output": "SIMPLE_ANSWER: Инструкция по устранению утечки масла:\n1. Остановите оборудование\n2. Определите место утечки\n3. Проверьте уровень масла\n4. Осмотрите сальники, прокладки, соединения\n5. Замените изношенные уплотнения\n6. Долейте масло до нужного уровня\n7. Запустите и проверьте работу"}
+{"input": "утечка воздуха инструкция", "output": "SIMPLE_ANSWER: Инструкция по устранению утечки воздуха:\n1. Остановите подачу сжатого воздуха\n2. Найдите место утечки (мыльный раствор)\n3. Проверьте пневматические соединения\n4. Замените поврежденные трубки или фитинги\n5. Подтяните соединения\n6. Восстановите подачу воздуха\n7. Проверьте давление в системе"}
+{"input": "какие самые частые поломки по механике на оборудовании", "output": "NEED_DATABASE:STATUS=NONE|MACHINE=NONE|LIMIT=100|FAILURE_TYPE=Механика"}
+{"input": "частые поломки механика", "output": "NEED_DATABASE:STATUS=NONE|MACHINE=NONE|LIMIT=100|FAILURE_TYPE=Механика"}
+{"input": "самые частые механические поломки", "output": "NEED_DATABASE:STATUS=NONE|MACHINE=NONE|LIMIT=100|FAILURE_TYPE=Механика"}
+{"input": "поломки по электронике", "output": "NEED_DATABASE:STATUS=NONE|MACHINE=NONE|LIMIT=100|FAILURE_TYPE=Электроника"}
+{"input": "электрические неисправности", "output": "NEED_DATABASE:STATUS=NONE|MACHINE=NONE|LIMIT=100|FAILURE_TYPE=Электрика"}

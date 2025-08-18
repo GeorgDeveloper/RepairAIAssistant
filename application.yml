@@ -1,0 +1,107 @@
+# Единая конфигурация Repair AI Assistant
+# Все модули используют этот файл конфигурации
+
+# Общие настройки
+app:
+  name: Repair AI Assistant
+  version: 1.0.0
+  description: Система технической поддержки с ИИ
+
+# Настройки серверов
+server:
+  core:
+    port: 8080
+  web:
+    port: 8081
+  telegram:
+    port: 8082
+  analyzer:
+    port: 8083
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+# База данных
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
+    username: dba
+    password: dbaPass
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+# Настройки ИИ
+ai:
+  ollama:
+    url: http://localhost:11434/api
+    model: mistral:latest
+    temperature: 0.7
+    timeout: 30000
+  training:
+    enabled: true
+    schedule: "0 0 3 * * ?"  # Каждый день в 3:00
+    batch-size: 200
+    max-examples: 1000
+
+# Telegram Bot
+telegram:
+  bot:
+    enabled: true
+    token: ${TELEGRAM_BOT_TOKEN:7086789672:AAEOnxfD5SiwEkuFiZssPlw5TgX8Pc4zpiw}
+    username: js_mai_bot
+    webhook-url: ${TELEGRAM_WEBHOOK_URL:}
+
+# Файловая система
+files:
+  upload-dir: ./uploads
+  training-data: classpath:training/
+  manuals-dir: ./manuals
+  csv-analysis-dir: ./analysis
+
+# Анализатор оборудования
+analyzer:
+  enabled: true
+  supported-formats: csv
+  max-file-size: 50MB
+  output-format: json
+
+# Логирование
+logging:
+  level:
+    ru.georgdeveloper: DEBUG
+    org.springframework: INFO
+    org.hibernate: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/repair-assistant.log
+
+# Мониторинг
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Кэширование
+cache:
+  enabled: true
+  ttl: 3600  # 1 час
+  max-size: 1000
