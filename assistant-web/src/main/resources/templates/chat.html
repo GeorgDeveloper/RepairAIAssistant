@@ -11,6 +11,11 @@
         <h1>Чат с ассистентом</h1>
         <div id="chat-container">
             <div id="messages"></div>
+            <div id="feedback-buttons" style="display:none; margin-top:10px;">
+                <button onclick="sendFeedback('correct')">Ответ корректен</button>
+                <button onclick="sendFeedback('regenerate')">Сгенерировать заново</button>
+                <button onclick="sendFeedback('newdialog')">Новый диалог</button>
+            </div>
             <div class="input-group">
                 <input type="text" id="messageInput" placeholder="Введите ваш вопрос...">
                 <button onclick="sendMessage()">Отправить</button>

@@ -1,0 +1,8 @@
+2025-08-19 10:02:40 [main] INFO  r.g.a.AssistantTelegramApplicationTests - Starting AssistantTelegramApplicationTests using Java 17.0.12 with PID 8228 (started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-19 10:02:40 [main] DEBUG r.g.a.AssistantTelegramApplicationTests - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-19 10:02:40 [main] INFO  r.g.a.AssistantTelegramApplicationTests - No active profile set, falling back to 1 default profile: "default"
+2025-08-19 10:02:42 [main] INFO  r.g.a.AssistantTelegramApplicationTests - Started AssistantTelegramApplicationTests in 2.098 seconds (process running for 2.986)
+2025-08-19 10:15:02 [main] INFO  r.g.a.AssistantTelegramApplicationTests - Starting AssistantTelegramApplicationTests using Java 17.0.12 with PID 13864 (started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-19 10:15:02 [main] DEBUG r.g.a.AssistantTelegramApplicationTests - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-19 10:15:02 [main] INFO  r.g.a.AssistantTelegramApplicationTests - No active profile set, falling back to 1 default profile: "default"
+2025-08-19 10:15:05 [main] INFO  r.g.a.AssistantTelegramApplicationTests - Started AssistantTelegramApplicationTests in 2.718 seconds (process running for 3.518)

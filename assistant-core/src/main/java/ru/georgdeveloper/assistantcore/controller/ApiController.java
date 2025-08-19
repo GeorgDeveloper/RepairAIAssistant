@@ -3,6 +3,13 @@ package ru.georgdeveloper.assistantcore.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ru.georgdeveloper.assistantcore.service.RepairAssistantService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import ru.georgdeveloper.assistantcore.config.ResourcePaths;
 
 /**
  * REST API контроллер для взаимодействия между модулями системы.
@@ -52,5 +59,64 @@ public class ApiController {
         System.out.println("Отправляем ответ: " + response);
         
         return response;
+    }
+    /**
+     * Эндпоинт для обратной связи: сохраняет пару запрос-ответ для дообучения
+     */
+    @PostMapping("/feedback")
+    public String saveFeedback(@RequestBody FeedbackDto feedback) {
+        try {
+            // Всегда сохраняем пару в query_training_data.jsonl
+            saveToQueryTrainingData(feedback);
+            // Если ответ похож на инструкцию — дополнительно сохраняем в repair_instructions.json
+            if (feedback.response != null && (feedback.response.contains("SIMPLE_ANSWER") || feedback.response.toLowerCase().contains("инструкция"))) {
+                saveToRepairInstructions(feedback);
+            }
+            return "OK";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "ERROR: " + e.getMessage();
+        }
+    }
+
+    private void saveToRepairInstructions(FeedbackDto feedback) throws IOException {
+        // Сохраняем полный текст запроса и ответа
+        String problem = feedback.request;
+        String solution = feedback.response.trim();
+        Map<String, String> entry = new LinkedHashMap<>();
+        entry.put("Участок", "-");
+        entry.put("Группа оборудования", "-");
+        entry.put("Узел", "-");
+        entry.put("Проблема", problem);
+        entry.put("Решение", solution);
+
+        ObjectMapper mapper = new ObjectMapper();
+        File file = new File(ResourcePaths.REPAIR_INSTRUCTIONS_JSON_ABS);
+        List<Map<String, String>> all;
+        if (file.exists()) {
+            Map[] arr = mapper.readValue(file, Map[].class);
+            all = new ArrayList<>();
+            for (Map m : arr) {
+                all.add(new LinkedHashMap<>((Map<String, String>) m));
+            }
+        } else {
+            all = new ArrayList<>();
+        }
+        all.add(entry);
+        mapper.writerWithDefaultPrettyPrinter().writeValue(file, all);
+    }
+
+    private void saveToQueryTrainingData(FeedbackDto feedback) throws IOException {
+        String line = String.format("{\"input\": \"%s\", \"output\": \"%s\"}\n",
+                feedback.request.replace("\"", "\\\""),
+                feedback.response.replace("\"", "\\\""));
+        Files.write(Paths.get(ResourcePaths.QUERY_TRAINING_DATA_JSONL_ABS),
+                line.getBytes(StandardCharsets.UTF_8),
+                Files.exists(Paths.get(ResourcePaths.QUERY_TRAINING_DATA_JSONL_ABS)) ? java.nio.file.StandardOpenOption.APPEND : java.nio.file.StandardOpenOption.CREATE);
+    }
+
+    public static class FeedbackDto {
+        public String request;
+        public String response;
     }
 }

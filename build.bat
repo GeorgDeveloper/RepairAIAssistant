@@ -4,7 +4,7 @@ echo    REPAIR AI ASSISTANT - BUILD
 echo ========================================
 echo.
 
-echo [1/8] Checking Java installation...
+echo [1/9] Checking Java installation...
 java -version >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Java not found! Please install Java 17 or higher.
@@ -13,7 +13,7 @@ if %errorlevel% neq 0 (
 )
 echo [OK] Java found
 
-echo [2/8] Checking Maven installation...
+echo [2/9] Checking Maven installation...
 call mvn -version >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Maven not found! Please install Maven.
@@ -23,21 +23,21 @@ if %errorlevel% neq 0 (
 echo [OK] Maven found
 
 echo.
-echo [3/8] Cleaning previous builds...
+echo [3/9] Cleaning previous builds...
 echo [                                        ] 0%%
 call mvn clean -q
 echo [########################################] 100%%
 echo [OK] Clean completed
 
 echo.
-echo [4/8] Building all modules...
+echo [4/9] Building all modules...
 echo [                                        ] 0%%
 call mvn package -DskipTests -q
 echo [########################################] 100%%
 echo [OK] Build completed
 
 echo.
-echo [5/8] Creating target directory structure...
+echo [5/9] Creating target directory structure...
 if not exist target mkdir target
 if not exist target\jars mkdir target\jars
 if not exist target\config mkdir target\config
@@ -45,21 +45,28 @@ if not exist target\logs mkdir target\logs
 echo [OK] Directory structure created
 
 echo.
-echo [6/8] Copying application files...
+echo [6/9] Copying application files...
 copy assistant-core\target\*.war target\jars\ >nul 2>&1
 copy assistant-web\target\*.war target\jars\ >nul 2>&1
 copy assistant-telegram\target\*.war target\jars\ >nul 2>&1
 echo [OK] Application files copied
 
 echo.
-echo [7/8] Copying configuration files...
+echo [7/9] Copying configuration files...
 copy assistant-core\src\main\resources\application.yml target\config\core-application.yml >nul 2>&1
 copy assistant-web\src\main\resources\application.yml target\config\web-application.yml >nul 2>&1
 copy assistant-telegram\src\main\resources\application.yml target\config\telegram-application.yml >nul 2>&1
 echo [OK] Configuration files copied
 
 echo.
-echo [8/8] Creating startup scripts...
+echo [8/9] Training configuration files...
+mkdir target\training
+copy assistant-core\src\main\resources\training\query_training_data.jsonl target\training\query_training_data.jsonl >nul 2>&1
+copy assistant-core\src\main\resources\training\repair_instructions.json target\training\repair_instructions.json >nul 2>&1
+echo [OK] Training files copied
+
+echo.
+echo [9/9] Creating startup scripts...
 echo @echo off > target\start.bat
 echo echo Starting Repair AI Assistant... >> target\start.bat
 echo start "Core" java -jar jars\assistant-core-0.0.1-SNAPSHOT.war >> target\start.bat

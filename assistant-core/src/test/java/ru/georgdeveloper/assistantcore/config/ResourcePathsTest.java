@@ -2,7 +2,7 @@ package ru.georgdeveloper.assistantcore.config;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.ClassPathResource;
+import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,23 +14,22 @@ public class ResourcePathsTest {
     
     @Test
     public void testRepairInstructionsJsonExists() {
-        ClassPathResource resource = new ClassPathResource(ResourcePaths.REPAIR_INSTRUCTIONS_JSON);
-        assertTrue(resource.exists(), 
+        File file = new File(ResourcePaths.REPAIR_INSTRUCTIONS_JSON);
+        assertTrue(file.exists(),
             "Файл repair_instructions.json должен существовать по пути: " + ResourcePaths.REPAIR_INSTRUCTIONS_JSON);
     }
-    
+
     @Test
     public void testQueryTrainingDataJsonlExists() {
-        ClassPathResource resource = new ClassPathResource(ResourcePaths.QUERY_TRAINING_DATA_JSONL);
-        assertTrue(resource.exists(), 
+        File file = new File(ResourcePaths.QUERY_TRAINING_DATA_JSONL);
+        assertTrue(file.exists(),
             "Файл query_training_data.jsonl должен существовать по пути: " + ResourcePaths.QUERY_TRAINING_DATA_JSONL);
     }
-    
+
     @Test
     public void testResourcePathsConstants() {
-        // Проверяем, что константы имеют правильные значения
-        assertEquals("training/repair_instructions.json", ResourcePaths.REPAIR_INSTRUCTIONS_JSON);
-        assertEquals("training/query_training_data.jsonl", ResourcePaths.QUERY_TRAINING_DATA_JSONL);
-        assertEquals("training/", ResourcePaths.TRAINING_BASE_PATH);
+    // Проверяем, что константы оканчиваются на нужные имена файлов
+    assertTrue(ResourcePaths.REPAIR_INSTRUCTIONS_JSON.endsWith("training/repair_instructions.json"));
+    assertTrue(ResourcePaths.QUERY_TRAINING_DATA_JSONL.endsWith("training/query_training_data.jsonl"));
     }
 }

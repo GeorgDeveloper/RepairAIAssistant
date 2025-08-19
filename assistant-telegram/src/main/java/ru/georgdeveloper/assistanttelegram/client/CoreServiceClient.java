@@ -7,6 +7,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import java.nio.charset.StandardCharsets;
+import ru.georgdeveloper.assistanttelegram.client.FeedbackDto;
 
 @Component
 public class CoreServiceClient {
@@ -22,5 +23,15 @@ public class CoreServiceClient {
         
         HttpEntity<String> entity = new HttpEntity<>(request, headers);
         return restTemplate.postForObject(CORE_SERVICE_URL + "/analyze", entity, String.class);
+    }
+    /**
+     * Отправляет пару запрос-ответ на сохранение для дообучения модели
+     */
+    public void saveFeedback(String request, String response) {
+        FeedbackDto dto = new FeedbackDto(request, response);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<FeedbackDto> entity = new HttpEntity<>(dto, headers);
+        restTemplate.postForObject(CORE_SERVICE_URL + "/feedback", entity, String.class);
     }
 }

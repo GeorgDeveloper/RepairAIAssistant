@@ -8,8 +8,13 @@ import java.util.concurrent.*;
 @Component
 public class MessageHandler {
     
+
     @Autowired
     private CoreServiceClient coreServiceClient;
+
+    public CoreServiceClient getCoreServiceClient() {
+        return coreServiceClient;
+    }
     
 
     

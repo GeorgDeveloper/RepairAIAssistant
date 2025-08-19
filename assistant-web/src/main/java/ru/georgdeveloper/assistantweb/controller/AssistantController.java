@@ -27,4 +27,15 @@ public class AssistantController {
     public String processChat(@RequestBody String message) {
         return coreServiceClient.analyzeRepairRequest(message);
     }
+
+    @PostMapping("/api/chat/feedback")
+    @ResponseBody
+    public String processFeedback(@RequestBody FeedbackDto feedback) {
+        return coreServiceClient.sendFeedback(feedback);
+    }
+
+    public static class FeedbackDto {
+        public String request;
+        public String response;
+    }
 }

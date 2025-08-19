@@ -24,8 +24,6 @@
         <module>assistant-core</module>
         <module>assistant-web</module>
         <module>assistant-telegram</module>
-        <module>assistant-training</module>
-        <module>assistant-analyzer</module>
     </modules>
 
     <properties>
