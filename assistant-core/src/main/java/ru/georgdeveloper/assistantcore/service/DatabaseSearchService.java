@@ -62,14 +62,6 @@ public class DatabaseSearchService {
         return new SearchResult(summaryResults, equipmentResults, breakdownResults);
     }
 
-    private boolean containsAny(String text, List<String> keywords) {
-        if (text == null) return false;
-        String lower = text.toLowerCase();
-        for (String k : keywords) {
-            if (lower.contains(k)) return true;
-        }
-        return false;
-    }
 
     /**
      * Извлекает ключевые слова из пользовательского запроса (минимальная длина 3 символа)
