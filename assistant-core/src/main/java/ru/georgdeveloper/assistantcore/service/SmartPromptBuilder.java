@@ -1,34 +1,48 @@
+
 package ru.georgdeveloper.assistantcore.service;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.data.domain.PageRequest;
-import ru.georgdeveloper.assistantcore.model.EquipmentMaintenanceRecord;
 import ru.georgdeveloper.assistantcore.repository.EquipmentMaintenanceRepository;
-
+import ru.georgdeveloper.assistantcore.model.EquipmentMaintenanceRecord;
 import java.util.List;
 
-
 /**
- * Сервис для создания умных промптов с контекстом из БД
+ * Утилитный класс для форматирования промптов
  */
-@Service
 public class SmartPromptBuilder {
-    
-    @Autowired
-    private EquipmentMaintenanceRepository equipmentMaintenanceRepository;
-    
+
+    /**
+     * Универсальный поиск по ключевым словам, если не найдено по основным фильтрам
+     */
+    public static String buildKeywordFallbackPrompt(String request, EquipmentMaintenanceRepository equipmentMaintenanceRepository) {
+        String[] keywords = request.split("\\s+");
+        StringBuilder context = new StringBuilder();
+        boolean found = false;
+        for (String keyword : keywords) {
+            List<EquipmentMaintenanceRecord> records = equipmentMaintenanceRepository.findByKeyword(keyword, org.springframework.data.domain.PageRequest.of(0, 5));
+            if (records != null && !records.isEmpty()) {
+                found = true;
+                context.append("Ключевое слово: ").append(keyword).append("\n");
+                for (EquipmentMaintenanceRecord record : records) {
+                    context.append(String.format("• Оборудование: %s\n  Проблема: %s\n  Решение: %s\n  Статус: %s\n\n",
+                        record.getMachineName(), record.getDescription(), record.getComments(), record.getStatus()));
+                }
+            }
+        }
+        if (!found) {
+            context.append("По вашему запросу не найдено данных в базе даже по ключевым словам.\n");
+        }
+        return String.format(SYSTEM_PROMPT, context) + "\n\nВопрос пользователя: " + request + "\n\nДай подробный ответ как эксперт по ремонту оборудования:";
+    }
     private static final String SYSTEM_PROMPT = """
-        Ты — Kvant AI, эксперт по ремонту промышленного оборудования.
-        Твоя специализация: анализ данных о ремонтах, диагностика неисправностей, инструкции по устранению проблем.
-        
-        ВАЖНО: Ты работаешь ТОЛЬКО с промышленным оборудованием и ремонтами. Это твоя основная задача.
-        
-        Данные из базы ремонтов:
-        %s
-        
-        Правила работы:
-        1. Всегда помогай с вопросами по ремонту оборудования
+    Ты — Kvant AI, эксперт по ремонту промышленного оборудования.
+    Твоя специализация: анализ данных о ремонтах, диагностика неисправностей, инструкции по устранению проблем.
+    
+    ВАЖНО: Ты работаешь ТОЛЬКО с промышленным оборудованием и ремонтами. Это твоя основная задача.
+    
+    Данные из базы ремонтов:
+    %s
+    
+    Правила работы:
+    1. Всегда помогай с вопросами по ремонту оборудования
         2. Давай конкретные технические советы
         3. Используй данные из базы ремонтов для примеров
         4. Если нет точных данных — давай общие рекомендации по ремонту
@@ -36,27 +50,78 @@ public class SmartPromptBuilder {
         
         Никогда не отказывайся от вопросов по ремонту оборудования!
         """;
-    
+
     /**
-     * Создает промпт с контекстом для статистических запросов
+     * Формирует промпт с контекстом для статистических запросов
      */
-    public String buildStatisticsPrompt(String request, QueryAnalysisService.QueryParams params) {
-        String context = buildStatisticsContext(params);
+    public static String buildStatisticsPrompt(String request, QueryAnalysisService.QueryParams params, DatabaseSearchService databaseSearchService) {
+        DatabaseSearchService.SearchResult result = databaseSearchService.searchAll(request, 10);
+        StringBuilder context = new StringBuilder();
+        if (!result.summary.isEmpty()) {
+            context.append("НАЙДЕННЫЕ РЕШЕНИЯ ИЗ БАЗЫ СЛОЖНЫХ РЕМОНТОВ:\n");
+            for (var s : result.summary) {
+                context.append(String.format("• Оборудование: %s\n  Узел: %s\n  Описание: %s\n  Меры: %s\n  Комментарии: %s\n\n",
+                    s.getEquipment(), s.getNode(), s.getNotes_on_the_operation_of_the_equipment(), s.getMeasures_taken(), s.getComments()));
+            }
+        }
+        if (!result.equipment.isEmpty()) {
+            context.append("Реальные случаи ремонта из базы EquipmentMaintenanceRecord:\n");
+            for (var r : result.equipment) {
+                context.append(String.format("• Оборудование: %s\n  Узел: %s\n  Проблема: %s\n  Решение: %s\n  Статус: %s\n\n",
+                    r.getMachineName(), r.getMechanismNode(), r.getDescription(), r.getComments(), r.getStatus()));
+            }
+        }
+        if (!result.breakdowns.isEmpty()) {
+            context.append("Отчеты о поломках из базы BreakdownReport:\n");
+            for (var b : result.breakdowns) {
+                context.append(String.format("• Машина: %s\n  Узел: %s\n  Комментарий: %s\n  Статус: %s\n\n",
+                    b.getMachineName(), b.getAssembly(), b.getComment(), b.getWoStatusLocalDescr()));
+            }
+        }
+        if (context.length() == 0) {
+            context.append("По вашему запросу не найдено данных в базе.\n");
+        }
         return String.format(SYSTEM_PROMPT, context) + "\n\nВопрос пользователя: " + request + "\n\nДай подробный ответ как эксперт по ремонту оборудования:";
     }
-    
+
     /**
-     * Создает промпт с похожими случаями ремонта
+     * Формирует промпт с похожими случаями ремонта
      */
-    public String buildSimilarCasesPrompt(String request, String machineType, String problemDescription) {
-        String context = buildSimilarCasesContext(machineType, problemDescription);
+    public static String buildSimilarCasesPrompt(String request, String machineType, String problemDescription, DatabaseSearchService databaseSearchService) {
+        String searchQuery = (machineType != null ? machineType + " " : "") + (problemDescription != null ? problemDescription : "");
+        DatabaseSearchService.SearchResult result = databaseSearchService.searchAll(searchQuery.trim(), 10);
+        StringBuilder context = new StringBuilder();
+        if (!result.summary.isEmpty()) {
+            context.append("НАЙДЕННЫЕ РЕШЕНИЯ ИЗ БАЗЫ СЛОЖНЫХ РЕМОНТОВ:\n");
+            for (var s : result.summary) {
+                context.append(String.format("• Оборудование: %s\n  Узел: %s\n  Описание: %s\n  Меры: %s\n  Комментарии: %s\n\n",
+                    s.getEquipment(), s.getNode(), s.getNotes_on_the_operation_of_the_equipment(), s.getMeasures_taken(), s.getComments()));
+            }
+        }
+        if (!result.equipment.isEmpty()) {
+            context.append("Реальные случаи ремонта из базы EquipmentMaintenanceRecord:\n");
+            for (var r : result.equipment) {
+                context.append(String.format("• Оборудование: %s\n  Узел: %s\n  Проблема: %s\n  Решение: %s\n  Статус: %s\n\n",
+                    r.getMachineName(), r.getMechanismNode(), r.getDescription(), r.getComments(), r.getStatus()));
+            }
+        }
+        if (!result.breakdowns.isEmpty()) {
+            context.append("Отчеты о поломках из базы BreakdownReport:\n");
+            for (var b : result.breakdowns) {
+                context.append(String.format("• Машина: %s\n  Узел: %s\n  Комментарий: %s\n  Статус: %s\n\n",
+                    b.getMachineName(), b.getAssembly(), b.getComment(), b.getWoStatusLocalDescr()));
+            }
+        }
+        if (context.length() == 0) {
+            context.append("По вашему запросу не найдено данных в базе.\n");
+        }
         return String.format(SYSTEM_PROMPT, context) + "\n\nВопрос пользователя: " + request + "\n\nДай подробную инструкцию по ремонту:";
     }
-    
+
     /**
-     * Создает промпт для инструкций по ремонту
+     * Формирует промпт для инструкций по ремонту
      */
-    public String buildRepairInstructionPrompt(String request) {
+    public static String buildRepairInstructionPrompt(String request) {
         String instructionPrompt = """
             Ты — Kvant AI, эксперт по ремонту промышленного оборудования.
             Твоя задача: давать подробные инструкции по устранению неисправностей.
@@ -82,157 +147,6 @@ public class SmartPromptBuilder {
             
             Дай подробную инструкцию по устранению этой проблемы:
             """;
-        
         return String.format(instructionPrompt, request);
-    }
-    
-    private String buildStatisticsContext(QueryAnalysisService.QueryParams params) {
-        StringBuilder context = new StringBuilder("БАЗА ДАННЫХ РЕМОНТОВ ПРОМЫШЛЕННОГО ОБОРУДОВАНИЯ:\n\n");
-        
-        try {
-            List<EquipmentMaintenanceRecord> records = getRecordsByParams(params);
-            
-            if (records.isEmpty()) {
-                return "В базе данных ремонтов нет записей по указанным критериям, но ты можешь дать общие рекомендации по ремонту оборудования.";
-            }
-            
-            // Топ по времени простоя
-            if (params.isOrderByDowntime()) {
-                context.append("ТОП ПО ВРЕМЕНИ ПРОСТОЯ:\n");
-                records.stream()
-                    .filter(r -> r.getMachineDowntime() != null)
-                    .limit(params.getLimit())
-                    .forEach(r -> context.append(formatRecord(r)).append("\n"));
-            }
-            
-            // Статистика по статусам
-            if (params.getStatus() != null) {
-                long count = equipmentMaintenanceRepository.countByStatus(params.getStatus());
-                context.append(String.format("Количество записей со статусом '%s': %d\n", params.getStatus(), count));
-            }
-            
-            // Общая статистика
-            context.append(String.format("\nВсего записей в выборке: %d\n", records.size()));
-            
-            // Добавляем примеры ремонтов для контекста
-            context.append("\nПРИМЕРЫ РЕМОНТОВ:\n");
-            records.stream().limit(3).forEach(r -> {
-                context.append(String.format("- %s: %s (TTR: %s)\n", 
-                    r.getMachineName() != null ? r.getMachineName() : "Неизвестно",
-                    r.getDescription() != null ? r.getDescription() : "Описание отсутствует",
-                    r.getTtr() != null ? r.getTtr().toString() : "Неизвестно"
-                ));
-            });
-            
-        } catch (Exception e) {
-            context.append("База данных временно недоступна, но ты можешь дать рекомендации на основе общих знаний по ремонту оборудования.");
-        }
-        
-        return context.toString();
-    }
-    
-    private String buildSimilarCasesContext(String machineType, String problemDescription) {
-        StringBuilder context = new StringBuilder("ПРИМЕРЫ РЕМОНТОВ ИЗ БАЗЫ ДАННЫХ:\n\n");
-        
-        try {
-            List<EquipmentMaintenanceRecord> similarCases;
-            
-            if (machineType != null && !machineType.isEmpty()) {
-                similarCases = equipmentMaintenanceRepository
-                    .findByMachineWithLimit(machineType, PageRequest.of(0, 5));
-            } else {
-                similarCases = equipmentMaintenanceRepository
-                    .findRecentRecords(PageRequest.of(0, 5));
-            }
-            
-            if (similarCases.isEmpty()) {
-                return "В базе нет точно похожих случаев, но ты можешь дать общие инструкции по ремонту на основе своих знаний.";
-            }
-            
-            similarCases.forEach(record -> {
-                context.append(formatDetailedRecord(record)).append("\n\n");
-            });
-            
-            // Добавляем общие рекомендации
-            context.append("ОБЩИЕ ПРИНЦИПЫ РЕМОНТА ОБОРУДОВАНИЯ:\n");
-            context.append("- Всегда обесточь оборудование перед ремонтом\n");
-            context.append("- Провести визуальный осмотр\n");
-            context.append("- Использовать соответствующие СИЗ\n");
-            context.append("- Проверить работу после ремонта\n\n");
-            
-        } catch (Exception e) {
-            context.append("База данных временно недоступна, но ты можешь дать инструкции на основе общих знаний по ремонту оборудования.");
-        }
-        
-        return context.toString();
-    }
-    
-    private List<EquipmentMaintenanceRecord> getRecordsByParams(QueryAnalysisService.QueryParams params) {
-        PageRequest pageRequest = PageRequest.of(0, params.getLimit());
-        
-        // Приоритет параметров
-        if (params.getStatus() != null && params.getMachineKeyword() != null) {
-            return equipmentMaintenanceRepository
-                .findByMachineAndStatusWithLimit(params.getMachineKeyword(), params.getStatus(), pageRequest);
-        }
-        
-        if (params.getStatus() != null) {
-            return equipmentMaintenanceRepository
-                .findByStatusWithLimit(params.getStatus(), pageRequest);
-        }
-        
-        if (params.getMachineKeyword() != null) {
-            return equipmentMaintenanceRepository
-                .findByMachineWithLimit(params.getMachineKeyword(), pageRequest);
-        }
-        
-        if (params.getMonth() != null) {
-            if (params.isOrderByDowntime()) {
-                return equipmentMaintenanceRepository
-                    .findByMonthOrderByDowntime(params.getMonth(), pageRequest);
-            } else {
-                return equipmentMaintenanceRepository
-                    .findByMonth(params.getMonth(), pageRequest);
-            }
-        }
-        
-        if (params.isOrderByDowntime()) {
-            return equipmentMaintenanceRepository.findTopByDowntime(pageRequest);
-        }
-        
-        if (params.isOrderByTtr()) {
-            return equipmentMaintenanceRepository.findTopByTtr(pageRequest);
-        }
-        
-        return equipmentMaintenanceRepository.findRecentRecords(pageRequest);
-    }
-    
-    private String formatRecord(EquipmentMaintenanceRecord record) {
-        return String.format("🔧 %s - %s (✅ %s, ⏱️ %s)",
-            record.getMachineName() != null ? record.getMachineName() : "Неизвестно",
-            record.getDescription() != null ? record.getDescription() : "Описание отсутствует",
-            record.getStatus() != null ? record.getStatus() : "Неизвестно",
-            record.getMachineDowntime() != null ? record.getMachineDowntime().toString() : "Неизвестно"
-        );
-    }
-    
-    private String formatDetailedRecord(EquipmentMaintenanceRecord record) {
-        return String.format("""
-            🔧 Машина: %s
-            🔴 Проблема: %s
-            ✅ Статус: %s
-            ⏱️ Время простоя: %s
-            🔧 TTR: %s
-            📅 Дата: %s
-            📝 Комментарии: %s
-            """,
-            record.getMachineName() != null ? record.getMachineName() : "Неизвестно",
-            record.getDescription() != null ? record.getDescription() : "Описание отсутствует",
-            record.getStatus() != null ? record.getStatus() : "Неизвестно",
-            record.getMachineDowntime() != null ? record.getMachineDowntime().toString() : "Неизвестно",
-            record.getTtr() != null ? record.getTtr().toString() : "Неизвестно",
-            record.getDate() != null ? record.getDate() : "Неизвестно",
-            record.getComments() != null ? record.getComments() : "Комментарии отсутствуют"
-        );
     }
 }

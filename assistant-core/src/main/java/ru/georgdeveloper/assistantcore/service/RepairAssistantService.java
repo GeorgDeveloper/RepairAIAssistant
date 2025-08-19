@@ -7,6 +7,8 @@ import ru.georgdeveloper.assistantcore.repository.EquipmentMaintenanceRepository
 import ru.georgdeveloper.assistantcore.repository.BreakdownReportRepository;
 import ru.georgdeveloper.assistantcore.model.EquipmentMaintenanceRecord;
 import ru.georgdeveloper.assistantcore.model.BreakdownReport;
+import ru.georgdeveloper.assistantcore.model.SummaryOfSolutions;
+import ru.georgdeveloper.assistantcore.repository.SummaryOfSolutionsRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
@@ -37,13 +39,18 @@ public class RepairAssistantService {
     @Autowired(required = false)
     private BreakdownReportRepository breakdownReportRepository;
     
+    // Репозиторий для сводок по сложным ремонтам
+    @Autowired(required = false)
+    private SummaryOfSolutionsRepository summaryOfSolutionsRepository;
+    
     // Сервис для анализа пользовательских запросов
     @Autowired
     private QueryAnalysisService queryAnalysisService;
     
-    // Сервис для создания умных промптов с контекстом
+    
+    // Сервис для поиска данных по всем таблицам
     @Autowired
-    private SmartPromptBuilder smartPromptBuilder;
+    private DatabaseSearchService databaseSearchService;
     
     /**
      * Главный метод обработки запросов пользователей.
@@ -59,7 +66,45 @@ public class RepairAssistantService {
      * @return Ответ AI на основе реальных данных из БД
      */
     public String processRepairRequest(String request) {
-        return processRepairRequest(request, null);
+        // Универсальный анализ запроса и поиск по всем таблицам
+        DatabaseSearchService.SearchResult result = databaseSearchService.searchAll(request, 10);
+        StringBuilder context = new StringBuilder();
+        if (!result.summary.isEmpty()) {
+            context.append("НАЙДЕННЫЕ РЕШЕНИЯ ИЗ БАЗЫ СЛОЖНЫХ РЕМОНТОВ:\n");
+            for (var s : result.summary) {
+                context.append(String.format("• Оборудование: %s\n  Узел: %s\n  Описание: %s\n  Меры: %s\n  Комментарии: %s\n\n",
+                    s.getEquipment(), s.getNode(), s.getNotes_on_the_operation_of_the_equipment(), s.getMeasures_taken(), s.getComments()));
+            }
+        }
+        if (!result.equipment.isEmpty()) {
+            context.append("Реальные случаи ремонта из базы EquipmentMaintenanceRecord:\n");
+            for (var r : result.equipment) {
+                context.append(String.format("• Оборудование: %s\n  Узел: %s\n  Проблема: %s\n  Решение: %s\n  Статус: %s\n\n",
+                    r.getMachineName(), r.getMechanismNode(), r.getDescription(), r.getComments(), r.getStatus()));
+            }
+        }
+        if (!result.breakdowns.isEmpty()) {
+            context.append("Отчеты о поломках из базы BreakdownReport:\n");
+            for (var b : result.breakdowns) {
+                context.append(String.format("• Машина: %s\n  Узел: %s\n  Комментарий: %s\n  Статус: %s\n\n",
+                    b.getMachineName(), b.getAssembly(), b.getComment(), b.getWoStatusLocalDescr()));
+            }
+        }
+        String prompt;
+        if (context.length() == 0) {
+            // fallback: поиск по ключевым словам
+            prompt = SmartPromptBuilder.buildKeywordFallbackPrompt(request, equipmentMaintenanceRepository);
+        } else {
+            prompt = String.format("""
+                Ты — Kvant AI, эксперт по ремонту промышленного оборудования.
+                Используй только данные из базы ниже для ответа. Не придумывай информацию.
+                ДАННЫЕ ИЗ БАЗЫ:
+                %s
+                Запрос пользователя: %s
+                Дай подробный ответ, строго основываясь на найденных данных. Если данных нет — сообщи об этом.
+                """, context, request);
+        }
+        return ollamaService.generateResponse(prompt);
     }
     
     /**
@@ -107,7 +152,7 @@ public class RepairAssistantService {
         }
         
         // Этап 4: AI анализирует полученные данные и дает ответ с умным промптом
-        String prompt = smartPromptBuilder.buildStatisticsPrompt(request, params);
+    String prompt = SmartPromptBuilder.buildStatisticsPrompt(request, params, databaseSearchService);
         String response = ollamaService.generateResponse(prompt);
         
         return removeThinkTags(response);
@@ -241,7 +286,7 @@ public class RepairAssistantService {
      * Обработка запроса с поиском похожих случаев
      */
     public String processWithSimilarCases(String request, String machineType) {
-        String prompt = smartPromptBuilder.buildSimilarCasesPrompt(request, machineType, null);
+    String prompt = SmartPromptBuilder.buildSimilarCasesPrompt(request, machineType, null, databaseSearchService);
         String response = ollamaService.generateResponse(prompt);
         return removeThinkTags(response);
     }
@@ -272,7 +317,7 @@ public class RepairAssistantService {
         }
         
         // \u0417\u0430\u043f\u0440\u043e\u0441\u044b \u043d\u0430 \u0438\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0438\u0438
-        return lower.contains("и\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0438\u044f") || lower.contains("п\u0440\u043e\u0431\u043b\u0435\u043c\u0430");
+        return lower.contains("и\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0438\u0430") || lower.contains("п\u0440\u043e\u0431\u043b\u0435\u043c\u0430");
     }
     
     private String handleGeneralQuery(String request) {
@@ -294,14 +339,27 @@ public class RepairAssistantService {
      */
     private String buildRepairInstructionContext(String request) {
         StringBuilder context = new StringBuilder();
-        
         try {
-            // Поиск по ключевым словам
             String keyword = extractKeyword(request);
+            if (keyword != null && summaryOfSolutionsRepository != null) {
+                List<SummaryOfSolutions> summaryMatches = summaryOfSolutionsRepository.searchByKeyword(keyword);
+                if (summaryMatches != null && !summaryMatches.isEmpty()) {
+                    context.append("НАЙДЕННЫЕ РЕШЕНИЯ ИЗ БАЗЫ СЛОЖНЫХ РЕМОНТОВ (цитируй эти меры и комментарии в ответе):\n");
+                    summaryMatches.stream().limit(5).forEach(s -> {
+                        context.append(String.format("• Оборудование: %s\n", s.getEquipment()));
+                        context.append(String.format("  Узел: %s\n", s.getNode()));
+                        context.append(String.format("  Описание: %s\n", s.getNotes_on_the_operation_of_the_equipment()));
+                        context.append(String.format("  Меры (цитировать!): %s\n", s.getMeasures_taken()));
+                        context.append(String.format("  Комментарии (цитировать!): %s\n\n", s.getComments()));
+                    });
+                    context.append("\nИспользуй найденные меры и комментарии из базы выше в ответе для пользователя. Не придумывай общих советов, а только цитируй найденные решения.\n");
+                    return context.toString();
+                }
+            }
+            // Если не найдено — ищем в EquipmentMaintenanceRecord
             if (keyword != null && equipmentMaintenanceRepository != null) {
                 List<EquipmentMaintenanceRecord> records = equipmentMaintenanceRepository
                     .findByKeyword(keyword, PageRequest.of(0, 10));
-                
                 if (!records.isEmpty()) {
                     context.append("Реальные случаи ремонта из базы данных:\n");
                     for (EquipmentMaintenanceRecord record : records) {
@@ -324,7 +382,6 @@ public class RepairAssistantService {
         } catch (Exception e) {
             context.append("Ошибка подключения к базе данных: ").append(e.getMessage()).append("\n");
         }
-        
         return context.toString();
     }
     

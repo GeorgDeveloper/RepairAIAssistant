@@ -10,6 +10,14 @@ import java.util.List;
 
 @Repository
 public interface BreakdownReportRepository extends JpaRepository<BreakdownReport, String> {
+    /** Универсальный поиск по ключевому слову */
+    @Query("SELECT b FROM BreakdownReport b WHERE " +
+        "LOWER(b.machineName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+        "LOWER(b.assembly) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+        "LOWER(b.comment) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+        "LOWER(b.woStatusLocalDescr) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+        "ORDER BY b.duration DESC")
+    List<BreakdownReport> findByKeyword(@Param("keyword") String keyword, Pageable pageable);
     
     List<BreakdownReport> findByWoStatusLocalDescr(String status);
     
