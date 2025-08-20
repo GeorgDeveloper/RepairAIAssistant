@@ -7,8 +7,6 @@
 - **assistant-core** (8080) - Основной API и бизнес-логика
 - **assistant-web** (8081) - Веб-интерфейс
 - **assistant-telegram** (8082) - Telegram бот
-- **assistant-training** - Модуль обучения ИИ
-- **assistant-analyzer** (8083) - Модуль анализа CSV файлов
 
 ## Быстрый старт
 
@@ -45,8 +43,8 @@ stop.bat
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/monitoring_bd
-    username: dba
-    password: dbaPass
+    username: ****
+    password: ****
 ```
 
 ### ИИ модель
@@ -79,7 +77,6 @@ telegram:
 - `POST /api/query` - Обработка запросов
 - `GET /api/stats` - Статистика
 - `POST /api/manual/upload` - Загрузка руководств
-- `POST /api/equipment/analyze` - Анализ CSV файлов оборудования
 
 ### Веб-интерфейс
 - Чат с ИИ ассистентом
@@ -88,7 +85,6 @@ telegram:
 
 ### Telegram бот
 - Обработка текстовых запросов
-- Загрузка документов
 - Получение инструкций
 
 ## База данных
@@ -143,8 +139,6 @@ repair-ai-assistant/
 ├── assistant-core/          # Основной модуль
 ├── assistant-web/           # Веб-интерфейс  
 ├── assistant-telegram/      # Telegram бот
-├── assistant-training/      # Модуль обучения
-├── assistant-analyzer/      # Модуль анализа CSV
 └── target/                  # Сборка
 ```
 

@@ -1,3 +1,49 @@
+/* ====== Чат: растяжка окна переписки ====== */
+.container_dialog {
+    width: 100%;
+    max-width: none;
+    margin-top: 80px;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 80px);
+}
+
+#chat-container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding: 10px;
+    max-width: 100%;
+}
+
+#messages {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 16px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    min-height: 0;
+}
+
+.input-group {
+    display: flex;
+    gap: 8px;
+}
+.input-group input[type="text"] {
+    flex: 1 1 auto;
+    padding: 10px;
+    font-size: 1em;
+}
+.input-group button {
+    padding: 10px 20px;
+    font-size: 1em;
+}
+/* ====== Общие стили для всех страниц ====== */
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -8,6 +54,7 @@ body {
 
 .header{
     height: 80px;
+    width: 100%;
     background: #f0f0f0;
     position: fixed;
     left: 250px; /* Начинается после сайдбара */
@@ -15,15 +62,15 @@ body {
     top: 0;
     display: flex;
     align-items: center;
-    padding: 0 20px;
     
 }
 
 .main-content{
-    margin-top: 80px;   /* = высоте header */
+    width: 100%;
+    margin-top: 80px;
     padding: 20px;
-    /* min-height: calc(100vh - 80px); */
 }
+
 
 .sidebar {
     width: 250px;
@@ -102,14 +149,19 @@ body {
 .user{
     padding-left: 20px;
     padding-top: 30px;
-
 }
 
 .total-content {
     display: flex;
     flex-direction: column;
+    width: 100%;
 }
 
+/* ====== Таблицы и контейнеры ====== */
+
+.chats-container {
+width: 100%;
+}
 .current-status {
     width: 100%;
     border-collapse: collapse;
@@ -154,8 +206,6 @@ body {
     text-align: center !important;
 }
 
-
-/* Общие стили для контейнера таблиц */
 .tables-container {
     display: flex;
     gap: 20px;
@@ -163,7 +213,6 @@ body {
     flex-wrap: wrap;
 }
 
-/* Стили для заголовков таблиц */
 .table-title {
     text-align: center;
     font-weight: bold;
@@ -172,7 +221,6 @@ body {
     color: #333;
 }
 
-/* Основные стили таблиц */
 .machine-table {
     width: 100%;
     border-collapse: collapse;
@@ -181,7 +229,6 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-/* Стили для ячеек таблицы */
 .machine-table th, 
 .machine-table td {
     border: 1px solid #dddddd;
@@ -189,7 +236,6 @@ body {
     padding: 12px;
 }
 
-/* Стили для заголовков столбцов */
 .machine-table th {
     background-color: #4CAF50;
     color: white;
@@ -198,13 +244,10 @@ body {
     top: 0;
 }
 
-/* Чередование цветов строк */
 .machine-table tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
-/* Эффект при наведении на строку */
 .machine-table tr:hover {
     background-color: #f1f1f1;
 }
-

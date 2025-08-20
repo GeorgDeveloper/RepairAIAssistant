@@ -4,8 +4,7 @@
 <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Repair AI Assistant</title>
-    <link rel="stylesheet" th:href="@{/static/css/style.css}">
-    <link rel="stylesheet" href="static/styles/index_page/style.css">
+    <link rel="stylesheet" href="static/styles/style.css">
 </head>
 <body>
     
@@ -105,10 +104,98 @@
         <div class="main-content">
                 <div class="container">
                     <div class="content">
-                        <h1>Добро пожаловать в Repair AI Assistant</h1>
-                        <p>Здесь вы можете получить помощь в диагностике и ремонте автомобилей, а также найти полезные мануалы и инструкции.</p>
-                        <p>Используйте меню слева для навигации по разделам.</p>
+                        <h1>Отчеты о сложных ремонтах</h1>
+                        <form id="addSolutionForm" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px;">
+                            <input type="text" id="date" name="date" placeholder="Дата" required>
+                            <input type="text" id="executor" name="executor" placeholder="Исполнитель" required>
+                            <input type="text" id="region" name="region" placeholder="Участок" required>
+                            <input type="text" id="equipment" name="equipment" placeholder="Оборудование" required>
+                            <input type="text" id="node" name="node" placeholder="Узел" required>
+                            <input type="text" id="notes_on_the_operation_of_the_equipment" name="notes_on_the_operation_of_the_equipment" placeholder="Примечания по работе оборудования" required>
+                            <input type="text" id="measures_taken" name="measures_taken" placeholder="Принятые меры" required>
+                            <input type="text" id="comments" name="comments" placeholder="Комментарии" required>
+                            <button type="submit">Добавить</button>
+                        </form>
+                        <table id="solutionsTable" class="display" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Дата</th>
+                                    <th>Исполнитель</th>
+                                    <th>Участок</th>
+                                    <th>Оборудование</th>
+                                    <th>Узел</th>
+                                    <th>Примечания</th>
+                                    <th>Меры</th>
+                                    <th>Комментарии</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Данные будут подгружаться через JS -->
+                            </tbody>
+                        </table>
                     </div>
+</div>
+<!-- DataTables и jQuery -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Инициализация таблицы
+    var table = $('#solutionsTable').DataTable({
+        ajax: {
+            url: 'http://localhost:8080/api/summary-of-solutions',
+            dataSrc: ''
+        },
+        columns: [
+            { data: 'id' },
+            { data: 'date' },
+            { data: 'executor' },
+            { data: 'region' },
+            { data: 'equipment' },
+            { data: 'node' },
+            { data: 'notes_on_the_operation_of_the_equipment' },
+            { data: 'measures_taken' },
+            { data: 'comments' }
+        ],
+        language: {
+            search: "Поиск:",
+            lengthMenu: "Показать _MENU_ записей",
+            info: "Показано с _START_ по _END_ из _TOTAL_ записей",
+            paginate: { first: "Первая", last: "Последняя", next: "Следующая", previous: "Предыдущая" }
+        }
+    });
+
+    // Добавление записи
+    $('#addSolutionForm').on('submit', function(e) {
+        e.preventDefault();
+        var data = {
+            date: $('#date').val(),
+            executor: $('#executor').val(),
+            region: $('#region').val(),
+            equipment: $('#equipment').val(),
+            node: $('#node').val(),
+            notes_on_the_operation_of_the_equipment: $('#notes_on_the_operation_of_the_equipment').val(),
+            measures_taken: $('#measures_taken').val(),
+            comments: $('#comments').val()
+        };
+        $.ajax({
+            url: 'http://localhost:8080/api/summary-of-solutions',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function() {
+                table.ajax.reload();
+                $('#addSolutionForm')[0].reset();
+            },
+            error: function() {
+                alert('Ошибка при добавлении записи');
+            }
+        });
+    });
+});
+</script>
                 </div>
             </div>
         </div> 
