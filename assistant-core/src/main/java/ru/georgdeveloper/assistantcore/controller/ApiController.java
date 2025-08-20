@@ -94,10 +94,10 @@ public class ApiController {
         File file = new File(ResourcePaths.REPAIR_INSTRUCTIONS_JSON_ABS);
         List<Map<String, String>> all;
         if (file.exists()) {
-            Map[] arr = mapper.readValue(file, Map[].class);
+            List<Map<String, String>> tempList = mapper.readValue(file, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, String>>>() {});
             all = new ArrayList<>();
-            for (Map m : arr) {
-                all.add(new LinkedHashMap<>((Map<String, String>) m));
+            for (Map<String, String> rawMap : tempList) {
+                all.add(new LinkedHashMap<>(rawMap));
             }
         } else {
             all = new ArrayList<>();

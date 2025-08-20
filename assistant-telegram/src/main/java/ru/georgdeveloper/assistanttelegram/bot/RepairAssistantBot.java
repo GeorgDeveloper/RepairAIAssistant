@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import java.util.Base64;
@@ -184,14 +183,6 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
         } catch (Exception e) {
             return Integer.toHexString(s.hashCode());
         }
-    }
-
-    // Простейшее экранирование для передачи в callback_data
-    private String escape(String s) {
-        return s.replace("::", "__").replace("|", "__");
-    }
-    private String unescape(String s) {
-        return s.replace("__", "::");
     }
     
     /**
