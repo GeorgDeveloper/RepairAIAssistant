@@ -1,3 +1,8 @@
+const link = document.createElement('link');
+link.rel = 'stylesheet';
+link.href = '/static/css/chat.css';
+document.head.appendChild(link);
+
 function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
@@ -7,7 +12,7 @@ function sendMessage() {
     addMessage('user', message);
     input.value = '';
     
-    fetch('/api/chat', {
+    fetch('http://localhost:8080/api/analyze', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -36,8 +41,13 @@ function addMessage(sender, text) {
 function showFeedbackButtons(request, response) {
     const feedbackDiv = document.getElementById('feedback-buttons');
     feedbackDiv.style.display = 'block';
+    feedbackDiv.style.alignItems = 'center';
     feedbackDiv.dataset.request = request;
     feedbackDiv.dataset.response = response;
+
+    // Apply bold and green styling to assistant feedback
+    feedbackDiv.style.fontWeight = 'bold';
+    feedbackDiv.style.color = 'green';
 }
 
 function hideFeedbackButtons() {
@@ -52,7 +62,7 @@ function sendFeedback(type) {
     const request = feedbackDiv.dataset.request;
     const response = feedbackDiv.dataset.response;
     if (type === 'correct') {
-        fetch('/api/chat/feedback', {
+        fetch('http://localhost:8080/api/feedback', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ request, response })

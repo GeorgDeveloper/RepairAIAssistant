@@ -1,0 +1,19 @@
+/* Styling for chat messages */
+.message {
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    font-family: Arial, sans-serif;
+}
+
+.message.user {
+    background-color: #add8e6; /* Light blue background for user messages */
+    text-align: right;
+    font-weight: bold;
+}
+
+.message.assistant {
+    background-color: #90ee90; /* Light green background for assistant messages */
+    text-align: left;
+    font-weight: bold;
+}

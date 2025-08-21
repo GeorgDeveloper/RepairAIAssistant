@@ -175,6 +175,18 @@ body {
     justify-self: end;
 }
 
+.user_logo {
+    margin-left: auto;
+    /* Это сдвинет элемент вправо */
+    padding-right: 20px;
+    /* Отступ 20px справа */
+    display: flex;
+    align-items: center;
+    /* Выравнивание по вертикали по центру */
+    height: 100%;
+    /* Занимает всю высоту родителя */
+}
+
 .total-content {
     display: flex;
     flex-direction: column;
