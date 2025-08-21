@@ -1,15 +1,16 @@
-/* ====== Чат: растяжка окна переписки ====== */
-.container_dialog {
-    max-width: calc(100% - 270px); /* Учитываем ширину сайдбара + отступы */
-    margin-top: 10px;
+.container {
     margin-bottom: 20px;
-    margin-left: 270px; /* Отступ от сайдбара */
-    padding: 0 20px 20px 0; /* Отступы справа и снизу */
+}
+
+.container_dialog {
+    max-width: 100%;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 0;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 100px);
-    position: relative;
+    height: calc(100vh - 140px);
 }
 
 #chat-container {
@@ -22,7 +23,7 @@
     box-sizing: border-box;
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 #messages {
@@ -40,15 +41,18 @@
     display: flex;
     gap: 8px;
 }
+
 .input-group input[type="text"] {
     flex: 1 1 auto;
     padding: 10px;
     font-size: 1em;
 }
+
 .input-group button {
     padding: 10px 20px;
     font-size: 1em;
 }
+
 /* ====== Общие стили для всех страниц ====== */
 body {
     font-family: Arial, sans-serif;
@@ -58,25 +62,36 @@ body {
     min-height: 100vh;
 }
 
-.header{
-    height: 80px;
-    width: 100%;
+.header {
+    height: 60px;
+    width: calc(100% - 250px);
+    /* Учитываем сайдбар и отступы */
     background: #f0f0f0;
     position: fixed;
-    left: 250px; /* Начинается после сайдбара */
-    right: 0;    /* Растягивается до края */
+    left: 250px;
+    right: 20px;
+    /* Отступ справа */
     top: 0;
     display: flex;
     align-items: center;
-    
+    z-index: 100;
+    padding: 0 20px;
+    /* Отступы внутри хедера */
+    box-sizing: border-box;
 }
 
-.main-content{
-    width: 100%;
-    height: 100%;
+/* Обновляем отступ для основного контента */
+.main-content {
+    width: calc(100% - 10px);
+    /* Ширина минус сайдбар и отступы */
     margin-top: 60px;
+    /* margin-left: 250px; Отступ от сайдбара */
     margin-right: 20px;
-    padding: 20px;
+    /* Отступ справа */
+    padding: 0 20px;
+    /* Отступы слева и справа внутри */
+    box-sizing: border-box;
+    height: calc(100vh - 60px);
 }
 
 .sidebar {
@@ -131,15 +146,15 @@ body {
     width: 200px;
     background-color: #fff;
     border: 1px solid #ddd;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
     list-style-type: none;
     padding: 0;
     margin: 0;
     z-index: 100;
 }
 
-.has-submenu:hover > .submenu,
-.submenu .has-submenu:hover > .submenu {
+.has-submenu:hover>.submenu,
+.submenu .has-submenu:hover>.submenu {
     display: block;
 }
 
@@ -154,9 +169,11 @@ body {
     border-bottom: none;
 }
 
-.user{
+.user {
     padding-left: 20px;
     padding-top: 30px;
+    display: flex;
+    justify-self: end;
 }
 
 .total-content {
@@ -168,8 +185,9 @@ body {
 /* ====== Таблицы и контейнеры ====== */
 
 .chats-container {
-width: 100%;
+    width: 100%;
 }
+
 .current-status {
     width: 100%;
     border-collapse: collapse;
@@ -177,7 +195,7 @@ width: 100%;
     font-family: Arial, sans-serif;
 }
 
-.current-status th, 
+.current-status th,
 .current-status td {
     border: 1px solid #ddd;
     padding: 10px;
@@ -234,10 +252,10 @@ width: 100%;
     border-collapse: collapse;
     font-family: Arial, sans-serif;
     margin-bottom: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.machine-table th, 
+.machine-table th,
 .machine-table td {
     border: 1px solid #dddddd;
     text-align: left;
@@ -280,16 +298,27 @@ width: 100%;
 }
 
 @media (max-width: 900px) {
-    .container_dialog {
+    .main-content {
+        width: calc(100% - 40px);
+        /* Полная ширина минус отступы */
         margin-left: 0;
-        max-width: 100%;
-        padding: 0 15px 15px 15px;
-        height: calc(100vh - 80px);
+        margin-right: 20px;
+        padding: 0 20px;
     }
-    
-    .sidebar.open ~ .total-content .container_dialog {
+
+    .header {
+        width: calc(100% - 40px);
+        left: 0;
+        right: 20px;
+    }
+
+    .container_dialog {
+        height: calc(100vh - 120px);
+    }
+
+    .sidebar.open~.total-content .main-content {
         margin-left: 250px;
-        max-width: calc(100% - 250px);
+        width: calc(100% - 250px - 40px);
     }
 }
 
@@ -345,15 +374,15 @@ width: 100%;
     width: 200px;
     background-color: #fff;
     border: 1px solid #ddd;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
     list-style-type: none;
     padding: 0;
     margin: 0;
     z-index: 100;
 }
 
-.has-submenu:hover > .submenu,
-.submenu .has-submenu:hover > .submenu {
+.has-submenu:hover>.submenu,
+.submenu .has-submenu:hover>.submenu {
     display: block;
 }
 
@@ -374,7 +403,8 @@ width: 100%;
 }
 
 /* ====== Исправление переполнения ====== */
-html, body {
+html,
+body {
     overflow-x: hidden;
 }
 
