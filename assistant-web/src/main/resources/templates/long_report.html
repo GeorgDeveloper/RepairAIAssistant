@@ -121,9 +121,15 @@
                             <form id="addSolutionForm" style="display: flex; flex-direction: column; gap: 8px;">
                                 <input type="text" id="date" name="date" placeholder="Дата" required>
                                 <input type="text" id="executor" name="executor" placeholder="Исполнитель" required>
-                                <input type="text" id="region" name="region" placeholder="Участок" required>
-                                <input type="text" id="equipment" name="equipment" placeholder="Оборудование" required>
-                                <input type="text" id="node" name="node" placeholder="Узел" required>
+                                <select id="region" name="region" required>
+                                    <option value="">Выберите участок</option>
+                                </select>
+                                <select id="equipment" name="equipment" required>
+                                    <option value="">Выберите оборудование</option>
+                                </select>
+                                <select id="node" name="node" required>
+                                    <option value="">Выберите узел</option>
+                                </select>
                                 <textarea id="notes_on_the_operation_of_the_equipment"
                                     name="notes_on_the_operation_of_the_equipment"
                                     placeholder="Примечания по работе оборудования" required
@@ -299,6 +305,50 @@
                                 alert('Ошибка при добавлении записи');
                             }
                         });
+                    });
+
+                    // Загрузка данных для списка регионов
+                    fetch('http://localhost:8080/api/regions')
+                        .then(response => response.json())
+                        .then(data => {
+                            const regionSelect = $('#region');
+                            data.forEach(region => {
+                                regionSelect.append(new Option(region.name_region, region.id));
+                            });
+                        });
+
+                    // Обновление списка оборудования при выборе региона
+                    $('#region').on('change', function () {
+                        const regionId = $(this).val();
+                        const equipmentSelect = $('#equipment');
+                        equipmentSelect.empty().append(new Option('Выберите оборудование', ''));
+
+                        if (regionId) {
+                            fetch(`http://localhost:8080/api/equipment?regionId=${regionId}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    data.forEach(equipment => {
+                                        equipmentSelect.append(new Option(equipment.name_equipment, equipment.id));
+                                    });
+                                });
+                        }
+                    });
+
+                    // Обновление списка узлов при выборе оборудования
+                    $('#equipment').on('change', function () {
+                        const equipmentId = $(this).val();
+                        const nodeSelect = $('#node');
+                        nodeSelect.empty().append(new Option('Выберите узел', ''));
+
+                        if (equipmentId) {
+                            fetch(`http://localhost:8080/api/nodes?equipmentId=${equipmentId}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    data.forEach(node => {
+                                        nodeSelect.append(new Option(node.name_node, node.id));
+                                    });
+                                });
+                        }
                     });
                 });
             </script>

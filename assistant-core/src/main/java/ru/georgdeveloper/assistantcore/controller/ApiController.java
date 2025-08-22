@@ -10,6 +10,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import ru.georgdeveloper.assistantcore.config.ResourcePaths;
+import org.springframework.jdbc.core.JdbcTemplate;
+import ru.georgdeveloper.assistantcore.repository.MonitoringRepository;
 
 /**
  * REST API контроллер для взаимодействия между модулями системы.
@@ -31,6 +33,13 @@ public class ApiController {
     // Основной сервис для обработки запросов с интеграцией AI и БД
     @Autowired
     private RepairAssistantService repairAssistantService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    // Использование MonitoringRepository вместо прямых SQL-запросов
+    @Autowired
+    private MonitoringRepository monitoringRepository;
     
     /**
      * Основной эндпоинт для анализа запросов пользователей.
@@ -118,5 +127,22 @@ public class ApiController {
     public static class FeedbackDto {
         public String request;
         public String response;
+    }
+
+    // Добавлены эндпоинты для получения данных из таблиц region, equipment и node
+
+    @GetMapping("/regions")
+    public List<Map<String, Object>> getRegions() {
+        return monitoringRepository.getRegions();
+    }
+
+    @GetMapping("/equipment")
+    public List<Map<String, Object>> getEquipment(@RequestParam int regionId) {
+        return monitoringRepository.getEquipment(regionId);
+    }
+
+    @GetMapping("/nodes")
+    public List<Map<String, Object>> getNodes(@RequestParam int equipmentId) {
+        return monitoringRepository.getNodes(equipmentId);
     }
 }
