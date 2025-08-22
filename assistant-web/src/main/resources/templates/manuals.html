@@ -1,32 +1,139 @@
 <!DOCTYPE html>
-<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мануалы - Repair AI Assistant</title>
-    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+    <title>Repair AI Assistant</title>
+    <link rel="stylesheet" href="static/styles/style.css">
 </head>
+
 <body>
-    <div class="container">
-        <h1>Мануалы</h1>
-        
-        <div class="upload-section">
-            <h2>Загрузить мануал</h2>
-            <form th:action="@{/manuals/upload}" method="post" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".pdf" required>
-                <button type="submit">Загрузить</button>
-            </form>
+
+    <div class="sidebar">
+        <div class="logo">
+            <img src="static/images/LogoPirelli3.png" alt="Логотип компании">
         </div>
-        
-        <div class="search-section">
-            <h2>Поиск мануалов</h2>
-            <input type="text" id="searchInput" placeholder="Поиск по мануалам...">
-            <button onclick="searchManuals()">Найти</button>
-            <div id="searchResults"></div>
+
+        <div class="nav-container">
+            <ul class="nav-menu">
+                <li class="has-submenu">
+                    <a href="#">Дашборд</a>
+                </li>
+                <li class="has-submenu">
+                    <a href="/">Главная</a>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Поломки</a>
+                    <ul class="submenu">
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Заявки на поломки</a></li>
+                        <li><a href="#">Топ причин</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Топ поломок</a>
+                            <ul class="submenu">
+                                <li><a href="#">Визуализация</a></li>
+                                <li><a href="#">Таблица</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="#">Лучшая смена</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">ППР</a>
+                    <ul class="submenu">
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Отчеты</a></li>
+                        <li><a href="#">Tag-PM-BD</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Диагностика</a>
+                    <ul class="submenu">
+                        <li><a href="#">Отчёты</a></li>
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Пневматика</a></li>
+                        <li><a href="#">Чек-листы</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Графики</a>
+                            <ul class="submenu">
+                                <li class="has-submenu">
+                                    <a href="#">Год</a>
+                                    <ul class="submenu">
+                                        <li class="has-submenu">
+                                            <a href="#">2025</a>
+                                            <ul class="submenu">
+                                                <li><a href="#">Январь</a></li>
+                                                <li><a href="#">Февраль</a></li>
+                                                <li><a href="#">Март</a></li>
+                                                <li><a href="#">Апрель</a></li>
+                                                <li><a href="#">Май</a></li>
+                                                <li><a href="#">Июнь</a></li>
+                                                <li><a href="#">Июль</a></li>
+                                                <li><a href="#">Август</a></li>
+                                                <li><a href="#">Сентябрь</a></li>
+                                                <li><a href="#">Октябрь</a></li>
+                                                <li><a href="#">Ноябрь</a></li>
+                                                <li><a href="#">Декабрь</a></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Ассистент KVANT AI </a>
+                    <ul class="submenu">
+                        <li><a href="/chat">Чат с ассистентом</a></li>
+                        <li><a href="/long_report">Отчеты</a></li>
+                        <li><a href="/manuals">Мануалы</a></li>
+                    </ul>
+                </li>
+            </ul>
         </div>
-        
-        <a href="/" class="btn">На главную</a>
     </div>
-    <script th:src="@{/static/js/manuals.js}"></script>
+
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="container">
+                <h1>Мануалы</h1>
+
+                <div class="upload-section">
+                    <h2>Загрузить мануал</h2>
+                    <form th:action="@{/manuals/upload}" method="post" enctype="multipart/form-data">
+                        <input type="file" name="file" accept=".pdf" required>
+                        <button type="submit">Загрузить</button>
+                    </form>
+                </div>
+
+                <div class="search-section">
+                    <h2>Поиск мануалов</h2>
+                    <input type="text" id="searchInput" placeholder="Поиск по мануалам...">
+                    <button onclick="searchManuals()">Найти</button>
+                    <div id="searchResults"></div>
+                </div>
+
+                <a href="/" class="btn">На главную</a>
+            </div>
+            <script th:src="@{/static/js/manuals.js}"></script>
+
+        </div>
+    </div>
+    </div>
+    </div>
+
+
+
+
 </body>
+
 </html>

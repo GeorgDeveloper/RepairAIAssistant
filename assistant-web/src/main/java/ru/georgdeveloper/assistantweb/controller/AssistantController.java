@@ -21,6 +21,11 @@ public class AssistantController {
     public String chat() {
         return "chat";
     }
+
+    @GetMapping("/long_report")
+    public String longReport() {
+        return "long_report";
+    }
     
     @PostMapping("/api/chat")
     @ResponseBody

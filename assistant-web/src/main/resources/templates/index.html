@@ -1,25 +1,27 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Repair AI Assistant</title>
     <link rel="stylesheet" href="static/styles/style.css">
 </head>
+
 <body>
-    
+
     <div class="sidebar">
         <div class="logo">
             <img src="static/images/LogoPirelli3.png" alt="Логотип компании">
         </div>
-        
+
         <div class="nav-container">
             <ul class="nav-menu">
                 <li class="has-submenu">
                     <a href="#">Дашборд</a>
                 </li>
                 <li class="has-submenu">
-                    <a href="main_page.html">Главная</a>
+                    <a href="/">Главная</a>
                 </li>
                 <li class="has-submenu">
                     <a href="#">Поломки</a>
@@ -85,7 +87,7 @@
                     <a href="#">Ассистент KVANT AI </a>
                     <ul class="submenu">
                         <li><a href="/chat">Чат с ассистентом</a></li>
-                        <li><a href="/">Отчеты</a></li>
+                        <li><a href="/long_report">Отчеты</a></li>
                         <li><a href="/manuals">Мануалы</a></li>
                     </ul>
                 </li>
@@ -93,151 +95,24 @@
         </div>
     </div>
 
-    
+
     <div class="total-content">
         <div class="header">
-                <div class="user_logo">
-                    Привет, <a href="#">user</a> 
-                </div>
-        </div>
-            
-        <div class="main-content">
-                <div class="container">
-                    <div class="content">
-                        <h1>Отчеты о сложных ремонтах</h1>
-                        <!-- Add a button to open the modal -->
-<button id="openModalButton" class="showSolutionForm" style="margin-bottom: 20px;">Добавить запись</button> <!-- Added margin-bottom to create space above the table -->
-
-<!-- Modal structure -->
-<div id="addSolutionModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;"> <!-- Added z-index for proper stacking -->
-    <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; width: 50%; max-width: 600px;">
-        <h2>Добавить запись</h2>
-        <form id="addSolutionForm" style="display: flex; flex-direction: column; gap: 8px;">
-            <input type="text" id="date" name="date" placeholder="Дата" required>
-            <input type="text" id="executor" name="executor" placeholder="Исполнитель" required>
-            <input type="text" id="region" name="region" placeholder="Участок" required>
-            <input type="text" id="equipment" name="equipment" placeholder="Оборудование" required>
-            <input type="text" id="node" name="node" placeholder="Узел" required>
-            <textarea id="notes_on_the_operation_of_the_equipment" name="notes_on_the_operation_of_the_equipment" placeholder="Примечания по работе оборудования" required style="height: 100px; overflow-y: auto;"></textarea>
-            <textarea id="measures_taken" name="measures_taken" placeholder="Принятые меры" required style="height: 100px; overflow-y: auto;"></textarea>
-            <textarea id="comments" name="comments" placeholder="Комментарии" required style="height: 100px; overflow-y: auto;"></textarea>
-            <button type="submit">Добавить</button>
-            <button type="button" id="closeModalButton">Закрыть</button>
-        </form>
-    </div>
-</div>
-
-<script>
-    // Ensure modal open and close functionality works
-    document.addEventListener('DOMContentLoaded', () => {
-        const modal = document.getElementById('addSolutionModal');
-        const openModalButton = document.getElementById('openModalButton');
-        const closeModalButton = document.getElementById('closeModalButton');
-
-        openModalButton.addEventListener('click', () => {
-            modal.style.display = 'flex';
-        });
-
-        closeModalButton.addEventListener('click', () => {
-            modal.style.display = 'none';
-        });
-
-        // Close modal when clicking outside the content
-        window.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    });
-</script>
-                        <table id="solutionsTable" class="display" style="width:100%">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Дата</th>
-                                    <th>Исполнитель</th>
-                                    <th>Участок</th>
-                                    <th>Оборудование</th>
-                                    <th>Узел</th>
-                                    <th>Примечания</th>
-                                    <th>Меры</th>
-                                    <th>Комментарии</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Данные будут подгружаться через JS -->
-                            </tbody>
-                        </table>
-                    </div>
-</div>
-<!-- DataTables и jQuery -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script>
-$(document).ready(function() {
-    // Инициализация таблицы
-    var table = $('#solutionsTable').DataTable({
-        ajax: {
-            url: 'http://localhost:8080/api/summary-of-solutions',
-            dataSrc: ''
-        },
-        columns: [
-            { data: 'id' },
-            { data: 'date' },
-            { data: 'executor' },
-            { data: 'region' },
-            { data: 'equipment' },
-            { data: 'node' },
-            { data: 'notes_on_the_operation_of_the_equipment' },
-            { data: 'measures_taken' },
-            { data: 'comments' }
-        ],
-        language: {
-            search: "Поиск:",
-            lengthMenu: "Показать _MENU_ записей",
-            info: "Показано с _START_ по _END_ из _TOTAL_ записей",
-            paginate: { first: "Первая", last: "Последняя", next: "Следующая", previous: "Предыдущая" }
-        }
-    });
-
-    // Добавление записи
-    $('#addSolutionForm').on('submit', function(e) {
-        e.preventDefault();
-        var data = {
-            date: $('#date').val(),
-            executor: $('#executor').val(),
-            region: $('#region').val(),
-            equipment: $('#equipment').val(),
-            node: $('#node').val(),
-            notes_on_the_operation_of_the_equipment: $('#notes_on_the_operation_of_the_equipment').val(),
-            measures_taken: $('#measures_taken').val(),
-            comments: $('#comments').val()
-        };
-        $.ajax({
-            url: 'http://localhost:8080/api/summary-of-solutions',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(data),
-            success: function() {
-                table.ajax.reload();
-                $('#addSolutionForm')[0].reset();
-                modal.style.display = 'none'; // Close the modal on success
-            },
-            error: function() {
-                alert('Ошибка при добавлении записи');
-            }
-        });
-    });
-});
-</script>
-                </div>
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
             </div>
-        </div> 
-    </div>   
+        </div>
 
-    
+        <div class="main-content">
 
-    
+        </div>
+    </div>
+    </div>
+    </div>
+
+
+
+
 </body>
+
 </html>
