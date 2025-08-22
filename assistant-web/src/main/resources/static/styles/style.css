@@ -393,6 +393,14 @@ body {
     border-bottom: none;
 }
 
+.showSolutionForm {
+    border: none;
+    margin-bottom: 10 px !important;
+    padding: 10px 15px;
+    cursor: pointer;
+    justify-self: end;
+}
+
 .total-content {
     display: flex;
     flex-direction: column;
