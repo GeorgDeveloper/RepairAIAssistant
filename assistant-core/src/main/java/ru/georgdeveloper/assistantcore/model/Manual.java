@@ -11,8 +11,17 @@ public class Manual {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "region")
+    private String region;
+
+    @Column(name = "equipment")
+    private String equipment;
+
+    @Column(name = "node")
+    private String node;
     
-    @Column(nullable = false)
+    @Column(name = "deviceType")
     private String deviceType;
     
     @Column(columnDefinition = "TEXT")
@@ -20,4 +29,8 @@ public class Manual {
     
     @Column
     private String fileName;
+
+    @Lob
+    @Column(name = "files")
+    private byte[] files;
 }

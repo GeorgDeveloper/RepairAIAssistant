@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Repair AI Assistant</title>
     <link rel="stylesheet" href="static/styles/style.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
 </head>
 
 <body>
@@ -107,33 +110,113 @@
             <div class="container">
                 <h1>Мануалы</h1>
 
-                <div class="upload-section">
-                    <h2>Загрузить мануал</h2>
-                    <form th:action="@{/manuals/upload}" method="post" enctype="multipart/form-data">
-                        <input type="file" name="file" accept=".pdf" required>
-                        <button type="submit">Загрузить</button>
-                    </form>
-                </div>
+                <button id="openUploadModalButton" style="margin-bottom: 20px;">Добавить документ</button>
 
-                <div class="search-section">
-                    <h2>Поиск мануалов</h2>
-                    <input type="text" id="searchInput" placeholder="Поиск по мануалам...">
-                    <button onclick="searchManuals()">Найти</button>
-                    <div id="searchResults"></div>
-                </div>
-
-                <a href="/" class="btn">На главную</a>
+                <h1>Справочники</h1>
+                <table id="manualsTable" class="display" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Участок</th>
+                            <th>Оборудование</th>
+                            <th>Узел</th>
+                            <th>Тип документа</th>
+                            <th>Имя файла</th>
+                            <th>Комментарий</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rows will be dynamically populated -->
+                    </tbody>
+                </table>
             </div>
             <script th:src="@{/static/js/manuals.js}"></script>
+            <script>
+                $(document).ready(function() {
+                    $('#manualsTable').DataTable({
+                        ajax: {
+                            url: 'http://localhost:8080/manuals/all',
+                            dataSrc: '' // Updated to use the root of the JSON response
+                        },
+                        columns: [
+                            { data: 'id' },
+                            { data: 'region' },
+                            { data: 'equipment' },
+                            { data: 'node' },
+                            { data: 'deviceType' },
+                            {
+                                data: 'fileName',
+                                render: function(data, type, row) {
+                                    return `<a href='http://localhost:8080/manuals/download/${row.id}' target='_blank'>${data}</a>`;
+                                }
+                            },
+                            { data: 'content' }
+                        ],
+                        language: {
+                            search: "Поиск:",
+                            lengthMenu: "Показать _MENU_ записей",
+                            info: "Показано с _START_ по _END_ из _TOTAL_ записей",
+                            paginate: { first: "Первая", last: "Последняя", next: "Следующая", previous: "Предыдущая" }
+                        }
+                    });
+                });
+            </script>
 
         </div>
     </div>
     </div>
     </div>
 
+    <!-- Modal for uploading manuals -->
+    <div id="uploadManualModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
+        <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; width: 50%; max-width: 600px;">
+            <h2>Загрузить мануал</h2>
+            <form id="uploadManualForm" enctype="multipart/form-data">
+                <input type="text" name="region" placeholder="Регион" required>
+                <input type="text" name="equipment" placeholder="Оборудование" required>
+                <input type="text" name="node" placeholder="Узел" required>
+                <input type="text" name="deviceType" placeholder="Тип устройства" required>
+                <input type="text" name="content" placeholder="Содержание" required>
+                <input type="file" name="file" accept=".txt,.pdf" required>
+                <button type="submit">Загрузить</button>
+                <button type="button" id="closeUploadModal">Закрыть</button>
+            </form>
+        </div>
+    </div>
 
+    <script>
+        // Modal open and close functionality
+        const uploadModal = document.getElementById('uploadManualModal');
+        const openUploadModalButton = document.getElementById('openUploadModalButton');
+        const closeUploadModalButton = document.getElementById('closeUploadModal');
 
+        openUploadModalButton.addEventListener('click', () => {
+            uploadModal.style.display = 'flex';
+        });
 
+        closeUploadModalButton.addEventListener('click', () => {
+            uploadModal.style.display = 'none';
+        });
+
+        // Handle form submission
+        document.getElementById('uploadManualForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+
+            fetch('http://localhost:8080/manuals/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                alert(data);
+                uploadModal.style.display = 'none';
+            })
+            .catch(error => {
+                alert('Ошибка при загрузке: ' + error.message);
+            });
+        });
+    </script>
 </body>
 
 </html>

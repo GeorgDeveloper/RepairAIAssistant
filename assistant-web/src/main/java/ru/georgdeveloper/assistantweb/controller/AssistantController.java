@@ -26,7 +26,12 @@ public class AssistantController {
     public String longReport() {
         return "long_report";
     }
-    
+
+    @GetMapping("/manuals")
+    public String manuals() {
+        return "manuals";
+    }
+
     @PostMapping("/api/chat")
     @ResponseBody
     public String processChat(@RequestBody String message) {
