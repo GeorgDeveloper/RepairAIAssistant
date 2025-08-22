@@ -34,6 +34,15 @@ function addMessage(sender, text) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender}`;
     messageDiv.textContent = `${sender === 'user' ? 'Вы' : 'Ассистент'}: ${text}`;
+
+    // Apply specific styles for system messages
+    if (sender === 'system') {
+        messageDiv.style.fontWeight = 'bold';
+        messageDiv.style.backgroundColor = '#90ee90'; // Light green background
+        messageDiv.style.padding = '10px';
+        messageDiv.style.borderRadius = '5px';
+    }
+
     messages.appendChild(messageDiv);
     messages.scrollTop = messages.scrollHeight;
 }
@@ -45,9 +54,6 @@ function showFeedbackButtons(request, response) {
     feedbackDiv.dataset.request = request;
     feedbackDiv.dataset.response = response;
 
-    // Apply bold and green styling to assistant feedback
-    feedbackDiv.style.fontWeight = 'bold';
-    feedbackDiv.style.color = 'green';
 }
 
 function hideFeedbackButtons() {
@@ -59,6 +65,9 @@ function hideFeedbackButtons() {
 
 function sendFeedback(type) {
     const feedbackDiv = document.getElementById('feedback-buttons');
+    feedbackDiv.style.fontWeight = 'bold';
+    feedbackDiv.style.color = 'green';
+    
     const request = feedbackDiv.dataset.request;
     const response = feedbackDiv.dataset.response;
     if (type === 'correct') {
@@ -67,7 +76,7 @@ function sendFeedback(type) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ request, response })
         }).then(() => {
-            addMessage('system', 'Спасибо за подтверждение! Пара добавлена для обучения.');
+            addMessage('system', 'Спасибо за подтверждение! Пара добавлена для обучения. Можете задать новый вопрос.');
             hideFeedbackButtons();
         });
     } else if (type === 'regenerate') {
@@ -93,5 +102,15 @@ function sendMessageAgain(message) {
     })
     .catch(error => {
         addMessage('assistant', 'Ошибка: ' + error.message);
+    });
+}
+
+// Add event listener for Enter key
+const messageInput = document.getElementById('messageInput');
+if (messageInput) {
+    messageInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
     });
 }
