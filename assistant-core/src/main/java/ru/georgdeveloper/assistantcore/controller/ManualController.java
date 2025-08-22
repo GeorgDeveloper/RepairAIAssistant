@@ -57,9 +57,14 @@ public class ManualController {
 
     @GetMapping("/download/{id}")
     @ResponseBody
-    public ResponseEntity<byte[]> downloadManual(@PathVariable Long id) {
+    public ResponseEntity<?> downloadManual(@PathVariable Long id) {
         return manualRepository.findById(id)
                 .map(manual -> {
+                    if (manual.getFiles() == null || manual.getFiles().length == 0) {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body("Файл не найден");
+                    }
+
                     HttpHeaders headers = new HttpHeaders();
                     String encodedFileName;
                     try {
@@ -71,12 +76,8 @@ public class ManualController {
                             .filename(encodedFileName, StandardCharsets.UTF_8)
                             .build());
                     headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-                    if (manual.getFiles().length == 0) {
-                        return new ResponseEntity<>(new byte[0], headers, HttpStatus.NOT_FOUND);                       
-                    } else {
-                        return new ResponseEntity<>(manual.getFiles(), headers, HttpStatus.OK);
-                    }
+                    return new ResponseEntity<>(manual.getFiles(), headers, HttpStatus.OK);
                 })
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Файл не найден"));
     }
 }

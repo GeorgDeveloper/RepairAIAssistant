@@ -171,7 +171,7 @@
     <div id="uploadManualModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
         <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; width: 50%; max-width: 600px;">
             <h2>Загрузить мануал</h2>
-            <form id="uploadManualForm" enctype="multipart/form-data">
+            <form id="uploadManualForm" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 10px;">
                 <input type="text" name="region" placeholder="Регион" required>
                 <input type="text" name="equipment" placeholder="Оборудование" required>
                 <input type="text" name="node" placeholder="Узел" required>
@@ -201,6 +201,51 @@
         // Handle form submission
         document.getElementById('uploadManualForm').addEventListener('submit', function(event) {
             event.preventDefault();
+
+            const region = document.querySelector('input[name="region"]');
+            const equipment = document.querySelector('input[name="equipment"]');
+            const node = document.querySelector('input[name="node"]');
+            const deviceType = document.querySelector('input[name="deviceType"]');
+            const content = document.querySelector('input[name="content"]');
+            const file = document.querySelector('input[name="file"]');
+
+            if (!region.value.trim()) {
+                alert('Поле "Регион" обязательно для заполнения.');
+                region.focus();
+                return;
+            }
+
+            if (!equipment.value.trim()) {
+                alert('Поле "Оборудование" обязательно для заполнения.');
+                equipment.focus();
+                return;
+            }
+
+            if (!node.value.trim()) {
+                alert('Поле "Узел" обязательно для заполнения.');
+                node.focus();
+                return;
+            }
+
+            if (!deviceType.value.trim()) {
+                alert('Поле "Тип устройства" обязательно для заполнения.');
+                deviceType.focus();
+                return;
+            }
+
+            if (!content.value.trim()) {
+                alert('Поле "Содержание" обязательно для заполнения.');
+                content.focus();
+                return;
+            }
+
+            if (!file.files.length) {
+                alert('Необходимо выбрать файл для загрузки.');
+                file.focus();
+                return;
+            }
+
+            // If all validations pass, submit the form
             const formData = new FormData(this);
 
             fetch('http://localhost:8080/manuals/upload', {
@@ -210,11 +255,79 @@
             .then(response => response.text())
             .then(data => {
                 alert(data);
-                uploadModal.style.display = 'none';
+                document.getElementById('uploadManualModal').style.display = 'none';
             })
             .catch(error => {
                 alert('Ошибка при загрузке: ' + error.message);
             });
+        });
+
+        // Function to handle file download
+        function downloadFile(fileId) {
+            fetch(`http://localhost:8080/manuals/download/${fileId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Файл не найден');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'file'; // Replace with actual filename if available
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => {
+                    showErrorModal(error.message);
+                });
+        }
+
+        // Function to show error modal
+        function showErrorModal(message) {
+            const errorModal = document.getElementById('errorModal');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorModal.style.display = 'flex';
+        }
+
+        // Create modal for error messages
+        document.addEventListener('DOMContentLoaded', () => {
+            const errorModal = document.createElement('div');
+            errorModal.id = 'errorModal';
+            errorModal.style.display = 'none';
+            errorModal.style.position = 'fixed';
+            errorModal.style.top = '0';
+            errorModal.style.left = '0';
+            errorModal.style.width = '100%';
+            errorModal.style.height = '100%';
+            errorModal.style.background = 'rgba(0, 0, 0, 0.8)';
+            errorModal.style.justifyContent = 'center';
+            errorModal.style.alignItems = 'center';
+            errorModal.style.zIndex = '1000';
+
+            const modalContent = document.createElement('div');
+            modalContent.style.background = 'white';
+            modalContent.style.padding = '20px';
+            modalContent.style.borderRadius = '8px';
+            modalContent.style.textAlign = 'center';
+
+            const errorMessage = document.createElement('p');
+            errorMessage.id = 'errorMessage';
+            modalContent.appendChild(errorMessage);
+
+            const closeModalButton = document.createElement('button');
+            closeModalButton.textContent = 'Закрыть';
+            closeModalButton.onclick = () => {
+                errorModal.style.display = 'none';
+            };
+            modalContent.appendChild(closeModalButton);
+
+            errorModal.appendChild(modalContent);
+            document.body.appendChild(errorModal);
         });
     </script>
 </body>
