@@ -215,25 +215,85 @@
                     // Добавление записи
                     $('#addSolutionForm').on('submit', function (e) {
                         e.preventDefault();
-                        var data = {
-                            date: $('#date').val(),
-                            executor: $('#executor').val(),
-                            region: $('#region').val(),
-                            equipment: $('#equipment').val(),
-                            node: $('#node').val(),
-                            notes_on_the_operation_of_the_equipment: $('#notes_on_the_operation_of_the_equipment').val(),
-                            measures_taken: $('#measures_taken').val(),
-                            comments: $('#comments').val()
+
+                        const date = $('#date');
+                        const executor = $('#executor');
+                        const region = $('#region');
+                        const equipment = $('#equipment');
+                        const node = $('#node');
+                        const notes = $('#notes_on_the_operation_of_the_equipment');
+                        const measures = $('#measures_taken');
+                        const comments = $('#comments');
+
+                        if (!date.val().trim()) {
+                            alert('Поле "Дата" обязательно для заполнения.');
+                            date.focus();
+                            return;
+                        }
+
+                        if (!executor.val().trim()) {
+                            alert('Поле "Исполнитель" обязательно для заполнения.');
+                            executor.focus();
+                            return;
+                        }
+
+                        if (!region.val().trim()) {
+                            alert('Поле "Участок" обязательно для заполнения.');
+                            region.focus();
+                            return;
+                        }
+
+                        if (!equipment.val().trim()) {
+                            alert('Поле "Оборудование" обязательно для заполнения.');
+                            equipment.focus();
+                            return;
+                        }
+
+                        if (!node.val().trim()) {
+                            alert('Поле "Узел" обязательно для заполнения.');
+                            node.focus();
+                            return;
+                        }
+
+                        if (!notes.val().trim()) {
+                            alert('Поле "Примечания по работе оборудования" обязательно для заполнения.');
+                            notes.focus();
+                            return;
+                        }
+
+                        if (!measures.val().trim()) {
+                            alert('Поле "Принятые меры" обязательно для заполнения.');
+                            measures.focus();
+                            return;
+                        }
+
+                        if (!comments.val().trim()) {
+                            alert('Поле "Комментарии" обязательно для заполнения.');
+                            comments.focus();
+                            return;
+                        }
+
+                        // Если все проверки пройдены, отправляем данные
+                        const data = {
+                            date: date.val(),
+                            executor: executor.val(),
+                            region: region.val(),
+                            equipment: equipment.val(),
+                            node: node.val(),
+                            notes_on_the_operation_of_the_equipment: notes.val(),
+                            measures_taken: measures.val(),
+                            comments: comments.val()
                         };
+
                         $.ajax({
                             url: 'http://localhost:8080/api/summary-of-solutions',
                             method: 'POST',
                             contentType: 'application/json',
                             data: JSON.stringify(data),
                             success: function () {
-                                table.ajax.reload();
+                                $('#solutionsTable').DataTable().ajax.reload();
                                 $('#addSolutionForm')[0].reset();
-                                modal.style.display = 'none'; // Close the modal on success
+                                $('#addSolutionModal').hide(); // Закрытие модального окна
                             },
                             error: function () {
                                 alert('Ошибка при добавлении записи');
@@ -246,10 +306,6 @@
     </div>
     </div>
     </div>
-
-
-
-
 </body>
 
 </html>

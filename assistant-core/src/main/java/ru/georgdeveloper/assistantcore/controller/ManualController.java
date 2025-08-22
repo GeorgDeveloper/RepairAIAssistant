@@ -49,9 +49,9 @@ public class ManualController {
             manual.setFileName(file.getOriginalFilename());
             manual.setFiles(file.getBytes()); // Save file content in 'files' column
             manualRepository.save(manual);
-            return "Manual uploaded successfully";
+            return "Документ успешно загружен";
         } catch (Exception e) {
-            return "Error uploading manual: " + e.getMessage();
+            return "Ошибка загрузки документа: " + e.getMessage();
         }
     }
 
@@ -62,6 +62,7 @@ public class ManualController {
                 .map(manual -> {
                     if (manual.getFiles() == null || manual.getFiles().length == 0) {
                         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .contentType(MediaType.APPLICATION_JSON)
                                 .body("Файл не найден");
                     }
 
@@ -78,6 +79,8 @@ public class ManualController {
                     headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
                     return new ResponseEntity<>(manual.getFiles(), headers, HttpStatus.OK);
                 })
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Файл не найден"));
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("Файл не найден"));
     }
 }

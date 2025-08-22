@@ -108,11 +108,11 @@
 
         <div class="main-content">
             <div class="container">
-                <h1>Мануалы</h1>
+                <h1>Справочники и чертежи</h1>
 
                 <button id="openUploadModalButton" style="margin-bottom: 20px;">Добавить документ</button>
 
-                <h1>Справочники</h1>
+                <h1></h1>
                 <table id="manualsTable" class="display" style="width:100%">
                     <thead>
                         <tr>
@@ -130,144 +130,169 @@
                     </tbody>
                 </table>
             </div>
-            <script th:src="@{/static/js/manuals.js}"></script>
-            <script>
-                $(document).ready(function() {
-                    $('#manualsTable').DataTable({
-                        ajax: {
-                            url: 'http://localhost:8080/manuals/all',
-                            dataSrc: '' // Updated to use the root of the JSON response
-                        },
-                        columns: [
-                            { data: 'id' },
-                            { data: 'region' },
-                            { data: 'equipment' },
-                            { data: 'node' },
-                            { data: 'deviceType' },
-                            {
-                                data: 'fileName',
-                                render: function(data, type, row) {
-                                    return `<a href='http://localhost:8080/manuals/download/${row.id}' target='_blank'>${data}</a>`;
-                                }
-                            },
-                            { data: 'content' }
-                        ],
-                        language: {
-                            search: "Поиск:",
-                            lengthMenu: "Показать _MENU_ записей",
-                            info: "Показано с _START_ по _END_ из _TOTAL_ записей",
-                            paginate: { first: "Первая", last: "Последняя", next: "Следующая", previous: "Предыдущая" }
-                        }
-                    });
-                });
-            </script>
 
-        </div>
-    </div>
-    </div>
-    </div>
+            <!-- Modal for uploading manuals -->
+            <div id="uploadManualModal" class="modal"
+                style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
+                <div class="modal-content"
+                    style="background: white; padding: 20px; border-radius: 8px; width: 50%; max-width: 600px;">
+                    <h2>Загрузить мануал</h2>
+                    <form id="uploadManualForm" enctype="multipart/form-data"
+                        style="display: flex; flex-direction: column; gap: 10px;">
+                        <input type="text" name="region" placeholder="Участок" required>
+                        <input type="text" name="equipment" placeholder="Оборудование" required>
+                        <input type="text" name="node" placeholder="Узел" required>
+                        <input type="text" name="deviceType" placeholder="Тип документа" required>
+                        <input type="text" name="content" placeholder="Содержание" required>
+                        <input type="file" name="file" accept=".txt,.pdf,.exls" required>
+                        <button type="submit">Загрузить</button>
+                        <button type="button" id="closeUploadModal">Закрыть</button>
+                    </form>
+                </div>
+            </div>
 
-    <!-- Modal for uploading manuals -->
-    <div id="uploadManualModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
-        <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; width: 50%; max-width: 600px;">
-            <h2>Загрузить мануал</h2>
-            <form id="uploadManualForm" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 10px;">
-                <input type="text" name="region" placeholder="Регион" required>
-                <input type="text" name="equipment" placeholder="Оборудование" required>
-                <input type="text" name="node" placeholder="Узел" required>
-                <input type="text" name="deviceType" placeholder="Тип устройства" required>
-                <input type="text" name="content" placeholder="Содержание" required>
-                <input type="file" name="file" accept=".txt,.pdf" required>
-                <button type="submit">Загрузить</button>
-                <button type="button" id="closeUploadModal">Закрыть</button>
-            </form>
+            <!-- Error Modal -->
+            <div id="errorModal"
+                style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
+                <div style="background: white; padding: 20px; border-radius: 8px; text-align: center;">
+                    <p id="errorMessage"></p>
+                    <button onclick="document.getElementById('errorModal').style.display = 'none'">Закрыть</button>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <script>
-        // Modal open and close functionality
-        const uploadModal = document.getElementById('uploadManualModal');
-        const openUploadModalButton = document.getElementById('openUploadModalButton');
-        const closeUploadModalButton = document.getElementById('closeUploadModal');
+        $(document).ready(function () {
+            $('#manualsTable').DataTable({
+                ajax: {
+                    url: 'http://localhost:8080/manuals/all',
+                    dataSrc: ''
+                },
+                columns: [
+                    { data: 'id' },
+                    { data: 'region' },
+                    { data: 'equipment' },
+                    { data: 'node' },
+                    { data: 'deviceType' },
+                    {
+                        data: 'fileName',
+                        render: function (data, type, row) {
+                            return `<a href='#' class='download-link' data-id='${row.id}'>${data}</a>`;
+                        }
+                    },
+                    { data: 'content' }
+                ],
+                language: {
+                    search: "Поиск:",
+                    lengthMenu: "Показать _MENU_ записей",
+                    info: "Показано с _START_ по _END_ из _TOTAL_ записей",
+                    paginate: { first: "Первая", last: "Последняя", next: "Следующая", previous: "Предыдущая" }
+                }
+            });
 
-        openUploadModalButton.addEventListener('click', () => {
-            uploadModal.style.display = 'flex';
-        });
+            // Обработчик для скачивания файлов
+            $(document).on('click', '.download-link', function (e) {
+                e.preventDefault();
+                const fileId = $(this).data('id');
+                const fileName = $(this).text();
+                downloadFile(fileId, fileName);
+            });
 
-        closeUploadModalButton.addEventListener('click', () => {
-            uploadModal.style.display = 'none';
-        });
+            // Modal open and close functionality
+            const uploadModal = document.getElementById('uploadManualModal');
+            const openUploadModalButton = document.getElementById('openUploadModalButton');
+            const closeUploadModalButton = document.getElementById('closeUploadModal');
 
-        // Handle form submission
-        document.getElementById('uploadManualForm').addEventListener('submit', function(event) {
-            event.preventDefault();
+            openUploadModalButton.addEventListener('click', () => {
+                uploadModal.style.display = 'flex';
+            });
 
-            const region = document.querySelector('input[name="region"]');
-            const equipment = document.querySelector('input[name="equipment"]');
-            const node = document.querySelector('input[name="node"]');
-            const deviceType = document.querySelector('input[name="deviceType"]');
-            const content = document.querySelector('input[name="content"]');
-            const file = document.querySelector('input[name="file"]');
+            closeUploadModalButton.addEventListener('click', () => {
+                uploadModal.style.display = 'none';
+            });
 
-            if (!region.value.trim()) {
-                alert('Поле "Регион" обязательно для заполнения.');
-                region.focus();
-                return;
-            }
+            // Handle form submission
+            document.getElementById('uploadManualForm').addEventListener('submit', function (event) {
+                event.preventDefault();
 
-            if (!equipment.value.trim()) {
-                alert('Поле "Оборудование" обязательно для заполнения.');
-                equipment.focus();
-                return;
-            }
+                const region = document.querySelector('input[name="region"]');
+                const equipment = document.querySelector('input[name="equipment"]');
+                const node = document.querySelector('input[name="node"]');
+                const deviceType = document.querySelector('input[name="deviceType"]');
+                const content = document.querySelector('input[name="content"]');
+                const file = document.querySelector('input[name="file"]');
 
-            if (!node.value.trim()) {
-                alert('Поле "Узел" обязательно для заполнения.');
-                node.focus();
-                return;
-            }
+                if (!region.value.trim()) {
+                    alert('Поле "Регион" обязательно для заполнения.');
+                    region.focus();
+                    return;
+                }
 
-            if (!deviceType.value.trim()) {
-                alert('Поле "Тип устройства" обязательно для заполнения.');
-                deviceType.focus();
-                return;
-            }
+                if (!equipment.value.trim()) {
+                    alert('Поле "Оборудование" обязательно для заполнения.');
+                    equipment.focus();
+                    return;
+                }
 
-            if (!content.value.trim()) {
-                alert('Поле "Содержание" обязательно для заполнения.');
-                content.focus();
-                return;
-            }
+                if (!node.value.trim()) {
+                    alert('Поле "Узел" обязательно для заполнения.');
+                    node.focus();
+                    return;
+                }
 
-            if (!file.files.length) {
-                alert('Необходимо выбрать файл для загрузки.');
-                file.focus();
-                return;
-            }
+                if (!deviceType.value.trim()) {
+                    alert('Поле "Тип устройства" обязательно для заполнения.');
+                    deviceType.focus();
+                    return;
+                }
 
-            // If all validations pass, submit the form
-            const formData = new FormData(this);
+                if (!content.value.trim()) {
+                    alert('Поле "Содержание" обязательно для заполнения.');
+                    content.focus();
+                    return;
+                }
 
-            fetch('http://localhost:8080/manuals/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text())
-            .then(data => {
-                alert(data);
-                document.getElementById('uploadManualModal').style.display = 'none';
-            })
-            .catch(error => {
-                alert('Ошибка при загрузке: ' + error.message);
+                if (!file.files.length) {
+                    alert('Необходимо выбрать файл для загрузки.');
+                    file.focus();
+                    return;
+                }
+
+                // If all validations pass, submit the form
+                const formData = new FormData(this);
+
+                fetch('http://localhost:8080/manuals/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.text())
+                    .then(data => {
+                        alert(data);
+                        document.getElementById('uploadManualModal').style.display = 'none';
+                        // Reload the table to show new data
+                        $('#manualsTable').DataTable().ajax.reload();
+                    })
+                    .catch(error => {
+                        alert('Ошибка при загрузке: ' + error.message);
+                    });
             });
         });
 
-        // Function to handle file download
-        function downloadFile(fileId) {
+        // Функция для скачивания файла
+        function downloadFile(fileId, fileName) {
             fetch(`http://localhost:8080/manuals/download/${fileId}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Файл не найден');
+                        return response.text().then(errorText => {
+                            try {
+                                const errorData = JSON.parse(errorText);
+                                throw new Error(errorData.error || 'Файл не найден');
+                            } catch {
+                                throw new Error(errorText || 'Файл не найден');
+                            }
+                        });
                     }
                     return response.blob();
                 })
@@ -276,59 +301,24 @@
                     const a = document.createElement('a');
                     a.style.display = 'none';
                     a.href = url;
-                    a.download = 'file'; // Replace with actual filename if available
+                    a.download = fileName || 'file';
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
                 })
                 .catch(error => {
                     showErrorModal(error.message);
                 });
         }
 
-        // Function to show error modal
+        // Функция для отображения модального окна с ошибкой
         function showErrorModal(message) {
             const errorModal = document.getElementById('errorModal');
             const errorMessage = document.getElementById('errorMessage');
             errorMessage.textContent = message;
             errorModal.style.display = 'flex';
         }
-
-        // Create modal for error messages
-        document.addEventListener('DOMContentLoaded', () => {
-            const errorModal = document.createElement('div');
-            errorModal.id = 'errorModal';
-            errorModal.style.display = 'none';
-            errorModal.style.position = 'fixed';
-            errorModal.style.top = '0';
-            errorModal.style.left = '0';
-            errorModal.style.width = '100%';
-            errorModal.style.height = '100%';
-            errorModal.style.background = 'rgba(0, 0, 0, 0.8)';
-            errorModal.style.justifyContent = 'center';
-            errorModal.style.alignItems = 'center';
-            errorModal.style.zIndex = '1000';
-
-            const modalContent = document.createElement('div');
-            modalContent.style.background = 'white';
-            modalContent.style.padding = '20px';
-            modalContent.style.borderRadius = '8px';
-            modalContent.style.textAlign = 'center';
-
-            const errorMessage = document.createElement('p');
-            errorMessage.id = 'errorMessage';
-            modalContent.appendChild(errorMessage);
-
-            const closeModalButton = document.createElement('button');
-            closeModalButton.textContent = 'Закрыть';
-            closeModalButton.onclick = () => {
-                errorModal.style.display = 'none';
-            };
-            modalContent.appendChild(closeModalButton);
-
-            errorModal.appendChild(modalContent);
-            document.body.appendChild(errorModal);
-        });
     </script>
 </body>
 
