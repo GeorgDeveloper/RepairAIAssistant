@@ -16,6 +16,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/manuals")
@@ -82,5 +83,29 @@ public class ManualController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .contentType(MediaType.APPLICATION_JSON)
                         .body("Файл не найден"));
+    }
+
+        // Добавлены эндпоинты для удаления и обновления записей
+
+
+    // Для совместимости с фронтендом
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteManual(@PathVariable Long id) {
+        manualRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/manuals/{id}")
+    public ResponseEntity<Void> updateManual(@PathVariable int id, @RequestBody Map<String, Object> manual) {
+           
+        manualRepository.updateByParametr(
+            (long) id,
+            (String) manual.get("region"),
+            (String) manual.get("equipment"),
+            (String) manual.get("node"),
+            (String) manual.get("deviceType"),
+            (String) manual.get("content")
+        );
+        return ResponseEntity.noContent().build();
     }
 }

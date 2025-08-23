@@ -132,6 +132,7 @@
                 </table>
             </div>
 
+
             <!-- Modal for uploading manuals -->
             <div id="uploadManualModal" class="modal"
                 style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
@@ -154,6 +155,31 @@
                         <input type="file" name="file" accept=".txt,.pdf,.exls" required>
                         <button type="submit">Загрузить</button>
                         <button type="button" id="closeUploadModal">Закрыть</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal for editing manuals -->
+            <div id="editManualModal" class="modal"
+                style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
+                <div class="modal-content"
+                    style="background: white; padding: 20px; border-radius: 8px; width: 50%; max-width: 600px;">
+                    <h2>Редактировать мануал</h2>
+                    <form id="editManualForm" style="display: flex; flex-direction: column; gap: 10px;">
+                        <input type="hidden" id="editManualId" name="id">
+                        <select id="editRegion" name="region" required>
+                            <option value="">Выберите участок</option>
+                        </select>
+                        <select id="editEquipment" name="equipment" required>
+                            <option value="">Выберите оборудование</option>
+                        </select>
+                        <select id="editNode" name="node" required>
+                            <option value="">Выберите узел</option>
+                        </select>
+                        <input type="text" id="editDeviceType" name="deviceType" placeholder="Тип документа" required>
+                        <input type="text" id="editContent" name="content" placeholder="Содержание" required>
+                        <button type="submit">Сохранить</button>
+                        <button type="button" id="closeEditModal">Закрыть</button>
                     </form>
                 </div>
             </div>
@@ -344,7 +370,7 @@
                 const id = $(this).data('id');
                 if (confirm('Вы уверены, что хотите удалить эту запись?')) {
                     // Добавлены заголовки в запрос DELETE для manuals
-                    fetch(`http://localhost:8080/api/manuals/${id}`, {
+                    fetch(`http://localhost:8080/manuals/delete/${id}`, {
                         method: 'DELETE',
                         headers: {
                             'Content-Type': 'application/json',
@@ -358,8 +384,125 @@
 
             $(document).on('click', '.edit-button', function () {
                 const id = $(this).data('id');
-                // Логика для открытия модального окна редактирования и отправки данных на сервер
-                // ...
+                const table = $('#manualsTable').DataTable();
+                const rowData = table.row($(this).parents('tr')).data();
+                // Заполнить скрытое поле id
+                $('#editManualId').val(rowData.id);
+
+                // 1. Загрузить регионы
+                fetch('http://localhost:8080/api/regions')
+                    .then(response => response.json())
+                    .then(regions => {
+                        const regionSelect = $('#editRegion');
+                        regionSelect.empty().append(new Option('Выберите участок', ''));
+                        regions.forEach(region => {
+                            regionSelect.append(new Option(region.name_region, region.id));
+                        });
+                        // Установить выбранный регион
+                        regionSelect.val(rowData.region);
+
+                        // 2. Загрузить оборудование для выбранного региона
+                        if (rowData.region) {
+                            fetch(`http://localhost:8080/api/equipment?regionId=${rowData.region}`)
+                                .then(response => response.json())
+                                .then(equipments => {
+                                    const equipmentSelect = $('#editEquipment');
+                                    equipmentSelect.empty().append(new Option('Выберите оборудование', ''));
+                                    equipments.forEach(equipment => {
+                                        equipmentSelect.append(new Option(equipment.name_equipment, equipment.id));
+                                    });
+                                    equipmentSelect.val(rowData.equipment);
+
+                                    // 3. Загрузить узлы для выбранного оборудования
+                                    if (rowData.equipment) {
+                                        fetch(`http://localhost:8080/api/nodes?equipmentId=${rowData.equipment}`)
+                                            .then(response => response.json())
+                                            .then(nodes => {
+                                                const nodeSelect = $('#editNode');
+                                                nodeSelect.empty().append(new Option('Выберите узел', ''));
+                                                nodes.forEach(node => {
+                                                    nodeSelect.append(new Option(node.name_node, node.id));
+                                                });
+                                                nodeSelect.val(rowData.node);
+                                            });
+                                    } else {
+                                        $('#editNode').empty().append(new Option('Выберите узел', ''));
+                                    }
+                                });
+                        } else {
+                            $('#editEquipment').empty().append(new Option('Выберите оборудование', ''));
+                            $('#editNode').empty().append(new Option('Выберите узел', ''));
+                        }
+                    });
+
+                // Остальные поля
+                $('#editDeviceType').val(rowData.deviceType);
+                $('#editContent').val(rowData.content);
+                // Показать модальное окно
+                $('#editManualModal').css('display', 'flex');
+            });
+
+            // Каскадное обновление списков в модальном окне редактирования
+            $('#editRegion').on('change', function () {
+                const regionId = $(this).val();
+                const equipmentSelect = $('#editEquipment');
+                equipmentSelect.empty().append(new Option('Выберите оборудование', ''));
+                $('#editNode').empty().append(new Option('Выберите узел', ''));
+                if (regionId) {
+                    fetch(`http://localhost:8080/api/equipment?regionId=${regionId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            data.forEach(equipment => {
+                                equipmentSelect.append(new Option(equipment.name_equipment, equipment.id));
+                            });
+                        });
+                }
+            });
+            $('#editEquipment').on('change', function () {
+                const equipmentId = $(this).val();
+                const nodeSelect = $('#editNode');
+                nodeSelect.empty().append(new Option('Выберите узел', ''));
+                if (equipmentId) {
+                    fetch(`http://localhost:8080/api/nodes?equipmentId=${equipmentId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            data.forEach(node => {
+                                nodeSelect.append(new Option(node.name_node, node.id));
+                            });
+                        });
+                }
+            });
+
+            // Закрыть модальное окно редактирования
+            $('#closeEditModal').on('click', function () {
+                $('#editManualModal').css('display', 'none');
+            });
+
+            // Обработка отправки формы редактирования
+            $('#editManualForm').on('submit', function (event) {
+                event.preventDefault();
+                const id = $('#editManualId').val();
+                const manual = {
+                    region: $('#editRegion').val(),
+                    equipment: $('#editEquipment').val(),
+                    node: $('#editNode').val(),
+                    deviceType: $('#editDeviceType').val(),
+                    content: $('#editContent').val()
+                };
+                fetch(`http://localhost:8080/manuals/manuals/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(manual)
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка при обновлении');
+                    $('#editManualModal').css('display', 'none');
+                    $('#manualsTable').DataTable().ajax.reload();
+                })
+                .catch(error => alert(error.message));
             });
         });
 

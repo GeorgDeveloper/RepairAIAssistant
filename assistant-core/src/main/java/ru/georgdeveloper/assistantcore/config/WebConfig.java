@@ -30,7 +30,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS","UPDATE")
                 .allowedHeaders("*")
                 .allowCredentials(true);
-        registry.addMapping("/long_report/**") // Added mapping for manuals
+        registry.addMapping("/api/summary-of-solutions/**") // Added mapping for manuals
                 .allowedOrigins("http://localhost:8081")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS","UPDATE")
                 .allowedHeaders("*")

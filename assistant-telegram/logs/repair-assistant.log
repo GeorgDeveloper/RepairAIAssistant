@@ -1,8 +1,166 @@
-2025-08-19 10:02:40 [main] INFO  r.g.a.AssistantTelegramApplicationTests - Starting AssistantTelegramApplicationTests using Java 17.0.12 with PID 8228 (started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
-2025-08-19 10:02:40 [main] DEBUG r.g.a.AssistantTelegramApplicationTests - Running with Spring Boot v3.5.4, Spring v6.2.9
-2025-08-19 10:02:40 [main] INFO  r.g.a.AssistantTelegramApplicationTests - No active profile set, falling back to 1 default profile: "default"
-2025-08-19 10:02:42 [main] INFO  r.g.a.AssistantTelegramApplicationTests - Started AssistantTelegramApplicationTests in 2.098 seconds (process running for 2.986)
-2025-08-19 10:15:02 [main] INFO  r.g.a.AssistantTelegramApplicationTests - Starting AssistantTelegramApplicationTests using Java 17.0.12 with PID 13864 (started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
-2025-08-19 10:15:02 [main] DEBUG r.g.a.AssistantTelegramApplicationTests - Running with Spring Boot v3.5.4, Spring v6.2.9
-2025-08-19 10:15:02 [main] INFO  r.g.a.AssistantTelegramApplicationTests - No active profile set, falling back to 1 default profile: "default"
-2025-08-19 10:15:05 [main] INFO  r.g.a.AssistantTelegramApplicationTests - Started AssistantTelegramApplicationTests in 2.718 seconds (process running for 3.518)
+2025-08-23 18:37:00 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 14108 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 18:37:00 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 18:37:00 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 18:37:01 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 18:37:01 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 18:37:01 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 18:37:01 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 18:37:01 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 622 ms
+2025-08-23 18:37:02 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-08-23 18:37:02 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.58 seconds (process running for 2.792)
+2025-08-23 18:41:17 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 2224 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 18:41:17 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 18:41:17 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 18:41:17 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 18:41:17 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 18:41:17 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 18:41:18 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 18:41:18 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 637 ms
+2025-08-23 18:41:19 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-08-23 18:41:19 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.445 seconds (process running for 2.652)
+2025-08-23 18:43:56 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 11372 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 18:43:56 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 18:43:56 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 18:43:56 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 18:43:56 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 18:43:56 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 18:43:56 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 18:43:56 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 754 ms
+2025-08-23 18:43:58 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-08-23 18:43:58 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.763 seconds (process running for 2.977)
+2025-08-23 18:52:08 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 18020 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 18:52:08 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 18:52:08 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 18:52:09 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 18:52:09 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 18:52:09 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 18:52:09 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 18:52:09 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 650 ms
+2025-08-23 18:52:10 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'
+2025-08-23 18:52:10 [main] INFO  o.s.b.a.l.ConditionEvaluationReportLogger - 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2025-08-23 18:52:10 [main] ERROR o.s.b.d.LoggingFailureAnalysisReporter - 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 8082 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8082 or configure this application to listen on another port.
+
+2025-08-23 18:52:10 [js_mai_bot Telegram Connection] ERROR o.t.t.u.DefaultBotSession - Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException: Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseInternal(PartialBotApiMethod.java:54)
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseArray(PartialBotApiMethod.java:39)
+	at org.telegram.telegrambots.meta.api.methods.updates.GetUpdates.deserializeResponse(GetUpdates.java:83)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.getUpdatesFromServer(DefaultBotSession.java:258)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.run(DefaultBotSession.java:188)
+2025-08-23 18:52:14 [js_mai_bot Telegram Connection] ERROR o.t.t.u.DefaultBotSession - Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException: Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseInternal(PartialBotApiMethod.java:54)
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseArray(PartialBotApiMethod.java:39)
+	at org.telegram.telegrambots.meta.api.methods.updates.GetUpdates.deserializeResponse(GetUpdates.java:83)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.getUpdatesFromServer(DefaultBotSession.java:258)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.run(DefaultBotSession.java:188)
+2025-08-23 18:52:15 [js_mai_bot Telegram Connection] ERROR o.t.t.u.DefaultBotSession - Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException: Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseInternal(PartialBotApiMethod.java:54)
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseArray(PartialBotApiMethod.java:39)
+	at org.telegram.telegrambots.meta.api.methods.updates.GetUpdates.deserializeResponse(GetUpdates.java:83)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.getUpdatesFromServer(DefaultBotSession.java:258)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.run(DefaultBotSession.java:188)
+2025-08-23 18:52:19 [js_mai_bot Telegram Connection] ERROR o.t.t.u.DefaultBotSession - Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException: Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseInternal(PartialBotApiMethod.java:54)
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseArray(PartialBotApiMethod.java:39)
+	at org.telegram.telegrambots.meta.api.methods.updates.GetUpdates.deserializeResponse(GetUpdates.java:83)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.getUpdatesFromServer(DefaultBotSession.java:258)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.run(DefaultBotSession.java:188)
+2025-08-23 18:52:20 [js_mai_bot Telegram Connection] ERROR o.t.t.u.DefaultBotSession - Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException: Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseInternal(PartialBotApiMethod.java:54)
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseArray(PartialBotApiMethod.java:39)
+	at org.telegram.telegrambots.meta.api.methods.updates.GetUpdates.deserializeResponse(GetUpdates.java:83)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.getUpdatesFromServer(DefaultBotSession.java:258)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.run(DefaultBotSession.java:188)
+2025-08-23 18:52:23 [js_mai_bot Telegram Connection] ERROR o.t.t.u.DefaultBotSession - Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException: Error executing org.telegram.telegrambots.meta.api.methods.updates.GetUpdates query: [409] Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseInternal(PartialBotApiMethod.java:54)
+	at org.telegram.telegrambots.meta.api.methods.PartialBotApiMethod.deserializeResponseArray(PartialBotApiMethod.java:39)
+	at org.telegram.telegrambots.meta.api.methods.updates.GetUpdates.deserializeResponse(GetUpdates.java:83)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.getUpdatesFromServer(DefaultBotSession.java:258)
+	at org.telegram.telegrambots.updatesreceivers.DefaultBotSession$ReaderThread.run(DefaultBotSession.java:188)
+2025-08-23 18:52:59 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 1464 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 18:52:59 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 18:52:59 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 18:52:59 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 18:52:59 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 18:52:59 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 18:52:59 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 18:52:59 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 598 ms
+2025-08-23 18:53:01 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-08-23 18:53:01 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.23 seconds (process running for 2.451)
+2025-08-23 18:58:36 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 880 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 18:58:36 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 18:58:36 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 18:58:37 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 18:58:37 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 18:58:37 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 18:58:37 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 18:58:37 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 621 ms
+2025-08-23 18:58:38 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-08-23 18:58:38 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.646 seconds (process running for 2.871)
+2025-08-23 19:02:41 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 10008 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 19:02:41 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 19:02:41 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 19:02:42 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 19:02:42 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 19:02:42 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 19:02:42 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 19:02:42 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 613 ms
+2025-08-23 19:02:43 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-08-23 19:02:43 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.447 seconds (process running for 2.656)
+2025-08-23 19:08:13 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 14844 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 19:08:13 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 19:08:13 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 19:08:14 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 19:08:14 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 19:08:14 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 19:08:14 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 19:08:14 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 730 ms
+2025-08-23 19:08:48 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 7932 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 19:08:48 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 19:08:48 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 19:08:48 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 19:08:48 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 19:08:48 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 19:08:49 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 19:08:49 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 633 ms
+2025-08-23 19:08:50 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-08-23 19:08:50 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.325 seconds (process running for 2.528)
+2025-08-23 19:12:02 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 17728 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 19:12:02 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 19:12:02 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 19:12:02 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 19:12:03 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 19:12:03 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 19:12:03 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 19:12:03 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 641 ms
+2025-08-23 19:12:04 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-08-23 19:12:04 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.254 seconds (process running for 2.462)
+2025-08-23 19:14:33 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 13068 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-08-23 19:14:33 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-08-23 19:14:33 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-08-23 19:14:34 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-08-23 19:14:34 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-08-23 19:14:34 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-08-23 19:14:34 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-08-23 19:14:34 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 640 ms
+2025-08-23 19:14:36 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-08-23 19:14:36 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 3.227 seconds (process running for 3.43)

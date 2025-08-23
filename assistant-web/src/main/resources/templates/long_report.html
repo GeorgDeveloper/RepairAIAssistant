@@ -365,8 +365,8 @@
                     $(document).on('click', '.delete-button', function () {
                         const id = $(this).data('id');
                         if (confirm('Вы уверены, что хотите удалить эту запись?')) {
-                            // Добавлены заголовки в запрос DELETE для long_report
-                            fetch(`http://localhost:8080/api/long_report/${id}`, {
+                            // Добавлены заголовки в запрос DELETE для summary-of-solutions
+                            fetch(`http://localhost:8080/api/summary-of-solutions/${id}`, {
                                 method: 'DELETE',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -380,8 +380,61 @@
 
                     $(document).on('click', '.edit-button', function () {
                         const id = $(this).data('id');
-                        // Логика для открытия модального окна редактирования и отправки данных на сервер
-                        // ...
+
+                        // Получение текущих данных записи с сервера
+                        fetch(`http://localhost:8080/api/summary-of-solutions/${id}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                // Заполнение модального окна текущими данными
+                                $('#date').val(data.date);
+                                $('#executor').val(data.executor);
+                                $('#region').val(data.region).trigger('change');
+                                $('#equipment').val(data.equipment).trigger('change');
+                                $('#node').val(data.node);
+                                $('#notes_on_the_operation_of_the_equipment').val(data.notes_on_the_operation_of_the_equipment);
+                                $('#measures_taken').val(data.measures_taken);
+                                $('#comments').val(data.comments);
+
+                                // Показ модального окна
+                                $('#addSolutionModal').css('display', 'flex');
+
+                                // Изменение логики кнопки "Добавить" на "Сохранить"
+                                const submitButton = $('#addSolutionForm button[type="submit"]');
+                                submitButton.text('Сохранить');
+
+                                // Удаление предыдущего обработчика и добавление нового для обновления записи
+                                $('#addSolutionForm').off('submit').on('submit', function (e) {
+                                    e.preventDefault();
+
+                                    const updatedData = {
+                                        date: $('#date').val(),
+                                        executor: $('#executor').val(),
+                                        region: $('#region').val(),
+                                        equipment: $('#equipment').val(),
+                                        node: $('#node').val(),
+                                        notes_on_the_operation_of_the_equipment: $('#notes_on_the_operation_of_the_equipment').val(),
+                                        measures_taken: $('#measures_taken').val(),
+                                        comments: $('#comments').val()
+                                    };
+
+                                    // Отправка PUT-запроса на сервер
+                                    fetch(`http://localhost:8080/api/summary-of-solutions/${id}`, {
+                                        method: 'PUT',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify(updatedData)
+                                    })
+                                    .then(() => {
+                                        $('#solutionsTable').DataTable().ajax.reload(); // Обновление таблицы
+                                        $('#addSolutionModal').hide(); // Закрытие модального окна
+                                        $('#addSolutionForm')[0].reset(); // Очистка формы
+                                        submitButton.text('Добавить'); // Возврат текста кнопки
+                                    })
+                                    .catch(error => alert('Ошибка при обновлении записи: ' + error.message));
+                                });
+                            })
+                            .catch(error => alert('Ошибка при загрузке данных для редактирования: ' + error.message));
                     });
                 });
             </script>
