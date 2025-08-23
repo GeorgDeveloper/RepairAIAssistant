@@ -179,6 +179,7 @@
                                 <th>Примечания</th>
                                 <th>Меры</th>
                                 <th>Комментарии</th>
+                                <th>Действия</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -208,7 +209,16 @@
                             { data: 'node' },
                             { data: 'notes_on_the_operation_of_the_equipment' },
                             { data: 'measures_taken' },
-                            { data: 'comments' }
+                            { data: 'comments' },
+                            {
+                                data: null,
+                                render: function (data, type, row) {
+                                    return `
+                                        <button class='edit-button' data-id='${row.id}'>Редактировать</button>
+                                        <button class='delete-button' data-id='${row.id}'>Удалить</button>
+                                    `;
+                                }
+                            }
                         ],
                         language: {
                             search: "Поиск:",
@@ -349,6 +359,29 @@
                                     });
                                 });
                         }
+                    });
+
+                    // Редактирование и удаление записей
+                    $(document).on('click', '.delete-button', function () {
+                        const id = $(this).data('id');
+                        if (confirm('Вы уверены, что хотите удалить эту запись?')) {
+                            // Добавлены заголовки в запрос DELETE для long_report
+                            fetch(`http://localhost:8080/api/long_report/${id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
+                                }
+                            })
+                            .then(() => $('#solutionsTable').DataTable().ajax.reload())
+                            .catch(error => alert('Ошибка при удалении: ' + error.message));
+                        }
+                    });
+
+                    $(document).on('click', '.edit-button', function () {
+                        const id = $(this).data('id');
+                        // Логика для открытия модального окна редактирования и отправки данных на сервер
+                        // ...
                     });
                 });
             </script>

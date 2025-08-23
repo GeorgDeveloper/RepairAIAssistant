@@ -12,6 +12,7 @@ import java.util.*;
 import ru.georgdeveloper.assistantcore.config.ResourcePaths;
 import org.springframework.jdbc.core.JdbcTemplate;
 import ru.georgdeveloper.assistantcore.repository.MonitoringRepository;
+import org.springframework.http.ResponseEntity;
 
 /**
  * REST API контроллер для взаимодействия между модулями системы.
@@ -144,5 +145,44 @@ public class ApiController {
     @GetMapping("/nodes")
     public List<Map<String, Object>> getNodes(@RequestParam int equipmentId) {
         return monitoringRepository.getNodes(equipmentId);
+    }
+
+    // Добавлены эндпоинты для удаления и обновления записей
+
+    @DeleteMapping("/manuals/{id}")
+    public ResponseEntity<Void> deleteManual(@PathVariable int id) {
+        System.out.println("Удаление записи из manuals с ID: " + id);
+        Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM manuals WHERE id = ?", Integer.class, id);
+        System.out.println("Количество записей с ID " + id + ": " + count);
+        
+        int rowsAffected = jdbcTemplate.update("DELETE FROM manuals WHERE id = ?", id);
+        System.out.println("Количество удаленных строк: " + rowsAffected);
+        
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/manuals/{id}")
+    public ResponseEntity<Void> updateManual(@PathVariable int id, @RequestBody Map<String, Object> manual) {
+        jdbcTemplate.update(
+            "UPDATE manuals SET region = ?, equipment = ?, node = ?, deviceType = ?, content = ? WHERE id = ?",
+            manual.get("region"), manual.get("equipment"), manual.get("node"), manual.get("deviceType"), manual.get("content"), id
+        );
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/long_report/{id}")
+    public ResponseEntity<Void> deleteLongReport(@PathVariable int id) {
+        System.out.println("Удаление записи из summary_of_solutions с ID: " + id);
+        jdbcTemplate.update("DELETE FROM summary_of_solutions WHERE id = ?", id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/long_report/{id}")
+    public ResponseEntity<Void> updateLongReport(@PathVariable int id, @RequestBody Map<String, Object> report) {
+        jdbcTemplate.update(
+            "UPDATE summary_of_solutions SET date = ?, executor = ?, region = ?, equipment = ?, node = ?, notes = ?, measures = ?, comments = ? WHERE id = ?",
+            report.get("date"), report.get("executor"), report.get("region"), report.get("equipment"), report.get("node"), report.get("notes"), report.get("measures"), report.get("comments"), id
+        );
+        return ResponseEntity.noContent().build();
     }
 }
