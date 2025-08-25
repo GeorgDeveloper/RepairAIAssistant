@@ -228,6 +228,8 @@
                         }
                     });
 
+                    table.order([0, 'desc']).draw();
+
                     // Добавление записи
                     $('#addSolutionForm').on('submit', function (e) {
                         e.preventDefault();
@@ -293,9 +295,9 @@
                         const data = {
                             date: date.val(),
                             executor: executor.val(),
-                            region: region.val(),
-                            equipment: equipment.val(),
-                            node: node.val(),
+                            region: $('#region option:selected').text(), // Получаем текст выбранного option
+                            equipment: $('#equipment option:selected').text(), // Получаем текст выбранного option
+                            node: $('#node option:selected').text(), // Получаем текст выбранного option
                             notes_on_the_operation_of_the_equipment: notes.val(),
                             measures_taken: measures.val(),
                             comments: comments.val()
@@ -373,8 +375,8 @@
                                     'Accept': 'application/json'
                                 }
                             })
-                            .then(() => $('#solutionsTable').DataTable().ajax.reload())
-                            .catch(error => alert('Ошибка при удалении: ' + error.message));
+                                .then(() => $('#solutionsTable').DataTable().ajax.reload())
+                                .catch(error => alert('Ошибка при удалении: ' + error.message));
                         }
                     });
 
@@ -409,9 +411,9 @@
                                     const updatedData = {
                                         date: $('#date').val(),
                                         executor: $('#executor').val(),
-                                        region: $('#region').val(),
-                                        equipment: $('#equipment').val(),
-                                        node: $('#node').val(),
+                                        region: $('#region option:selected').text(), // Получаем текст выбранного option
+                                        equipment: $('#equipment option:selected').text(), // Получаем текст выбранного option
+                                        node: $('#node option:selected').text(), // Получаем текст выбранного option
                                         notes_on_the_operation_of_the_equipment: $('#notes_on_the_operation_of_the_equipment').val(),
                                         measures_taken: $('#measures_taken').val(),
                                         comments: $('#comments').val()
@@ -425,13 +427,13 @@
                                         },
                                         body: JSON.stringify(updatedData)
                                     })
-                                    .then(() => {
-                                        $('#solutionsTable').DataTable().ajax.reload(); // Обновление таблицы
-                                        $('#addSolutionModal').hide(); // Закрытие модального окна
-                                        $('#addSolutionForm')[0].reset(); // Очистка формы
-                                        submitButton.text('Добавить'); // Возврат текста кнопки
-                                    })
-                                    .catch(error => alert('Ошибка при обновлении записи: ' + error.message));
+                                        .then(() => {
+                                            $('#solutionsTable').DataTable().ajax.reload(); // Обновление таблицы
+                                            $('#addSolutionModal').hide(); // Закрытие модального окна
+                                            $('#addSolutionForm')[0].reset(); // Очистка формы
+                                            submitButton.text('Добавить'); // Возврат текста кнопки
+                                        })
+                                        .catch(error => alert('Ошибка при обновлении записи: ' + error.message));
                                 });
                             })
                             .catch(error => alert('Ошибка при загрузке данных для редактирования: ' + error.message));

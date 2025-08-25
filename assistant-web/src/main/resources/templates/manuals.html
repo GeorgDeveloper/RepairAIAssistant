@@ -198,7 +198,7 @@
 
     <script>
         $(document).ready(function () {
-            $('#manualsTable').DataTable({
+           var table = $('#manualsTable').DataTable({
                 ajax: {
                     url: 'http://localhost:8080/manuals/all',
                     dataSrc: ''
@@ -233,6 +233,8 @@
                     paginate: { first: "Первая", last: "Последняя", next: "Следующая", previous: "Предыдущая" }
                 }
             });
+
+            table.order([0, 'desc']).draw();
 
             // Обработчик для скачивания файлов
             $(document).on('click', '.download-link', function (e) {
@@ -302,8 +304,20 @@
                     return;
                 }
 
-                // If all validations pass, submit the form
-                const formData = new FormData(this);
+                // Получаем текстовые названия вместо ID
+                const regionText = $('#region option:selected').text();
+                const equipmentText = $('#equipment option:selected').text();
+                const nodeText = $('#node option:selected').text();
+
+                // Создаем FormData и добавляем параметры по отдельности
+                const formData = new FormData();
+                formData.append('file', file.files[0]);
+                formData.append('region', regionText); // Отправляем текст, а не значение
+                formData.append('equipment', equipmentText); // Отправляем текст, а не значение
+                formData.append('node', nodeText); // Отправляем текст, а не значение
+                formData.append('deviceType', deviceType.value);
+                formData.append('content', content.value);
+
 
                 fetch('http://localhost:8080/manuals/upload', {
                     method: 'POST',
@@ -377,8 +391,8 @@
                             'Accept': 'application/json'
                         }
                     })
-                    .then(() => $('#manualsTable').DataTable().ajax.reload())
-                    .catch(error => alert('Ошибка при удалении: ' + error.message));
+                        .then(() => $('#manualsTable').DataTable().ajax.reload())
+                        .catch(error => alert('Ошибка при удалении: ' + error.message));
                 }
             });
 
@@ -483,9 +497,9 @@
                 event.preventDefault();
                 const id = $('#editManualId').val();
                 const manual = {
-                    region: $('#editRegion').val(),
-                    equipment: $('#editEquipment').val(),
-                    node: $('#editNode').val(),
+                    region: $('#editRegion option:selected').text(),
+                    equipment: $('#editEquipment option:selected').text(),
+                    node: $('#editNode option:selected').text(),
                     deviceType: $('#editDeviceType').val(),
                     content: $('#editContent').val()
                 };
@@ -497,12 +511,12 @@
                     },
                     body: JSON.stringify(manual)
                 })
-                .then(response => {
-                    if (!response.ok) throw new Error('Ошибка при обновлении');
-                    $('#editManualModal').css('display', 'none');
-                    $('#manualsTable').DataTable().ajax.reload();
-                })
-                .catch(error => alert(error.message));
+                    .then(response => {
+                        if (!response.ok) throw new Error('Ошибка при обновлении');
+                        $('#editManualModal').css('display', 'none');
+                        $('#manualsTable').DataTable().ajax.reload();
+                    })
+                    .catch(error => alert(error.message));
             });
         });
 
