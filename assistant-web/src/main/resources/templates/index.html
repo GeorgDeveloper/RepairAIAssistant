@@ -120,7 +120,7 @@
                     <div class="col">
                         <div class="table-container">
                             <div class="chart-container">
-                                <h3>Текущие показатели</h3>
+                                <!-- <h3>Текущие показатели</h3> -->
                                 <div id="metricsTable"></div>
                             </div>
                         </div>
@@ -190,6 +190,16 @@
             );
         }
 
+        // Функция для определения цвета точки
+        function getColorForPoint(value, type) {
+            if (type === "breakDown" && value > 2) {
+                return "#dc3545"; // Красный для breakDown > 2%
+            } else if (type === "availability" && value < 97) {
+                return "#dc3545"; // Красный для availability < 97%
+            }
+            return "#007bff"; // Синий по умолчанию
+        }
+
         // Функция для создания графика
         function createChart(containerId, chartId, title, dataPoints, chartType) {
             console.log(`Создание графика ${title} с данными:`, dataPoints);
@@ -201,28 +211,32 @@
                 console.warn('Нет данных для графика:', title);
                 document.querySelector(chartId).innerHTML =
                     `<div style="text-align: center; padding-top: 50px; color: #677;">
-                    <h3>${title}</h3>
-                    <p>Нет данных для отображения</p>
-                </div>`;
+                <h3>${title}</h3>
+                <p>Нет данных для отображения</p>
+            </div>`;
                 return;
             }
 
-            // Определяем цвет для каждого столбца в зависимости от типа графика
-            const coloredDataPoints = filteredData.map(point => {
-                let color = "#007bff"; // Синий по умолчанию
-
-                if (chartType === "breakDown" && point.y > 2) {
-                    color = "#dc3545"; // Красный для breakDown > 2%
-                } else if (chartType === "availability" && point.y < 97) {
-                    color = "#dc3545"; // Красный для availability < 97%
+            // Убедимся, что все даты уникальны и отсортированы
+            const uniqueDataMap = new Map();
+            filteredData.forEach(point => {
+                if (point.label && point.y !== null && point.y !== undefined) {
+                    uniqueDataMap.set(point.label, point.y);
                 }
-
-                return {
-                    label: point.label,
-                    y: point.y,
-                    color: color
-                };
             });
+
+            // Преобразуем обратно в массив и сортируем по дате
+            const uniqueDataPoints = Array.from(uniqueDataMap.entries())
+                .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+                .map(([label, y]) => ({ label, y }));
+
+            console.log('Уникальные отсортированные данные:', uniqueDataPoints);
+
+            const coloredDataPoints = uniqueDataPoints.map(point => ({
+                label: point.label,
+                y: point.y,
+                color: getColorForPoint(point.y, chartType)
+            }));
 
             const options = {
                 animationEnabled: true,
@@ -231,7 +245,9 @@
                 },
                 axisX: {
                     labelAngle: -45,
-                    interval: 2
+                    interval: 2,
+                    labelAutoFit: true,
+                    labelMaxWidth: 80
                 },
                 axisY: {
                     suffix: "%"
@@ -261,27 +277,26 @@
                 return;
             }
 
-
             // Дата предыдущих суток
             const currentDate = new Date();
-            const prevDate = new Date(currentDate.getTime() - 24*60*60*1000);
+            const prevDate = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000);
             const prevDay = prevDate.toLocaleDateString('ru-RU');
             const currentMonth = currentDate.toLocaleDateString('ru-RU', { month: 'long' });
 
             let tableHTML = `
-                <table class="metrics-table">
-                    <thead>
-                        <tr>
-                            <th>Показатель</th>
-                            <th>Цель</th>
-                            <th>${currentMonth}</th>
-                            <th>${prevDay}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+            <table class="metrics-table">
+                <thead>
+                    <tr>
+                        <th>Показатель</th>
+                        <th>Цель</th>
+                        <th>${currentMonth}</th>
+                        <th>${prevDay}</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
 
-            // Добавляем данные для каждого раздела ("Завод" только один раз, в конце)
+            // Добавляем данные для каждого раздела
             const sections = [
                 { name: 'Резиносмешение', prefix: 'report_new_mixing_area' },
                 { name: 'Сборка 1', prefix: 'report_semifinishing_area' },
@@ -292,38 +307,38 @@
                 { name: 'Завод', prefix: 'report_plant' }
             ];
 
-
             sections.forEach(section => {
                 // Проверка наличия данных (0.0 — не подсвечивать)
                 const bdMonth = metricsData[`${section.prefix}_bd_month`];
                 const bdToday = metricsData[`${section.prefix}_bd_today`];
                 const avMonth = metricsData[`${section.prefix}_availability_month`];
                 const avToday = metricsData[`${section.prefix}_availability_today`];
+
                 tableHTML += `
-                    <tr class="section-header">
-                        <td colspan="4">${section.name}</td>
-                    </tr>
-                    <tr>
-                        <td>BD</td>
-                        <td>2%</td>
-                        <td class="${bdMonth === 0 ? '' : (bdMonth <= 2 ? 'target-met' : 'target-not-met')}">
-                            ${bdMonth !== null && bdMonth !== undefined ? bdMonth.toFixed(2) + '%' : 'N/A'}
-                        </td>
-                        <td class="${bdToday === 0 ? '' : (bdToday <= 2 ? 'target-met' : 'target-not-met')}">
-                            ${bdToday !== null && bdToday !== undefined ? bdToday.toFixed(2) + '%' : 'N/A'}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Доступность</td>
-                        <td>97%</td>
-                        <td class="${avMonth === 0 ? '' : (avMonth >= 97 ? 'target-met' : 'target-not-met')}">
-                            ${avMonth !== null && avMonth !== undefined ? avMonth.toFixed(2) + '%' : 'N/A'}
-                        </td>
-                        <td class="${avToday === 0 ? '' : (avToday >= 97 ? 'target-met' : 'target-not-met')}">
-                            ${avToday !== null && avToday !== undefined ? avToday.toFixed(2) + '%' : 'N/A'}
-                        </td>
-                    </tr>
-                `;
+                <tr class="section-header">
+                    <td colspan="4">${section.name}</td>
+                </tr>
+                <tr>
+                    <td>BD</td>
+                    <td>2%</td>
+                    <td class="${bdMonth === 0 ? '' : (bdMonth <= 2 ? 'target-met' : 'target-not-met')}">
+                        ${bdMonth !== null && bdMonth !== undefined ? bdMonth.toFixed(2) + '%' : 'N/A'}
+                    </td>
+                    <td class="${bdToday === 0 ? '' : (bdToday <= 2 ? 'target-met' : 'target-not-met')}">
+                        ${bdToday !== null && bdToday !== undefined ? bdToday.toFixed(2) + '%' : 'N/A'}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Доступность</td>
+                    <td>97%</td>
+                    <td class="${avMonth === 0 ? '' : (avMonth >= 97 ? 'target-met' : 'target-not-met')}">
+                        ${avMonth !== null && avMonth !== undefined ? avMonth.toFixed(2) + '%' : 'N/A'}
+                    </td>
+                    <td class="${avToday === 0 ? '' : (avToday >= 97 ? 'target-met' : 'target-not-met')}">
+                        ${avToday !== null && avToday !== undefined ? avToday.toFixed(2) + '%' : 'N/A'}
+                    </td>
+                </tr>
+            `;
             });
 
             tableHTML += '</tbody></table>';

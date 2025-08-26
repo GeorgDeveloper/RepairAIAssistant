@@ -244,12 +244,14 @@ body {
 }
 
 
+
 .table-container {
     width: 100%;
-    max-height: 370px;
+    max-height: 380px;
     overflow-y: auto;
     overflow-x: hidden;
     box-sizing: border-box;
+    display: block;
 }
 
 .metrics-table {
@@ -258,13 +260,58 @@ body {
     table-layout: fixed;
     word-break: break-word;
     background: #fff;
-    font-size: 15px;
+    font-size: 13px;
     margin-bottom: 0;
 }
 
-.metrics-table th, .metrics-table td {
+.metrics-table th,
+.metrics-table td {
     border: 1px solid #dee2e6;
-    padding: 8px 10px;
+    padding: 3px 3px;
+    /* уменьшенные отступы */
+    text-align: center;
+}
+
+.metrics-table th {
+    background: #f8f9fa;
+    font-weight: bold;
+}
+
+.metrics-table tr.section-header td {
+    background: #e9ecef;
+    font-weight: bold;
+    text-align: left;
+    font-size: 8px;
+    padding: 2px 2px;
+}
+
+/* Цветовые классы для целей */
+.metrics-table td.target-met {
+    background: #d4edda !important;
+    color: #155724 !important;
+    font-weight: bold;
+}
+
+.metrics-table td.target-not-met {
+    background: #f8d7da !important;
+    color: #721c24 !important;
+    font-weight: bold;
+}
+
+.metrics-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    word-break: break-word;
+    background: #fff;
+    font-size: 8px;
+    margin-bottom: 0;
+}
+
+.metrics-table th,
+.metrics-table td {
+    border: 1px solid #dee2e6;
+    padding: 3px 3px;
     text-align: center;
 }
 
@@ -285,11 +332,11 @@ body {
     color: #155724 !important;
     font-weight: bold;
 }
+
 .metrics-table td.target-not-met {
     background: #f8d7da !important;
     color: #721c24 !important;
     font-weight: bold;
-}
 }
 
 .table-title {
@@ -559,6 +606,7 @@ body {
         border: none;
 
     }
+
     .chart-container {
         margin: 20px;
         padding: 20px;
@@ -576,6 +624,7 @@ body {
         color: #155724 !important;
         font-weight: bold;
     }
+
     .metrics-table td.target-not-met {
         background-color: #f8d7da !important;
         color: #721c24 !important;
