@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair AI Assistant</title>
+    <link rel="stylesheet" href="static/styles/style.css">
+    <link href="https://canvasjs.com/assets/css/jquery-ui.1.11.2.min.css" rel="stylesheet" />
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo">
+            <img src="static/images/LogoPirelli3.png" alt="Логотип компании">
+        </div>
+
+        <div class="nav-container">
+            <ul class="nav-menu">
+                <li class="has-submenu">
+                    <a href="/dashboard">Дашборд</a>
+                </li>
+                <li class="has-submenu">
+                    <a href="/">Главная</a>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Поломки</a>
+                    <ul class="submenu">
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Заявки на поломки</a></li>
+                        <li><a href="#">Топ причин</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Топ поломок</a>
+                            <ul class="submenu">
+                                <li><a href="#">Визуализация</a></li>
+                                <li><a href="#">Таблица</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="#">Лучшая смена</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">ППР</a>
+                    <ul class="submenu">
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Отчеты</a></li>
+                        <li><a href="#">Tag-PM-BD</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Диагностика</a>
+                    <ul class="submenu">
+                        <li><a href="#">Отчёты</a></li>
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Пневматика</a></li>
+                        <li><a href="#">Чек-листы</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Графики</a>
+                            <ul class="submenu">
+                                <li class="has-submenu">
+                                    <a href="#">Год</a>
+                                    <ul class="submenu">
+                                        <li class="has-submenu">
+                                            <a href="#">2025</a>
+                                            <ul class="submenu">
+                                                <li><a href="#">Январь</a></li>
+                                                <li><a href="#">Февраль</a></li>
+                                                <li><a href="#">Март</a></li>
+                                                <li><a href="#">Апрель</a></li>
+                                                <li><a href="#">Май</a></li>
+                                                <li><a href="#">Июнь</a></li>
+                                                <li><a href="#">Июль</a></li>
+                                                <li><a href="#">Август</a></li>
+                                                <li><a href="#">Сентябрь</a></li>
+                                                <li><a href="#">Октябрь</a></li>
+                                                <li><a href="#">Ноябрь</a></li>
+                                                <li><a href="#">Декабрь</a></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Ассистент KVANT AI </a>
+                    <ul class="submenu">
+                        <li><a href="/chat">Чат с ассистентом</a></li>
+                        <li><a href="/long_report">Отчеты</a></li>
+                        <li><a href="/manuals">Мануалы</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+                        <div id="resizable_breakDownOnline" class="chart-container">
+                            <div id="breakDown" style="height: 100%; width: 100%;"></div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div id="resizable_availabilityOnline" class="chart-container">
+                            <div id="availabilityOnline" style="height: 100%; width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="table-container">
+                            <div class="chart-container">
+                                <h3>Топ поломок за сутки</h3>
+                                <div id="topBreakdownsTable"></div>
+                                <h3>Топ поломок за неделю</h3>
+                                <div id="topBreakdownsWeekTable"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="table-container">
+                            <div class="chart-container">
+                                <h3>Ключевые линии</h3>
+                                <div id="topBreakdownsKeyLinesTable"></div>
+                                <h3>Ключевые линии (неделя)</h3>
+                                <div id="topBreakdownsWeekKeyLinesTable"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
+    <script src="https://canvasjs.com/assets/script/jquery-ui.1.11.2.min.js"></script>
+    <script src="https://cdn.canvasjs.com/jquery.canvasjs.min.js"></script>
+    <script>
+        // Функция для получения данных с сервера
+        async function fetchData(url) {
+            try {
+                console.log('Запрос данных по URL:', url);
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('Получены данные:', data);
+                return data;
+            } catch (error) {
+                console.error('Ошибка при получении данных:', error);
+                return null;
+            }
+        }
+
+        // Функция для создания таблицы топ поломок
+        function createTopBreakdownsTable(data, containerId, isWeekly = false) {
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                document.getElementById(containerId).innerHTML = '<p>Нет данных для отображения</p>';
+                return;
+            }
+            let tableHTML = `<table class="metrics-table">
+                <thead>
+                    <tr>`;
+            if (isWeekly) {
+                tableHTML += '<th>machine_name</th><th>machine_downtime</th>';
+            } else {
+                tableHTML += '<th>code</th><th>machine_name</th><th>machine_downtime</th><th>cause</th>';
+            }
+            tableHTML += `</tr>
+                </thead>
+                <tbody>`;
+            data.forEach(row => {
+                tableHTML += '<tr>';
+                if (isWeekly) {
+                    tableHTML += `<td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td>`;
+                } else {
+                    tableHTML += `<td>${row.code || ''}</td><td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td><td>${row.cause || ''}</td>`;
+                }
+                tableHTML += '</tr>';
+            });
+            tableHTML += '</tbody></table>';
+            document.getElementById(containerId).innerHTML = tableHTML;
+        }
+
+        // Загрузка и отображение топ поломок
+        async function loadTopBreakdownsTables() {
+            const topBreakdowns = await fetchData('http://localhost:8080/dashboard/top-breakdowns');
+            createTopBreakdownsTable(topBreakdowns, 'topBreakdownsTable');
+            const topBreakdownsKeyLines = await fetchData('http://localhost:8080/dashboard/top-breakdowns-key-lines');
+            createTopBreakdownsTable(topBreakdownsKeyLines, 'topBreakdownsKeyLinesTable');
+            const topBreakdownsWeek = await fetchData('http://localhost:8080/dashboard/top-breakdowns-week');
+            createTopBreakdownsTable(topBreakdownsWeek, 'topBreakdownsWeekTable', true);
+            const topBreakdownsWeekKeyLines = await fetchData('http://localhost:8080/dashboard/top-breakdowns-week-key-lines');
+            createTopBreakdownsTable(topBreakdownsWeekKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
+        }
+
+        // Вызовем при инициализации
+        window.onload = loadTopBreakdownsTables;
+    </script>
+
+</body>
+
+</html>

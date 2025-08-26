@@ -8,6 +8,11 @@ import ru.georgdeveloper.assistantweb.client.CoreServiceClient;
 
 @Controller
 public class AssistantController {
+
+    @GetMapping("/dashboard")
+    public String dashboard() {
+        return "dashboard";
+    }
     
     @Autowired
     private CoreServiceClient coreServiceClient;
