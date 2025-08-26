@@ -22,17 +22,22 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(@NonNull CorsRegistry registry) {
         registry.addMapping("/api/**")
                 .allowedOrigins("http://localhost:8081")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS","UPDATE")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
                 .allowedHeaders("*")
                 .allowCredentials(true);
         registry.addMapping("/manuals/**") // Added mapping for manuals
                 .allowedOrigins("http://localhost:8081")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS","UPDATE")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
                 .allowedHeaders("*")
                 .allowCredentials(true);
         registry.addMapping("/api/summary-of-solutions/**") // Added mapping for manuals
                 .allowedOrigins("http://localhost:8081")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS","UPDATE")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
+                .allowedHeaders("*")
+                .allowCredentials(true);
+        registry.addMapping("/dashboard/**") // Added mapping for manuals
+                .allowedOrigins("http://localhost:8081")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }
