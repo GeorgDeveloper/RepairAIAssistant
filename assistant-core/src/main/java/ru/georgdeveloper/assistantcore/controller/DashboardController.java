@@ -9,6 +9,30 @@ import ru.georgdeveloper.assistantcore.repository.MonitoringRepository;
 @RequestMapping("/dashboard")
 public class DashboardController {
 
+    @GetMapping("/top-breakdowns-week")
+    @ResponseBody
+    public List<Map<String, Object>> getTopBreakdownsPerWeek() {
+        return monitoringRepository.getTopBreakdownsPerWeek();
+    }
+
+    @GetMapping("/top-breakdowns-week-key-lines")
+    @ResponseBody
+    public List<Map<String, Object>> getTopBreakdownsPerWeekKeyLines() {
+        return monitoringRepository.getTopBreakdownsPerWeekKeyLines();
+    }
+
+    @GetMapping("/top-breakdowns")
+    @ResponseBody
+    public List<Map<String, Object>> getTopBreakdownsPerDay() {
+        return monitoringRepository.getTopBreakdownsPerDay();
+    }
+
+    @GetMapping("/top-breakdowns-key-lines")
+    @ResponseBody
+    public List<Map<String, Object>> getTopBreakdownsPerDayKeyLines() {
+        return monitoringRepository.getTopBreakdownsPerDayKeyLines();
+    }
+
     @Autowired
     private MonitoringRepository monitoringRepository;
     

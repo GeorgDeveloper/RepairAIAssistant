@@ -127,12 +127,44 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col"></div>
-                    <div class="col"></div>
+                    <div class="col">
+                        <div class="table-container">
+                            <div class="chart-container">
+                                <h3>Топ поломок за сутки</h3>
+                                <div id="topBreakdownsTable"></div>
+                                <h3>Топ поломок за неделю</h3>
+                                <div id="topBreakdownsWeekTable"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="table-container">
+                            <div class="chart-container">
+                                <h3>Ключевые линии</h3>
+                                <div id="topBreakdownsKeyLinesTable"></div>
+                                <h3>Ключевые линии (неделя)</h3>
+                                <div id="topBreakdownsWeekKeyLinesTable"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="row">
-                    <div class="col"></div>
-                    <div class="col"></div>
+                    <div class="col">
+                        <div class="table-container">
+                            <!-- <div class="chart-container">
+                                <h3>Топ поломок за неделю</h3>
+                                <div id="topBreakdownsWeekTable"></div>
+                            </div> -->
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="table-container">
+                            <!-- <div class="chart-container">
+                                <h3>Ключевые линии (неделя)</h3>
+                                <div id="topBreakdownsWeekKeyLinesTable"></div>
+                            </div> -->
+                        </div>
+                    </div>
                 </div>
                 <div class="row"></div>
                 <div class="row">
@@ -388,6 +420,55 @@
         }
 
         window.onload = initializeDashboard;
+        // Функция для создания таблицы топ поломок
+        function createTopBreakdownsTable(data, containerId, isWeekly = false) {
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                document.getElementById(containerId).innerHTML = '<p>Нет данных для отображения</p>';
+                return;
+            }
+            let tableHTML = `<table class="metrics-table">
+                <thead>
+                    <tr>`;
+            if (isWeekly) {
+                tableHTML += '<th>machine_name</th><th>machine_downtime</th>';
+            } else {
+                tableHTML += '<th>code</th><th>machine_name</th><th>machine_downtime</th><th>cause</th>';
+            }
+            tableHTML += `</tr>
+                </thead>
+                <tbody>`;
+            data.forEach(row => {
+                tableHTML += '<tr>';
+                if (isWeekly) {
+                    tableHTML += `<td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td>`;
+                } else {
+                    tableHTML += `<td>${row.code || ''}</td><td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td><td>${row.cause || ''}</td>`;
+                }
+                tableHTML += '</tr>';
+            });
+            tableHTML += '</tbody></table>';
+            document.getElementById(containerId).innerHTML = tableHTML;
+        }
+
+        // Загрузка и отображение топ поломок
+        async function loadTopBreakdownsTables() {
+            const topBreakdowns = await fetchData('http://localhost:8080/dashboard/top-breakdowns');
+            createTopBreakdownsTable(topBreakdowns, 'topBreakdownsTable');
+            const topBreakdownsKeyLines = await fetchData('http://localhost:8080/dashboard/top-breakdowns-key-lines');
+            createTopBreakdownsTable(topBreakdownsKeyLines, 'topBreakdownsKeyLinesTable');
+
+            // Неделя
+            const topBreakdownsWeek = await fetchData('http://localhost:8080/dashboard/top-breakdowns-week');
+            createTopBreakdownsTable(topBreakdownsWeek, 'topBreakdownsWeekTable', true);
+            const topBreakdownsWeekKeyLines = await fetchData('http://localhost:8080/dashboard/top-breakdowns-week-key-lines');
+            createTopBreakdownsTable(topBreakdownsWeekKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
+        }
+
+        // Вызовем при инициализации
+        window.onload = async function() {
+            await initializeDashboard();
+            await loadTopBreakdownsTables();
+        }
     </script>
 
 </body>

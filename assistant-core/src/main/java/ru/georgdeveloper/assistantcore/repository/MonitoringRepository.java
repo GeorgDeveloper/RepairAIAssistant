@@ -9,6 +9,60 @@ import java.util.Map;
 
 @Repository
 public class MonitoringRepository {
+    // Топ-5 поломок за неделю (общее)
+    public List<Map<String, Object>> getTopBreakdownsPerWeek() {
+        String sql = "SELECT machine_name, SEC_TO_TIME(SUM(TIME_TO_SEC(machine_downtime))) as machine_downtime " +
+                "FROM monitoring_bd.equipment_maintenance_records " +
+                "WHERE WEEK(CURDATE(), 1) = WEEK(start_bd_t1, 1) AND failure_type <> 'Другие' " +
+                "GROUP BY machine_name " +
+                "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
+                "LIMIT 5";
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    // Топ-5 поломок за неделю по ключевым линиям
+    public List<Map<String, Object>> getTopBreakdownsPerWeekKeyLines() {
+        String sql = "SELECT machine_name, SEC_TO_TIME(SUM(TIME_TO_SEC(machine_downtime))) as machine_downtime " +
+                "FROM monitoring_bd.equipment_maintenance_records " +
+                "WHERE WEEK(CURDATE(), 1) = WEEK(start_bd_t1, 1) AND NOT failure_type = 'Другие' " +
+                "AND machine_name IN ('Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', " +
+                "'Calender Complex Berstorf - 01', 'Bandina - 01', 'Duplex - 01', " +
+                "'Calender Comerio Ercole - 01', 'VMI APEX - 01', 'VMI APEX - 02', " +
+                "'Trafila Quadruplex - 01', 'Bartell Bead Machine - 01', " +
+                "'TTM fisher belt cutting - 01', 'VMI TPCS 1600-1000') " +
+                "GROUP BY machine_name " +
+                "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
+                "LIMIT 5";
+        return jdbcTemplate.queryForList(sql);
+    }
+    // Топ-5 поломок за сутки (с 18:00 вчера до 08:00 сегодня)
+    public List<Map<String, Object>> getTopBreakdownsPerDay() {
+        String sql = "SELECT code, machine_name, machine_downtime, cause " +
+                "FROM monitoring_bd.equipment_maintenance_records " +
+                "WHERE start_bd_t1 >= CONCAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), ' 18:00:00') " +
+                "AND stop_bd_t4 <= CONCAT(CURRENT_DATE(), ' 08:00:00') " +
+                "AND NOT failure_type = 'Другие' " +
+                "ORDER BY TIME_TO_SEC(machine_downtime) DESC " +
+                "LIMIT 5";
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    // Топ-5 поломок по ключевым линиям за сутки
+    public List<Map<String, Object>> getTopBreakdownsPerDayKeyLines() {
+        String sql = "SELECT code, machine_name, machine_downtime, cause " +
+                "FROM monitoring_bd.equipment_maintenance_records " +
+                "WHERE machine_name IN ('Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', " +
+                "'Calender Complex Berstorf - 01', 'Bandina - 01', 'Duplex - 01', " +
+                "'Calender Comerio Ercole - 01', 'VMI APEX - 01', 'VMI APEX - 02', " +
+                "'Trafila Quadruplex - 01', 'Bartell Bead Machine - 01', " +
+                "'TTM fisher belt cutting - 01', 'VMI TPCS 1600-1000') " +
+                "AND start_bd_t1 >= CONCAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), ' 18:00:00') " +
+                "AND stop_bd_t4 <= CONCAT(CURRENT_DATE(), ' 08:00:00') " +
+                "AND NOT failure_type = 'Другие' " +
+                "ORDER BY TIME_TO_SEC(machine_downtime) DESC " +
+                "LIMIT 5";
+        return jdbcTemplate.queryForList(sql);
+    }
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
