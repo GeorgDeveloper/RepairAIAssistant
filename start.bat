@@ -1,7 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
+REM Скрипт запуска Repair AI Assistant
+REM Этот скрипт запускает все компоненты системы: core, web и telegram
 echo Starting Repair AI Assistant...
 
+REM ========== БЛОК ПРОВЕРКИ JAVA (ЗАКОММЕНТИРОВАН) ==========
+REM Проверка доступности Java в системе
 @REM REM Check if Java is available
 @REM java -version >nul 2>&1
 @REM if %errorlevel% neq 0 (
@@ -12,6 +16,8 @@ echo Starting Repair AI Assistant...
 @REM echo Java is available.
 @REM echo Proceeding to Maven check...
 
+REM ========== БЛОК ПРОВЕРКИ MAVEN (ЗАКОММЕНТИРОВАН) ==========
+REM Проверка доступности Maven для сборки проекта
 @REM REM Check if Maven is available
 @REM echo Checking Maven...
 @REM mvn -version
@@ -23,6 +29,8 @@ echo Starting Repair AI Assistant...
 @REM echo Maven is available.
 @REM echo Proceeding to Ollama check...
 
+REM ========== БЛОК ПРОВЕРКИ OLLAMA (ЗАКОММЕНТИРОВАН) ==========
+REM Проверка работы сервиса Ollama для ИИ-функций
 @REM REM Check if Ollama is running
 @REM echo Checking Ollama service...
 @REM curl -s http://localhost:11434/api/tags >nul 2>&1
@@ -34,6 +42,8 @@ echo Starting Repair AI Assistant...
 @REM echo Ollama service is running.
 @REM echo Proceeding to build modules...
 
+REM ========== БЛОК СБОРКИ МОДУЛЕЙ (ЗАКОММЕНТИРОВАН) ==========
+REM Сборка всех модулей проекта через Maven
 @REM REM Build all modules
 @REM echo Building modules...
 @REM call mvn clean install -q
@@ -45,10 +55,14 @@ echo Starting Repair AI Assistant...
 @REM echo Build successful.
 @REM echo Proceeding to start assistant-core...
 
+REM ========== ЗАПУСК ОСНОВНОГО СЕРВИСА (ASSISTANT-CORE) ==========
+REM Запуск основного сервиса на порту 8080 - содержит API и бизнес-логику
 REM Start assistant-core
 echo Starting assistant-core...
 start "Assistant Core" cmd /k "cd assistant-core && mvn spring-boot:run"
 
+REM Ожидание запуска основного сервиса
+REM Проверяем доступность health endpoint каждые 5 секунд
 REM Wait for core service to start
 echo Waiting for core service to start...
 :wait_core
@@ -58,10 +72,14 @@ if %errorlevel% neq 0 goto wait_core
 echo Core service started.
 echo Proceeding to start assistant-web...
 
+REM ========== ЗАПУСК ВЕБ-ИНТЕРФЕЙСА (ASSISTANT-WEB) ==========
+REM Запуск веб-интерфейса на порту 8081 - пользовательский интерфейс
 REM Start assistant-web
 echo Starting assistant-web...
 start "Assistant Web" cmd /k "cd assistant-web && mvn spring-boot:run"
 
+REM Ожидание запуска веб-сервиса
+REM Проверяем доступность веб-интерфейса каждые 3 секунды
 REM Wait for web service to start
 echo Waiting for web service to start...
 :wait_web
@@ -71,10 +89,14 @@ if %errorlevel% neq 0 goto wait_web
 echo Web service started.
 echo Proceeding to start assistant-telegram...
 
+REM ========== ЗАПУСК TELEGRAM-БОТА (ASSISTANT-TELEGRAM) ==========
+REM Запуск Telegram-бота на порту 8082 - интеграция с мессенджером
 REM Start assistant-telegram
 echo Starting assistant-telegram...
 start "Assistant Telegram" cmd /k "cd assistant-telegram && mvn spring-boot:run"
 
+REM ========== ЗАВЕРШЕНИЕ ЗАПУСКА ==========
+REM Информация о запущенных сервисах и их адресах
 REM Final message
 echo All services started successfully!
 echo Web interface: http://localhost:8081
