@@ -37,6 +37,11 @@ public class AssistantController {
         return "manuals";
     }
 
+    @GetMapping("/gantt")
+    public String gantt() {
+        return "gantt";
+    }
+
     @PostMapping("/api/chat")
     @ResponseBody
     public String processChat(@RequestBody String message) {

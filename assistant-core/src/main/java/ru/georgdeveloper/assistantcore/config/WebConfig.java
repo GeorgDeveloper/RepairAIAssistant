@@ -40,5 +40,10 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
                 .allowedHeaders("*")
                 .allowCredentials(true);
+        registry.addMapping("/gantt/**") // Added mapping for gantt
+                .allowedOrigins("http://localhost:8081")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
+                .allowedHeaders("*")
+                .allowCredentials(true);
     }
 }
