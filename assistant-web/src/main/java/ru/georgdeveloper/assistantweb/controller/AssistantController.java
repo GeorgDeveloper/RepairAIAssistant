@@ -42,6 +42,11 @@ public class AssistantController {
         return "gantt";
     }
 
+    @GetMapping("/dinamic_bd")
+    public String dinamicBd() {
+        return "dinamic_bd";
+    }
+
     @PostMapping("/api/chat")
     @ResponseBody
     public String processChat(@RequestBody String message) {

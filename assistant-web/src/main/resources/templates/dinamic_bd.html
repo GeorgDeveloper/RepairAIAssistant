@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Динамика поломок</title>
+    <link rel="stylesheet" href="static/styles/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 6px;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .filter-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .filter-control {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .btn-apply {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            grid-column: 1 / -1;
+            margin-top: 10px;
+        }
+        
+        .btn-apply:hover {
+            background-color: #c0392b;
+        }
+        
+        .chart-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            color: #3498db;
+        }
+        
+        .error {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #e74c3c;
+            background-color: #ffebee;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo">
+            <img src="static/images/LogoPirelli3.png" alt="Логотип компании">
+        </div>
+
+        <div class="nav-container">
+            <ul class="nav-menu">
+                <li class="has-submenu">
+                    <a href="/dashboard">Дашборд</a>
+                </li>
+                <li class="has-submenu">
+                    <a href="/">Главная</a>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Поломки</a>
+                    <ul class="submenu">
+                        <li><a href="/dinamic_bd">Динамика</a></li>
+                        <li><a href="#">Заявки на поломки</a></li>
+                        <li><a href="#">Топ причин</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Топ поломок</a>
+                            <ul class="submenu">
+                                <li><a href="#">Визуализация</a></li>
+                                <li><a href="#">Таблица</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="#">Лучшая смена</a></li>
+                        <li><a href="/gantt">Диаграмма Ганта</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">ППР</a>
+                    <ul class="submenu">
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Отчеты</a></li>
+                        <li><a href="#">Tag-PM-BD</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Диагностика</a>
+                    <ul class="submenu">
+                        <li><a href="#">Отчёты</a></li>
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Пневматика</a></li>
+                        <li><a href="#">Чек-листы</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Графики</a>
+                            <ul class="submenu">
+                                <li class="has-submenu">
+                                    <a href="#">Год</a>
+                                    <ul class="submenu">
+                                        <li class="has-submenu">
+                                            <a href="#">2025</a>
+                                            <ul class="submenu">
+                                                <li><a href="#">Январь</a></li>
+                                                <li><a href="#">Февраль</a></li>
+                                                <li><a href="#">Март</a></li>
+                                                <li><a href="#">Апрель</a></li>
+                                                <li><a href="#">Май</a></li>
+                                                <li><a href="#">Июнь</a></li>
+                                                <li><a href="#">Июль</a></li>
+                                                <li><a href="#">Август</a></li>
+                                                <li><a href="#">Сентябрь</a></li>
+                                                <li><a href="#">Октябрь</a></li>
+                                                <li><a href="#">Ноябрь</a></li>
+                                                <li><a href="#">Декабрь</a></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Ассистент KVANT AI </a>
+                    <ul class="submenu">
+                        <li><a href="/chat">Чат с ассистентом</a></li>
+                        <li><a href="/long_report">Отчеты</a></li>
+                        <li><a href="/manuals">Мануалы</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="container">
+                <h1>Динамика поломок оборудования</h1>
+                
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="year">Год:</label>
+                        <select id="year" class="filter-control">
+                            <option value="all">Все</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="month">Месяц:</label>
+                        <select id="month" class="filter-control">
+                            <option value="all">Все</option>
+                            <option value="1">Январь</option>
+                            <option value="2">Февраль</option>
+                            <option value="3">Март</option>
+                            <option value="4">Апрель</option>
+                            <option value="5">Май</option>
+                            <option value="6">Июнь</option>
+                            <option value="7">Июль</option>
+                            <option value="8">Август</option>
+                            <option value="9">Сентябрь</option>
+                            <option value="10">Октябрь</option>
+                            <option value="11">Ноябрь</option>
+                            <option value="12">Декабрь</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="week">Неделя:</label>
+                        <select id="week" class="filter-control">
+                            <option value="all">Все</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="area">Участок:</label>
+                        <select id="area" class="filter-control">
+                            <option value="all">Все участки</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="equipment">Оборудование:</label>
+                        <select id="equipment" class="filter-control">
+                            <option value="all">Всё оборудование</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="failure-type">Тип поломки:</label>
+                        <select id="failure-type" class="filter-control">
+                            <option value="all">Все</option>
+                        </select>
+                    </div>
+                    
+                    <button id="apply-filters" class="btn-apply">Применить фильтры</button>
+                </div>
+                
+                <div class="loading" id="loading">Загрузка данных...</div>
+                <div class="error" id="error"></div>
+                
+                <div class="charts-wrapper" style="display: flex; gap: 20px; height: 580px;">
+                    <div class="charts-column" style="flex: 2; position: relative;">
+                        <div class="chart-controls" style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px;">
+                            <button id="toggleChart" class="btn-toggle" style="background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                Показать количество
+                            </button>
+                            <button id="toggleChartType" class="btn-toggle" style="background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                Накопительная
+                            </button>
+                        </div>
+                        <div class="chart-container" style="height: calc(100% - 40px); padding: 20px; padding-top: 50px;">
+                            <canvas id="mainChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                    <div class="legend-column" style="flex: 1; padding: 20px; background: #f8f9fa; border-radius: 6px; display: flex; flex-direction: column;">
+                        <h4 style="margin-top: 0; margin-bottom: 15px;">Легенда</h4>
+                        <div id="customLegend" style="overflow-y: auto; flex: 1;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mainChart = null;
+        let currentMode = 'downtime';
+        let chartType = 'line';
+        let chartData = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            loadInitialData();
+        });
+        
+        function setupEventListeners() {
+            document.getElementById('year').addEventListener('change', function() {
+                loadMonths();
+            });
+            
+            document.getElementById('month').addEventListener('change', function() {
+                loadWeeks();
+            });
+            
+            document.getElementById('area').addEventListener('change', function() {
+                loadEquipment(this.value);
+            });
+            
+            document.getElementById('apply-filters').addEventListener('click', function() {
+                applyFilters();
+            });
+            
+            document.getElementById('toggleChart').addEventListener('click', function() {
+                toggleChartMode();
+            });
+            
+            document.getElementById('toggleChartType').addEventListener('click', function() {
+                toggleChartType();
+            });
+        }
+        
+        async function loadEquipment(area) {
+            try {
+                const response = await fetch(`http://localhost:8080/gantt/equipment?area=${area}`);
+                const equipment = await response.json();
+                
+                const equipmentSelect = document.getElementById('equipment');
+                equipmentSelect.innerHTML = '<option value="all">Всё оборудование</option>';
+                
+                equipment.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.machine_name;
+                    option.textContent = item.machine_name;
+                    equipmentSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки оборудования:', error);
+            }
+        }
+        
+        async function loadInitialData() {
+            showLoading(true);
+            try {
+                await Promise.all([
+                    loadYears(),
+                    loadAreas(),
+                    loadFailureTypes()
+                ]);
+                await applyFilters();
+            } catch (error) {
+                showError('Ошибка загрузки данных: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function loadYears() {
+            try {
+                const response = await fetch('http://localhost:8080/dynamics/years');
+                const years = await response.json();
+                
+                const yearSelect = document.getElementById('year');
+                yearSelect.innerHTML = '<option value="all">Все</option>';
+                
+                years.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.year;
+                    option.textContent = item.year;
+                    if (item.year == new Date().getFullYear()) {
+                        option.selected = true;
+                    }
+                    yearSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки годов:', error);
+            }
+        }
+        
+        async function loadMonths() {
+            const year = document.getElementById('year').value;
+            if (year === 'all') return;
+            
+            try {
+                const response = await fetch(`http://localhost:8080/dynamics/months?year=${year}`);
+                const months = await response.json();
+                
+                const monthSelect = document.getElementById('month');
+                const currentValue = monthSelect.value;
+                monthSelect.innerHTML = '<option value="all">Все</option>';
+                
+                const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+                
+                months.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.month;
+                    option.textContent = monthNames[item.month - 1];
+                    monthSelect.appendChild(option);
+                });
+                
+                if (currentValue !== 'all') {
+                    monthSelect.value = currentValue;
+                }
+                
+                loadWeeks();
+            } catch (error) {
+                console.error('Ошибка загрузки месяцев:', error);
+            }
+        }
+        
+        async function loadWeeks() {
+            const year = document.getElementById('year').value;
+            const month = document.getElementById('month').value;
+            
+            if (year === 'all' || month === 'all') {
+                document.getElementById('week').innerHTML = '<option value="all">Все</option>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/dynamics/weeks?year=${year}&month=${month}`);
+                const weeks = await response.json();
+                
+                const weekSelect = document.getElementById('week');
+                weekSelect.innerHTML = '<option value="all">Все</option>';
+                
+                weeks.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.week;
+                    option.textContent = item.week;
+                    weekSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки недель:', error);
+            }
+        }
+        
+        async function loadAreas() {
+            try {
+                const response = await fetch('http://localhost:8080/gantt/areas');
+                const areas = await response.json();
+                
+                const areaSelect = document.getElementById('area');
+                areaSelect.innerHTML = '<option value="all">Все участки</option>';
+                
+                areas.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.area;
+                    option.textContent = item.area;
+                    areaSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки участков:', error);
+            }
+        }
+        
+        async function loadFailureTypes() {
+            try {
+                const response = await fetch('http://localhost:8080/dynamics/failure-types');
+                const types = await response.json();
+                
+                const typeSelect = document.getElementById('failure-type');
+                typeSelect.innerHTML = '<option value="all">Все</option>';
+                
+                types.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.cause;
+                    option.textContent = item.cause;
+                    typeSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки типов поломок:', error);
+            }
+        }
+        
+        async function applyFilters() {
+            showLoading(true);
+            try {
+                const params = {
+                    year: document.getElementById('year').value,
+                    month: document.getElementById('month').value,
+                    week: document.getElementById('week').value,
+                    area: document.getElementById('area').value,
+                    equipment: document.getElementById('equipment').value,
+                    failureType: document.getElementById('failure-type').value
+                };
+                
+                const data = await fetchDynamicsData(params);
+                generateChart(data, params);
+            } catch (error) {
+                showError('Ошибка применения фильтров: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function fetchDynamicsData(params) {
+            const url = new URL('http://localhost:8080/dynamics/data');
+            Object.keys(params).forEach(key => {
+                if (params[key] && params[key] !== 'all') {
+                    url.searchParams.append(key, params[key]);
+                }
+            });
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        }
+        
+        function generateChart(data, params) {
+            const labels = generateLabels(data, params);
+            chartData = {
+                labels: labels,
+                downtimeDatasets: generateDowntimeDatasets(data, labels),
+                countDatasets: generateCountDatasets(data, labels),
+                params: params
+            };
+            
+            createMainChart();
+            createCustomLegend(chartData.downtimeDatasets);
+        }
+        
+        function createMainChart() {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            
+            if (mainChart) {
+                mainChart.destroy();
+            }
+            
+            const datasets = currentMode === 'downtime' ? chartData.downtimeDatasets : chartData.countDatasets;
+            const title = currentMode === 'downtime' ? 'Динамика времени простоя' : 'Количество вызовов';
+            const yAxisTitle = currentMode === 'downtime' ? 'Общее время простоя (часы)' : 'Количество вызовов';
+            
+            mainChart = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: chartData.labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: title
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            stacked: chartType === 'bar',
+                            title: {
+                                display: true,
+                                text: yAxisTitle
+                            }
+                        },
+                        x: {
+                            stacked: chartType === 'bar',
+                            title: {
+                                display: true,
+                                text: getXAxisTitle(chartData.params)
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createCustomLegend(datasets) {
+            const legendContainer = document.getElementById('customLegend');
+            legendContainer.innerHTML = '';
+            
+            datasets.forEach(dataset => {
+                const legendItem = document.createElement('div');
+                legendItem.style.cssText = 'display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;';
+                
+                const colorBox = document.createElement('div');
+                colorBox.style.cssText = `width: 20px; height: 3px; background-color: ${dataset.borderColor}; margin-right: 8px; border-radius: 2px;`;
+                
+                const label = document.createElement('span');
+                label.textContent = dataset.label;
+                label.style.fontSize = '12px';
+                
+                legendItem.appendChild(colorBox);
+                legendItem.appendChild(label);
+                legendContainer.appendChild(legendItem);
+                
+                legendItem.addEventListener('click', function() {
+                    const datasetIndex = mainChart.data.datasets.findIndex(d => d.label === dataset.label);
+                    if (datasetIndex !== -1) {
+                        const meta = mainChart.getDatasetMeta(datasetIndex);
+                        meta.hidden = !meta.hidden;
+                        legendItem.style.opacity = meta.hidden ? '0.5' : '1';
+                        mainChart.update();
+                    }
+                });
+            });
+        }
+        
+        function toggleChartMode() {
+            currentMode = currentMode === 'downtime' ? 'count' : 'downtime';
+            const button = document.getElementById('toggleChart');
+            button.textContent = currentMode === 'downtime' ? 'Показать количество' : 'Показать время';
+            
+            if (chartData) {
+                createMainChart();
+            }
+        }
+        
+        function toggleChartType() {
+            chartType = chartType === 'line' ? 'bar' : 'line';
+            const button = document.getElementById('toggleChartType');
+            button.textContent = chartType === 'line' ? 'Накопительная' : 'Линейная';
+            
+            if (chartData) {
+                createMainChart();
+            }
+        }
+        
+        function generateLabels(data, params) {
+            const uniqueLabels = [...new Set(data.map(item => item.period_label))].sort((a, b) => a - b);
+            return uniqueLabels;
+        }
+        
+        function generateDowntimeDatasets(data, labels) {
+            const uniqueTypes = [...new Set(data.map(item => item.failure_type))].filter(type => type).sort();
+            const colors = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+                '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA', '#F1948A', '#85929E', '#D7BDE2', '#A9DFBF',
+                '#F9E79F', '#AED6F1', '#F5B7B1', '#D5A6BD', '#A3E4D7', '#F4D03F', '#AEB6BF', '#E8DAEF',
+                '#ABEBC6', '#FCF3CF', '#D6EAF8', '#FADBD8', '#E6B0AA', '#B2DFDB', '#FFF9C4', '#C8E6C9'
+            ];
+            
+            return uniqueTypes.map((type, index) => {
+                const chartData = labels.map(label => {
+                    const items = data.filter(item => 
+                        item.failure_type === type && 
+                        item.period_label == label
+                    );
+                    return items.reduce((sum, item) => sum + (parseFloat(item.total_downtime) || 0), 0);
+                });
+                
+                return {
+                    label: type,
+                    data: chartData,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '80',
+                    tension: 0.1,
+                    borderWidth: 2
+                };
+            });
+        }
+        
+        function generateCountDatasets(data, labels) {
+            const uniqueTypes = [...new Set(data.map(item => item.failure_type))].filter(type => type).sort();
+            const colors = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+                '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA', '#F1948A', '#85929E', '#D7BDE2', '#A9DFBF',
+                '#F9E79F', '#AED6F1', '#F5B7B1', '#D5A6BD', '#A3E4D7', '#F4D03F', '#AEB6BF', '#E8DAEF',
+                '#ABEBC6', '#FCF3CF', '#D6EAF8', '#FADBD8', '#E6B0AA', '#B2DFDB', '#FFF9C4', '#C8E6C9'
+            ];
+            
+            return uniqueTypes.map((type, index) => {
+                const chartData = labels.map(label => {
+                    const items = data.filter(item => 
+                        item.failure_type === type && 
+                        item.period_label == label
+                    );
+                    return items.reduce((sum, item) => sum + (parseInt(item.failure_count) || 0), 0);
+                });
+                
+                return {
+                    label: type,
+                    data: chartData,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '80',
+                    tension: 0.1,
+                    borderWidth: 2
+                };
+            });
+        }
+        
+        function getXAxisTitle(params) {
+            if (params.week !== 'all') {
+                return 'Дни месяца';
+            } else if (params.month !== 'all') {
+                return 'Номера недель';
+            } else if (params.year !== 'all') {
+                return 'Месяцы';
+            } else {
+                return 'Годы';
+            }
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+    </script>
+
+</body>
+
+</html>
