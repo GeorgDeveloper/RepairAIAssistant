@@ -95,6 +95,15 @@ public class MonitoringRepository {
         return jdbcTemplate.queryForList(sql);
     }
 
+    // Данные для графика PM: план/факт/tag за текущий месяц
+    public List<Map<String, Object>> getPmPlanFactTagPerMonth() {
+        String sql = "SELECT production_day, quantity_pm_planned AS plan, quantity_pm_close AS fact, quantity_tag AS tag " +
+                "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) " +
+                "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE()) " +
+                "ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
+        return jdbcTemplate.queryForList(sql);
+    }
+
 
     public Map<String, Object> getCurrentMetrics() {
         Map<String, Object> result = new java.util.HashMap<>();

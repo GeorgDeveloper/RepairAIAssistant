@@ -106,6 +106,11 @@
         </div>
 
         <div class="main-content">
+            <style>
+                .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
+                .pm-row .table-container, .pm-row .chart-container { height: 100%; }
+                #resizablePm { height: 100% !important; }
+            </style>
             <div class="container">
                 <div class="row">
                     <div class="col">
@@ -127,12 +132,23 @@
                         </div>
                     </div>
                 </div>
-                <div class="row">
+                <div class="row pm-row">
                     <div class="col">
-                        <!-- Таблицы топ поломок перенесены на /dashboard -->
+                        <div class="table-container">
+                            <div class="chart-container" id="resizablePm" style="overflow: hidden;">
+                                <div id="pmChart" style="height: 100%; width: 100%;"></div>
+                            </div>
+                        </div>
                     </div>
                     <div class="col">
-                        <!-- Таблицы топ поломок перенесены на /dashboard -->
+                        <div class="table-container">
+                            <div class="chart-container">
+                                <h3>Ключевые линии (неделя)</h3>
+                                <div id="topBreakdownsWeekKeyLinesTable"></div>
+                                <h3>Топ поломок за неделю</h3>
+                                <div id="topBreakdownsWeekTable"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="row">
@@ -288,6 +304,53 @@
             });
         }
 
+        // Линейный график для PM (План/Факт/Tag)
+        function createPmLineChart(containerSelector, chartSelector, data) {
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                document.querySelector(chartSelector).innerHTML = '<p>Нет данных для отображения</p>';
+                return;
+            }
+
+            const parse = (key) => data.map(x => ({ label: x.production_day, y: Number(x[key]) || 0 }));
+
+            const totalPlan = data.reduce((s, x) => s + (Number(x.plan) || 0), 0);
+            const totalFact = data.reduce((s, x) => s + (Number(x.fact) || 0), 0);
+            const completion = totalPlan > 0 ? Math.round((totalFact / totalPlan) * 100) : 0;
+
+            const options = {
+                animationEnabled: true,
+                backgroundColor: "#ffffff",
+                title: { text: "PM: План / Факт / Tag" },
+                subtitles: [{
+                    text: "Выполнение: " + completion + "%",
+                    verticalAlign: "top",
+                    horizontalAlign: "right",
+                    dockInsidePlotArea: true
+                }],
+                axisX: {
+                    title: "Дата",
+                    labelAngle: -45,
+                    margin: 10
+                },
+                axisY: {
+                    title: "Количество",
+                    includeZero: true,
+                    margin: 10
+                },
+                legend: { verticalAlign: "bottom" },
+                data: [
+                    { type: "line", name: "Plan", showInLegend: true, color: "#e31a1c", markerSize: 4, dataPoints: parse('plan') },
+                    { type: "line", name: "Fact", showInLegend: true, color: "#33a02c", markerSize: 4, dataPoints: parse('fact') },
+                    { type: "line", name: "Tag", showInLegend: true, color: "#1f78b4", markerSize: 4, dataPoints: parse('tag') }
+                ]
+            };
+
+            $(containerSelector).resizable({
+                create: function () { $(chartSelector).CanvasJSChart(options); },
+                resize: function () { $(chartSelector).CanvasJSChart().render(); }
+            });
+        }
+
         // Функция для создания таблицы с показателями
         function createMetricsTable(metricsData) {
             if (!metricsData) {
@@ -364,6 +427,36 @@
             document.getElementById('metricsTable').innerHTML = tableHTML;
         }
 
+        // Функция для создания таблицы топ поломок
+        function createTopBreakdownsTable(data, containerId, isWeekly = false) {
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                document.getElementById(containerId).innerHTML = '<p>Нет данных для отображения</p>';
+                return;
+            }
+            let tableHTML = `<table class="metrics-table">
+                <thead>
+                    <tr>`;
+            if (isWeekly) {
+                tableHTML += '<th>machine_name</th><th>machine_downtime</th>';
+            } else {
+                tableHTML += '<th>code</th><th>machine_name</th><th>machine_downtime</th><th>cause</th>';
+            }
+            tableHTML += `</tr>
+                </thead>
+                <tbody>`;
+            data.forEach(row => {
+                tableHTML += '<tr>';
+                if (isWeekly) {
+                    tableHTML += `<td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td>`;
+                } else {
+                    tableHTML += `<td>${row.code || ''}</td><td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td><td>${row.cause || ''}</td>`;
+                }
+                tableHTML += '</tr>';
+            });
+            tableHTML += '</tbody></table>';
+            document.getElementById(containerId).innerHTML = tableHTML;
+        }
+
         // Основная функция инициализации
         async function initializeDashboard() {
             console.log('Инициализация дашборда...');
@@ -400,6 +493,16 @@
                 const currentMetrics = await fetchCurrentMetrics();
                 console.log('Текущие показатели:', currentMetrics);
                 createMetricsTable(currentMetrics);
+
+                // Загружаем недельные таблицы
+                const topBreakdownsWeek = await fetchData('http://localhost:8080/dashboard/top-breakdowns-week');
+                createTopBreakdownsTable(topBreakdownsWeek, 'topBreakdownsWeekTable', true);
+                const topBreakdownsWeekKeyLines = await fetchData('http://localhost:8080/dashboard/top-breakdowns-week-key-lines');
+                createTopBreakdownsTable(topBreakdownsWeekKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
+
+                // График PM План/Факт/Tag
+                const pmData = await fetchData('http://localhost:8080/dashboard/pm-plan-fact-tag');
+                createPmLineChart('#resizablePm', '#pmChart', pmData);
 
             } catch (error) {
                 console.error('Ошибка при инициализации дашборда:', error);

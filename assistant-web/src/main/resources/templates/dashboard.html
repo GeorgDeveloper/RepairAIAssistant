@@ -105,45 +105,52 @@
             </div>
         </div>
 
-        <div class="main-content">
-            <div class="container">
-                <div class="row">
-                    <div class="col">
-                        <div id="resizable_breakDownOnline" class="chart-container">
-                            <div id="breakDown" style="height: 100%; width: 100%;"></div>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div id="resizable_availabilityOnline" class="chart-container">
-                            <div id="availabilityOnline" style="height: 100%; width: 100%;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <div class="table-container">
-                            <div class="chart-container">
-                                <h3>Топ поломок за сутки</h3>
-                                <div id="topBreakdownsTable"></div>
-                                <h3>Топ поломок за неделю</h3>
-                                <div id="topBreakdownsWeekTable"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="table-container">
-                            <div class="chart-container">
-                                <h3>Ключевые линии</h3>
-                                <div id="topBreakdownsKeyLinesTable"></div>
-                                <h3>Ключевые линии (неделя)</h3>
-                                <div id="topBreakdownsWeekKeyLinesTable"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
+		<div class="main-content">
+			<style>
+				.main-content { padding-top: 16px; }
+				.container { height: 100%; box-sizing: border-box; padding: 0 16px; }
+				.dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; grid-gap: 16px; height: calc(100vh - 128px); }
+				.stack { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); grid-gap: 16px; height: 100%; min-height: 0; }
+				.card { background: #fff; padding: 8px; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+				.right-stack { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); grid-gap: 16px; height: 100%; min-height: 0; }
+				.panel { background: #fff; padding: 8px; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+				.panel h3 { margin-top: 0; }
+				.chart-container, #metricsTable, #topBreakdownsTable, #topBreakdownsKeyLinesTable { height: 100%; }
+				.chart-container { overflow: hidden; }
+				.table-container { height: 100%; overflow: auto; }
+			</style>
+			<div class="container">
+				<div class="dashboard-grid">
+					<div class="stack">
+						<div class="card">
+							<div id="resizable_breakDownOnline" class="chart-container" style="height: 100%">
+								<div id="breakDown" style="height: 100%; width: 100%;"></div>
+							</div>
+						</div>
+						<div class="card">
+							<div id="resizable_availabilityOnline" class="chart-container" style="height: 100%">
+								<div id="availabilityOnline" style="height: 100%; width: 100%;"></div>
+							</div>
+						</div>
+					</div>
+					<div class="right-stack">
+						<div class="card">
+							<div class="table-container">
+								<div class="chart-container">
+									<div id="metricsTable"></div>
+								</div>
+							</div>
+						</div>
+						<div class="panel">
+							<h3>Ключевые линии</h3>
+							<div id="topBreakdownsKeyLinesTable"></div>
+							<h3>Топ поломок за сутки</h3>
+							<div id="topBreakdownsTable"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
     </div>
 
     <script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
@@ -165,6 +172,145 @@
                 console.error('Ошибка при получении данных:', error);
                 return null;
             }
+        }
+
+        // Функция для получения текущих показателей
+        async function fetchCurrentMetrics() {
+            try {
+                const response = await fetch('http://localhost:8080/dashboard/current-metrics');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Ошибка при получении текущих показателей:', error);
+                return null;
+            }
+        }
+
+        // Функция для создания графика
+        function createChart(containerId, chartId, title, dataPoints, yAxisSuffix = "%") {
+            const options = {
+                animationEnabled: true,
+                title: { text: title },
+                axisX: {
+                    title: "Время",
+                    labelAngle: -45
+                },
+                axisY: {
+                    title: "Значение",
+                    suffix: yAxisSuffix
+                },
+                data: dataPoints
+            };
+
+            $(containerId).resizable({
+                create: function() {
+                    $(chartId).CanvasJSChart(options);
+                },
+                resize: function() {
+                    $(chartId).CanvasJSChart().render();
+                }
+            });
+        }
+
+        // Функция для обработки данных графика
+        function processChartData(rawData) {
+            const groupedData = {};
+            
+            rawData.forEach(item => {
+                if (!groupedData[item.area]) {
+                    groupedData[item.area] = [];
+                }
+                groupedData[item.area].push({
+                    label: item.timestamp,
+                    y: item.value
+                });
+            });
+
+            return Object.keys(groupedData).map(area => ({
+                type: "line",
+                name: area,
+                showInLegend: true,
+                dataPoints: groupedData[area]
+            }));
+        }
+
+        // Загрузка графиков BD и доступности
+        async function loadOnlineCharts() {
+            try {
+                const bdData = await fetchData('http://localhost:8081/dashboard/online/bd');
+                const availabilityData = await fetchData('http://localhost:8081/dashboard/online/availability');
+
+                if (bdData) {
+                    const bdChartData = processChartData(bdData);
+                    createChart("#resizable_breakDownOnline", "#breakDown", "BD % (онлайн)", bdChartData);
+                }
+
+                if (availabilityData) {
+                    const availabilityChartData = processChartData(availabilityData);
+                    createChart("#resizable_availabilityOnline", "#availabilityOnline", "Доступность % (онлайн)", availabilityChartData);
+                }
+                
+                // Обновляем таблицу с текущими данными
+                createMetricsTable(bdData, availabilityData);
+            } catch (error) {
+                console.error('Ошибка при загрузке онлайн графиков:', error);
+            }
+        }
+
+        // Функция для создания таблицы с показателями
+        function createMetricsTable(bdData, availabilityData) {
+            const currentDate = new Date().toLocaleDateString('ru-RU');
+            const areas = ['Резиносмешение', 'Сборка 1', 'Сборка 2', 'Вулканизация', 'УЗО', 'Модули', 'Завод'];
+            
+            // Получаем последние значения из данных графиков
+            const getCurrentValue = (data, area) => {
+                if (!data) return 0;
+                const areaData = data.filter(item => item.area === area);
+                return areaData.length > 0 ? areaData[areaData.length - 1].value : 0;
+            };
+
+            let tableHTML = `
+            <table class="metrics-table">
+                <thead>
+                    <tr>
+                        <th>Показатель</th>
+                        <th>Цель</th>
+                        <th>${currentDate}</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+            areas.forEach(area => {
+                const bdValue = getCurrentValue(bdData, area);
+                const availabilityValue = getCurrentValue(availabilityData, area);
+                
+                tableHTML += `
+                <tr class="section-header">
+                    <td colspan="3">${area}</td>
+                </tr>
+                <tr>
+                    <td>BD</td>
+                    <td>2%</td>
+                    <td class="${bdValue <= 2 ? 'target-met' : 'target-not-met'}">
+                        ${bdValue.toFixed(2)}%
+                    </td>
+                </tr>
+                <tr>
+                    <td>Доступность</td>
+                    <td>97%</td>
+                    <td class="${availabilityValue >= 97 ? 'target-met' : 'target-not-met'}">
+                        ${availabilityValue.toFixed(2)}%
+                    </td>
+                </tr>
+            `;
+            });
+
+            tableHTML += '</tbody></table>';
+            document.getElementById('metricsTable').innerHTML = tableHTML;
         }
 
         // Функция для создания таблицы топ поломок
@@ -203,14 +349,19 @@
             createTopBreakdownsTable(topBreakdowns, 'topBreakdownsTable');
             const topBreakdownsKeyLines = await fetchData('http://localhost:8080/dashboard/top-breakdowns-key-lines');
             createTopBreakdownsTable(topBreakdownsKeyLines, 'topBreakdownsKeyLinesTable');
-            const topBreakdownsWeek = await fetchData('http://localhost:8080/dashboard/top-breakdowns-week');
-            createTopBreakdownsTable(topBreakdownsWeek, 'topBreakdownsWeekTable', true);
-            const topBreakdownsWeekKeyLines = await fetchData('http://localhost:8080/dashboard/top-breakdowns-week-key-lines');
-            createTopBreakdownsTable(topBreakdownsWeekKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
+        }
+
+        // Инициализация дашборда
+        async function initializeDashboard() {
+            await loadTopBreakdownsTables();
+            await loadOnlineCharts();
+            
+            // Обновление графиков каждые 3 минуты
+            setInterval(loadOnlineCharts, 180000);
         }
 
         // Вызовем при инициализации
-        window.onload = loadTopBreakdownsTables;
+        window.onload = initializeDashboard;
     </script>
 
 </body>

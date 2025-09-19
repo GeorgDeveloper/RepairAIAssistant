@@ -48,6 +48,12 @@ public class DashboardController {
         return monitoringRepository.searchAvailability();
     }
 
+    @GetMapping("/pm-plan-fact-tag")
+    @ResponseBody
+    public List<Map<String, Object>> getPmPlanFactTagPerMonth() {
+        return monitoringRepository.getPmPlanFactTagPerMonth();
+    }
+
 
     @GetMapping("/current-metrics")
     @ResponseBody
