@@ -47,6 +47,11 @@ public class AssistantController {
         return "dinamic_bd";
     }
 
+    @GetMapping("/failures")
+    public String failures() {
+        return "failures";
+    }
+
     @PostMapping("/api/chat")
     @ResponseBody
     public String processChat(@RequestBody String message) {
@@ -57,6 +62,13 @@ public class AssistantController {
     @ResponseBody
     public String processFeedback(@RequestBody FeedbackDto feedback) {
         return coreServiceClient.sendFeedback(feedback);
+    }
+
+    @GetMapping("/dashboard/equipment-maintenance-records")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords(
+            @RequestParam(name = "limit", defaultValue = "500") int limit) {
+        return coreServiceClient.getEquipmentMaintenanceRecords(limit);
     }
 
     public static class FeedbackDto {

@@ -60,4 +60,11 @@ public class DashboardController {
     public Map<String, Object> getCurrentMetrics() {
         return monitoringRepository.getCurrentMetrics();
     }
+
+    @GetMapping("/equipment-maintenance-records")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords(
+            @RequestParam(name = "limit", defaultValue = "500") int limit) {
+        return monitoringRepository.getEquipmentMaintenanceRecords(limit);
+    }
 }

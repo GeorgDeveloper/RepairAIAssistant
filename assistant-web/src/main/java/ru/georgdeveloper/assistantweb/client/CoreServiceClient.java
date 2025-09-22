@@ -18,4 +18,10 @@ public class CoreServiceClient {
     public String sendFeedback(Object feedback) {
         return restTemplate.postForObject(CORE_SERVICE_URL + "/feedback", feedback, String.class);
     }
+
+    @SuppressWarnings("unchecked")
+    public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords(int limit) {
+        return restTemplate.getForObject("http://localhost:8080/dashboard/equipment-maintenance-records?limit=" + limit, 
+                java.util.List.class);
+    }
 }

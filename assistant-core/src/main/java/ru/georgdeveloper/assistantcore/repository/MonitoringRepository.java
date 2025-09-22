@@ -104,6 +104,13 @@ public class MonitoringRepository {
         return jdbcTemplate.queryForList(sql);
     }
 
+    // Все заявки на поломки (equipment_maintenance_records) с ограничением по количеству
+    public List<Map<String, Object>> getEquipmentMaintenanceRecords(int limit) {
+        String sql = "SELECT * " +
+                "FROM monitoring_bd.equipment_maintenance_records LIMIT ?";
+        return jdbcTemplate.queryForList(sql, limit);
+    }
+
 
     public Map<String, Object> getCurrentMetrics() {
         Map<String, Object> result = new java.util.HashMap<>();
