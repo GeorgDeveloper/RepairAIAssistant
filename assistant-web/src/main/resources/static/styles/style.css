@@ -508,24 +508,29 @@ body {
     font-weight: bold;
 }
 
-/* ====== Исправление переполнения ====== */
+/* ====== Переполнение и скролл ====== */
+/* Разрешаем горизонтальный скролл страницы при необходимости */
 html,
 body {
-    overflow-x: hidden;
+    overflow-x: auto;
 }
 
+/* Родительские контейнеры не должны скрывать горизонтальный скролл дочерних таблиц */
 .total-content {
-    overflow: hidden;
+    overflow: visible;
 }
 
+/* Основной контент прокручиваемый, но не блокируем ось X */
 .main-content {
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: visible;
     box-sizing: border-box;
 }
 
+/* Контейнеры не должны обрезать горизонтальные полосы прокрутки */
 .container {
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .row {
