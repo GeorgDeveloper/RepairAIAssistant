@@ -47,6 +47,16 @@ public class AssistantController {
         return "dinamic_bd";
     }
 
+    @GetMapping("/top_causes")
+    public String topCauses() {
+        return "top_causes";
+    }
+
+    @GetMapping("/top-causes")
+    public String topCausesAlt() {
+        return "top_causes";
+    }
+
     @GetMapping("/failures")
     public String failures() {
         return "failures";
