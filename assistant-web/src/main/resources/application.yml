@@ -3,9 +3,10 @@ server:
   port: ${server.web.port:8081}
 
 spring:
+  # Не импортируем корневой файл, чтобы избежать дублирования URL ядра в веб-модуле
   config:
-    import: file:../application.yml
+    import: ''
 
 core:
   service:
-    url: http://localhost:${server.core.port:8080}/api
+    url: http://localhost:${server.core.port:8080}

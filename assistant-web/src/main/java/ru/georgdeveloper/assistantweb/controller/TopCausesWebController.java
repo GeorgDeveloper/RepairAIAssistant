@@ -10,7 +10,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/top-causes")
-@CrossOrigin(origins = "*")
 public class TopCausesWebController {
 
     @Value("${core.service.url:http://localhost:8080}")

@@ -40,7 +40,7 @@ public class GanttRepository {
         sql.append("machine_downtime, ");
         sql.append("status, ");
         sql.append("comments ");
-        sql.append("FROM monitoring_bd.equipment_maintenance_records ");
+        sql.append("FROM equipment_maintenance_records ");
         sql.append("WHERE 1=1 ");
 
         // Добавляем фильтры
@@ -94,7 +94,7 @@ public class GanttRepository {
 
     public List<Map<String, Object>> getEquipmentByArea(String area) {
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT DISTINCT machine_name FROM monitoring_bd.equipment_maintenance_records ");
+        sql.append("SELECT DISTINCT machine_name FROM equipment_maintenance_records ");
         sql.append("WHERE machine_name IS NOT NULL AND machine_name != '' ");
         
         if (area != null && !area.equals("all")) {
@@ -146,7 +146,7 @@ public class GanttRepository {
                     "                        'Manual dosing', 'Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1') THEN 'NewMixingArea' " +
                     "  ELSE 'Other' " +
                     "END as area " +
-                    "FROM monitoring_bd.equipment_maintenance_records " +
+                    "FROM equipment_maintenance_records " +
                     "WHERE machine_name IS NOT NULL " +
                     "ORDER BY area";
         
@@ -154,14 +154,14 @@ public class GanttRepository {
     }
 
     public List<Map<String, Object>> getFailureTypes() {
-        String sql = "SELECT DISTINCT failure_type FROM monitoring_bd.equipment_maintenance_records " +
+        String sql = "SELECT DISTINCT failure_type FROM equipment_maintenance_records " +
                     "WHERE failure_type IS NOT NULL AND failure_type != '' " +
                     "ORDER BY failure_type";
         return jdbcTemplate.queryForList(sql);
     }
 
     public List<Map<String, Object>> getStatuses() {
-        String sql = "SELECT DISTINCT status FROM monitoring_bd.equipment_maintenance_records " +
+        String sql = "SELECT DISTINCT status FROM equipment_maintenance_records " +
                     "WHERE status IS NOT NULL AND status != '' " +
                     "ORDER BY status";
         return jdbcTemplate.queryForList(sql);

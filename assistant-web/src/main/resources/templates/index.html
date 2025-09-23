@@ -203,7 +203,7 @@
         // Функция для получения текущих показателей
         async function fetchCurrentMetrics() {
             try {
-                const response = await fetch('http://localhost:8080/dashboard/current-metrics');
+                const response = await fetch('/dashboard/current-metrics');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -462,8 +462,8 @@
 
             try {
                 // Загружаем данные для графиков
-                const breakDownData = await fetchData('http://localhost:8080/dashboard/breakDown');
-                const availabilityData = await fetchData('http://localhost:8080/dashboard/availability');
+                const breakDownData = await fetchData('/dashboard/breakDown');
+                const availabilityData = await fetchData('/dashboard/availability');
 
                 let breakDownPoints = [];
                 let availabilityPoints = [];
@@ -494,13 +494,13 @@
                 createMetricsTable(currentMetrics);
 
                 // Загружаем недельные таблицы
-                const topBreakdownsWeek = await fetchData('http://localhost:8080/dashboard/top-breakdowns-week');
+                const topBreakdownsWeek = await fetchData('/dashboard/top-breakdowns-week');
                 createTopBreakdownsTable(topBreakdownsWeek, 'topBreakdownsWeekTable', true);
-                const topBreakdownsWeekKeyLines = await fetchData('http://localhost:8080/dashboard/top-breakdowns-week-key-lines');
+                const topBreakdownsWeekKeyLines = await fetchData('/dashboard/top-breakdowns-week-key-lines');
                 createTopBreakdownsTable(topBreakdownsWeekKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
 
                 // График PM План/Факт/Tag
-                const pmData = await fetchData('http://localhost:8080/dashboard/pm-plan-fact-tag');
+                const pmData = await fetchData('/dashboard/pm-plan-fact-tag');
                 createPmLineChart('#resizablePm', '#pmChart', pmData);
 
             } catch (error) {

@@ -9,7 +9,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/online-metrics")
-@CrossOrigin(origins = "*")
 public class OnlineMetricsController {
 
     @Autowired
