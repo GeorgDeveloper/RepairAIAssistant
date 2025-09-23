@@ -70,6 +70,17 @@ public class TopCausesController {
                                                         @RequestParam(required = false) String area) {
         return repository.getCauseMechanisms(cause, machine, dateFrom, dateTo, week, area);
     }
+
+    @GetMapping("/drilldown/events")
+    public List<Map<String, Object>> getCauseEvents(@RequestParam String cause,
+                                                    @RequestParam String machine,
+                                                    @RequestParam String mechanism,
+                                                    @RequestParam(required = false) String dateFrom,
+                                                    @RequestParam(required = false) String dateTo,
+                                                    @RequestParam(required = false) String week,
+                                                    @RequestParam(required = false) String area) {
+        return repository.getCauseEvents(cause, machine, mechanism, dateFrom, dateTo, week, area);
+    }
 }
 
 

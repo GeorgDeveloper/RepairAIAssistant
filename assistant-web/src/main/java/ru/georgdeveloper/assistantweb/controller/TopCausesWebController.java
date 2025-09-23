@@ -87,6 +87,22 @@ public class TopCausesWebController {
         if (area != null) url.append("&area=").append(area);
         return restTemplate.getForObject(url.toString(), List.class);
     }
+
+    @GetMapping("/drilldown/events")
+    public List<Map<String, Object>> drillEvents(@RequestParam String cause,
+                                                 @RequestParam String machine,
+                                                 @RequestParam String mechanism,
+                                                 @RequestParam(required = false) String dateFrom,
+                                                 @RequestParam(required = false) String dateTo,
+                                                 @RequestParam(required = false) String week,
+                                                 @RequestParam(required = false) String area) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/top-causes/drilldown/events?cause=" + cause + "&machine=" + machine + "&mechanism=" + mechanism);
+        if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
+        if (dateTo != null) url.append("&dateTo=").append(dateTo);
+        if (week != null) url.append("&week=").append(week);
+        if (area != null) url.append("&area=").append(area);
+        return restTemplate.getForObject(url.toString(), List.class);
+    }
 }
 
 
