@@ -18,43 +18,51 @@ public class DashboardWebController {
     @Autowired
     private RestTemplate restTemplate;
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/breakDown")
     public List<Map<String, Object>> breakDown() {
-        return restTemplate.getForObject(coreServiceUrl + "/dashboard/breakDown", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/breakDown", List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/availability")
     public List<Map<String, Object>> availability() {
-        return restTemplate.getForObject(coreServiceUrl + "/dashboard/availability", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/availability", List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/current-metrics")
     public Map<String, Object> currentMetrics() {
-        return restTemplate.getForObject(coreServiceUrl + "/dashboard/current-metrics", Map.class);
+        return (Map<String, Object>) restTemplate.getForObject(coreServiceUrl + "/dashboard/current-metrics", Map.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/top-breakdowns-week")
     public List<Map<String, Object>> topBreakdownsWeek() {
-        return restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns-week", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns-week", List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/top-breakdowns-week-key-lines")
     public List<Map<String, Object>> topBreakdownsWeekKeyLines() {
-        return restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns-week-key-lines", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns-week-key-lines", List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/top-breakdowns")
     public List<Map<String, Object>> topBreakdownsDay() {
-        return restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns", List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/top-breakdowns-key-lines")
     public List<Map<String, Object>> topBreakdownsDayKeyLines() {
-        return restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns-key-lines", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns-key-lines", List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/pm-plan-fact-tag")
     public List<Map<String, Object>> pmPlanFactTag() {
-        return restTemplate.getForObject(coreServiceUrl + "/dashboard/pm-plan-fact-tag", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/pm-plan-fact-tag", List.class);
     }
 }

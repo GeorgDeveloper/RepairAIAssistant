@@ -18,6 +18,7 @@ public class TopAreasWebController {
     @Autowired
     private RestTemplate restTemplate;
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/data")
     public List<Map<String, Object>> data(@RequestParam(required = false) String dateFrom,
                                           @RequestParam(required = false) String dateTo,
@@ -30,19 +31,22 @@ public class TopAreasWebController {
         if (week != null) url.append("week=").append(week).append('&');
         if (failureType != null) url.append("failureType=").append(failureType).append('&');
         if (limit != null) url.append("limit=").append(limit).append('&');
-        return restTemplate.getForObject(url.toString(), List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/weeks")
     public List<Map<String, Object>> weeks() {
-        return restTemplate.getForObject(coreServiceUrl + "/top-areas/weeks", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/top-areas/weeks", List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/failure-types")
     public List<Map<String, Object>> failureTypes() {
-        return restTemplate.getForObject(coreServiceUrl + "/top-areas/failure-types", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/top-areas/failure-types", List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/drilldown/categories")
     public List<Map<String, Object>> categories(@RequestParam String area,
                                                 @RequestParam(required = false) String dateFrom,
@@ -52,9 +56,10 @@ public class TopAreasWebController {
         if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
-        return restTemplate.getForObject(url.toString(), List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/drilldown/causes")
     public List<Map<String, Object>> causes(@RequestParam String area,
                                             @RequestParam String category,
@@ -65,9 +70,10 @@ public class TopAreasWebController {
         if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
-        return restTemplate.getForObject(url.toString(), List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/drilldown/events")
     public List<Map<String, Object>> events(@RequestParam String area,
                                             @RequestParam String category,
@@ -79,6 +85,6 @@ public class TopAreasWebController {
         if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
-        return restTemplate.getForObject(url.toString(), List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 }

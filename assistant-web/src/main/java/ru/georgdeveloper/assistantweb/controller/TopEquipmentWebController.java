@@ -2,6 +2,8 @@ package ru.georgdeveloper.assistantweb.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -32,22 +34,22 @@ public class TopEquipmentWebController {
         if (area != null) url.append("area=").append(area).append('&');
         if (failureType != null) url.append("failureType=").append(failureType).append('&');
         if (limit != null) url.append("limit=").append(limit).append('&');
-        return restTemplate.getForObject(url.toString(), List.class);
+        return getList(url.toString());
     }
 
     @GetMapping("/weeks")
     public List<Map<String, Object>> weeks() {
-        return restTemplate.getForObject(coreServiceUrl + "/top-equipment/weeks", List.class);
+        return getList(coreServiceUrl + "/top-equipment/weeks");
     }
 
     @GetMapping("/areas")
     public List<Map<String, Object>> areas() {
-        return restTemplate.getForObject(coreServiceUrl + "/top-equipment/areas", List.class);
+        return getList(coreServiceUrl + "/top-equipment/areas");
     }
 
     @GetMapping("/failure-types")
     public List<Map<String, Object>> failureTypes() {
-        return restTemplate.getForObject(coreServiceUrl + "/top-equipment/failure-types", List.class);
+        return getList(coreServiceUrl + "/top-equipment/failure-types");
     }
 
     @GetMapping("/drilldown/causes")
@@ -61,7 +63,7 @@ public class TopEquipmentWebController {
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
         if (area != null) url.append("&area=").append(area);
-        return restTemplate.getForObject(url.toString(), List.class);
+        return getList(url.toString());
     }
 
     @GetMapping("/drilldown/mechanisms")
@@ -76,7 +78,7 @@ public class TopEquipmentWebController {
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
         if (area != null) url.append("&area=").append(area);
-        return restTemplate.getForObject(url.toString(), List.class);
+        return getList(url.toString());
     }
 
     @GetMapping("/drilldown/events")
@@ -92,6 +94,13 @@ public class TopEquipmentWebController {
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
         if (area != null) url.append("&area=").append(area);
-        return restTemplate.getForObject(url.toString(), List.class);
+        return getList(url.toString());
+    }
+
+    private List<Map<String, Object>> getList(String url) {
+        return restTemplate
+                .exchange(url, HttpMethod.GET, null,
+                        new ParameterizedTypeReference<List<Map<String, Object>>>() {})
+                .getBody();
     }
 }

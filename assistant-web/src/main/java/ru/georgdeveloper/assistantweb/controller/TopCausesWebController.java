@@ -2,6 +2,8 @@ package ru.georgdeveloper.assistantweb.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -34,28 +36,28 @@ public class TopCausesWebController {
         if (failureType != null) url.append("failureType=").append(failureType).append('&');
         if (machine != null) url.append("machine=").append(machine).append('&');
         if (limit != null) url.append("limit=").append(limit).append('&');
-        return restTemplate.getForObject(url.toString(), List.class);
+        return getList(url.toString());
     }
 
     @GetMapping("/weeks")
     public List<Map<String, Object>> weeks() {
-        return restTemplate.getForObject(coreServiceUrl + "/top-causes/weeks", List.class);
+        return getList(coreServiceUrl + "/top-causes/weeks");
     }
 
     @GetMapping("/areas")
     public List<Map<String, Object>> areas() {
-        return restTemplate.getForObject(coreServiceUrl + "/top-causes/areas", List.class);
+        return getList(coreServiceUrl + "/top-causes/areas");
     }
 
     @GetMapping("/failure-types")
     public List<Map<String, Object>> failureTypes() {
-        return restTemplate.getForObject(coreServiceUrl + "/top-causes/failure-types", List.class);
+        return getList(coreServiceUrl + "/top-causes/failure-types");
     }
 
     @GetMapping("/machines")
     public List<Map<String, Object>> machines(@RequestParam(required = false) String area) {
         String url = coreServiceUrl + "/top-causes/machines" + (area != null ? ("?area=" + area) : "");
-        return restTemplate.getForObject(url, List.class);
+        return getList(url);
     }
 
     @GetMapping("/drilldown/machines")
@@ -69,7 +71,7 @@ public class TopCausesWebController {
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
         if (area != null) url.append("&area=").append(area);
-        return restTemplate.getForObject(url.toString(), List.class);
+        return getList(url.toString());
     }
 
     @GetMapping("/drilldown/mechanisms")
@@ -84,7 +86,7 @@ public class TopCausesWebController {
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
         if (area != null) url.append("&area=").append(area);
-        return restTemplate.getForObject(url.toString(), List.class);
+        return getList(url.toString());
     }
 
     @GetMapping("/drilldown/events")
@@ -100,7 +102,14 @@ public class TopCausesWebController {
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
         if (area != null) url.append("&area=").append(area);
-        return restTemplate.getForObject(url.toString(), List.class);
+        return getList(url.toString());
+    }
+
+    private List<Map<String, Object>> getList(String url) {
+        return restTemplate
+                .exchange(url, HttpMethod.GET, null,
+                        new ParameterizedTypeReference<List<Map<String, Object>>>() {})
+                .getBody();
     }
 }
 

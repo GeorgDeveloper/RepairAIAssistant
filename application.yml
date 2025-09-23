@@ -49,6 +49,7 @@ spring:
 
 # Настройки ИИ
 ai:
+  enabled: false
   ollama:
     url: http://localhost:11434/api
     model: mistral:latest

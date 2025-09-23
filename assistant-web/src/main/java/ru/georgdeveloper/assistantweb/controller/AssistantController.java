@@ -1,6 +1,7 @@
 package ru.georgdeveloper.assistantweb.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,9 @@ public class AssistantController {
     
     @Autowired
     private CoreServiceClient coreServiceClient;
+
+    @Value("${ai.enabled:true}")
+    private boolean aiEnabled;
     
     @GetMapping("/")
     public String index() {
@@ -24,6 +28,9 @@ public class AssistantController {
     
     @GetMapping("/chat")
     public String chat() {
+        if (!aiEnabled) {
+            return "index";
+        }
         return "chat";
     }
 
@@ -85,12 +92,18 @@ public class AssistantController {
     @PostMapping("/api/chat")
     @ResponseBody
     public String processChat(@RequestBody String message) {
+        if (!aiEnabled) {
+            return "AI is disabled";
+        }
         return coreServiceClient.analyzeRepairRequest(message);
     }
 
     @PostMapping("/api/chat/feedback")
     @ResponseBody
     public String processFeedback(@RequestBody FeedbackDto feedback) {
+        if (!aiEnabled) {
+            return "AI is disabled";
+        }
         return coreServiceClient.sendFeedback(feedback);
     }
 
