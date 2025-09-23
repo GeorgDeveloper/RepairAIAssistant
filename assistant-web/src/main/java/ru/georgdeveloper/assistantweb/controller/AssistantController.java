@@ -57,6 +57,26 @@ public class AssistantController {
         return "top_causes";
     }
 
+    @GetMapping("/top_equipment")
+    public String topEquipment() {
+        return "top_equipment";
+    }
+
+    @GetMapping("/top-equipment")
+    public String topEquipmentAlt() {
+        return "top_equipment";
+    }
+
+    @GetMapping("/top_areas")
+    public String topAreas() {
+        return "top_areas";
+    }
+
+    @GetMapping("/top-areas")
+    public String topAreasAlt() {
+        return "top_areas";
+    }
+
     @GetMapping("/failures")
     public String failures() {
         return "failures";
