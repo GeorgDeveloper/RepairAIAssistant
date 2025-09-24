@@ -18,7 +18,8 @@
         /* Фиксируем страницу в пределах видимой области */
         html, body { height: 100%; overflow: hidden !important; }
         /* Основной контент прокручиваемый только внутри по вертикали при необходимости */
-        .main-content { height: calc(100vh - 80px); overflow-y: auto !important; overflow-x: visible !important; }
+        .main-content { height: calc(100vh - 80px);width: 85%; overflow-y: auto !important; overflow-x: visible !important; padding-right: 100px; }
+
         /* Родители не должны обрезать полосы прокрутки */
         .total-content, .container, .row { overflow: visible !important; }
         /* Force scrollbars inside DataTables area */
@@ -79,15 +80,14 @@
                     <ul class="submenu">
                         <li><a href="/dinamic_bd">Динамика</a></li>
                         <li><a href="/failures">Заявки на поломки</a></li>
-                        <li><a href="#">Топ причин</a></li>
+                        <li><a href="/top-causes">Топ причин</a></li>
                         <li class="has-submenu">
                             <a href="/top-causes">Топ поломок</a>
                             <ul class="submenu">
-                                <li><a href="#">Визуализация</a></li>
-                                <li><a href="#">Таблица</a></li>
+                                <li><a href="/top-equipment">Оборудование</a></li>
+                                <li><a href="/top_areas">Участки</a></li>
                             </ul>
                         </li>
-                        <li><a href="#">Лучшая смена</a></li>
                         <li><a href="/gantt">Диаграмма Ганта</a></li>
                     </ul>
                 </li>
@@ -154,7 +154,13 @@
                 Привет, <a href="#">user</a>
             </div>
         </div>
+
         <div class="main-content">
+            <style>
+                .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
+                .pm-row .table-container, .pm-row .chart-container { height: 100%; }
+                #resizablePm { height: 100% !important; }
+            </style>
             <div class="container">
                 <div class="row">
                     <div class="col">
@@ -307,9 +313,6 @@
             });
         });
     </script>
-    </div>
-</div>
-</div>
 </body>
 
 </html>

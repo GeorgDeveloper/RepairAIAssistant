@@ -49,27 +49,92 @@
                     <a href="/">Главная</a>
                 </li>
                 <li class="has-submenu">
-                    <a href="/failures">Поломки</a>
+                    <a href="#">Поломки</a>
+                    <ul class="submenu">
+                        <li><a href="/dinamic_bd">Динамика</a></li>
+                        <li><a href="/failures">Заявки на поломки</a></li>
+                        <li><a href="/top-causes">Топ причин</a></li>
+                        <li class="has-submenu">
+                            <a href="/top-causes">Топ поломок</a>
+                            <ul class="submenu">
+                                <li><a href="/top-equipment">Оборудование</a></li>
+                                <li><a href="/top_areas">Участки</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="/gantt">Диаграмма Ганта</a></li>
+                    </ul>
                 </li>
                 <li class="has-submenu">
-                    <a href="/dinamic_bd">Динамика</a>
+                    <a href="#">ППР</a>
+                    <ul class="submenu">
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Отчеты</a></li>
+                        <li><a href="#">Tag-PM-BD</a></li>
+                    </ul>
                 </li>
                 <li class="has-submenu">
-                    <a href="/top-equipment">Топ поломок</a>
+                    <a href="#">Диагностика</a>
+                    <ul class="submenu">
+                        <li><a href="#">Отчёты</a></li>
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Пневматика</a></li>
+                        <li><a href="#">Чек-листы</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Графики</a>
+                            <ul class="submenu">
+                                <li class="has-submenu">
+                                    <a href="#">Год</a>
+                                    <ul class="submenu">
+                                        <li class="has-submenu">
+                                            <a href="#">2025</a>
+                                            <ul class="submenu">
+                                                <li><a href="#">Январь</a></li>
+                                                <li><a href="#">Февраль</a></li>
+                                                <li><a href="#">Март</a></li>
+                                                <li><a href="#">Апрель</a></li>
+                                                <li><a href="#">Май</a></li>
+                                                <li><a href="#">Июнь</a></li>
+                                                <li><a href="#">Июль</a></li>
+                                                <li><a href="#">Август</a></li>
+                                                <li><a href="#">Сентябрь</a></li>
+                                                <li><a href="#">Октябрь</a></li>
+                                                <li><a href="#">Ноябрь</a></li>
+                                                <li><a href="#">Декабрь</a></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
                 </li>
                 <li class="has-submenu">
-                    <a class="active" href="/top-areas">Топ по участкам</a>
+                    <a href="#">Ассистент KVANT AI </a>
+                    <ul class="submenu">
+                        <li><a href="/chat">Чат с ассистентом</a></li>
+                        <li><a href="/long_report">Отчеты</a></li>
+                        <li><a href="/manuals">Мануалы</a></li>
+                    </ul>
                 </li>
             </ul>
         </div>
-
-        <div class="user-block">
-            <span>Привет,</span>
-            <a href="/profile">user</a>
-        </div>
     </div>
 
-    <div class="content">
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <style>
+                .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
+                .pm-row .table-container, .pm-row .chart-container { height: 100%; }
+                #resizablePm { height: 100% !important; }
+            </style>
+            <div class="container">
         <div class="content-header">
             <h1>Топ по участкам</h1>
         </div>

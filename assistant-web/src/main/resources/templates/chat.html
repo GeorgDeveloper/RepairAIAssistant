@@ -74,13 +74,13 @@
                         <li><a href="/failures">Заявки на поломки</a></li>
                         <li><a href="/top-causes">Топ причин</a></li>
                         <li class="has-submenu">
-                            <a href="#">Топ поломок</a>
+                            <a href="/top-causes">Топ поломок</a>
                             <ul class="submenu">
-                                <li><a href="#">Визуализация</a></li>
-                                <li><a href="#">Таблица</a></li>
+                                <li><a href="/top-equipment">Оборудование</a></li>
+                                <li><a href="/top_areas">Участки</a></li>
                             </ul>
                         </li>
-                        <li><a href="#">Лучшая смена</a></li>
+                        <li><a href="/gantt">Диаграмма Ганта</a></li>
                     </ul>
                 </li>
                 <li class="has-submenu">
@@ -148,6 +148,11 @@
         </div>
 
         <div class="main-content">
+            <style>
+                .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
+                .pm-row .table-container, .pm-row .chart-container { height: 100%; }
+                #resizablePm { height: 100% !important; }
+            </style>
             <div class="container_dialog">
                 <h1 style="margin: 16px 0 8px 0;">Чат с ассистентом</h1>
                 <div id="chat-container" class="chats-container">
@@ -165,7 +170,6 @@
             </div>
             <script th:src="@{/static/js/chat.js}"></script>
         </div>
-    </div>
     </div>
 
 </body>

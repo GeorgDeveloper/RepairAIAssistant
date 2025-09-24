@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Repair AI Assistant</title>
+    <link rel="icon" type="image/png" href="/static/images/LogoPirelli3.png">
     <link rel="stylesheet" href="static/styles/style.css">
     <link href="https://canvasjs.com/assets/css/jquery-ui.1.11.2.min.css" rel="stylesheet" />
 </head>
@@ -34,7 +35,7 @@
                             <a href="/top-causes">Топ поломок</a>
                             <ul class="submenu">
                                 <li><a href="/top-equipment">Оборудование</a></li>
-                                <li><a href="/top_areas">Таблица</a>Участки</li>
+                                <li><a href="/top_areas">Участки</a></li>
                             </ul>
                         </li>
                         <li><a href="/gantt">Диаграмма Ганта</a></li>
@@ -104,13 +105,13 @@
             </div>
         </div>
 
-        <div class="main-content">
+        <div class="main-content" style="width: auto !important; height: 100% - 80px !important;">
             <style>
                 .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
-                .pm-row .table-container, .pm-row .chart-container { height: 100%; }
+                .pm-row .table-container, .pm-row .chart-container { height: 100% !important;}
                 #resizablePm { height: 100% !important; }
             </style>
-            <div class="container">
+            <div class="container home-grid" style="width: 100% !important;">
                 <div class="row">
                     <div class="col">
                         <div id="resizable1" class="chart-container">
@@ -134,8 +135,8 @@
                 <div class="row pm-row">
                     <div class="col">
                         <div class="table-container">
-                            <div class="chart-container" id="resizablePm" style="overflow: hidden;">
-                                <div id="pmChart" style="height: 100%; width: 100%;"></div>
+                            <div class="chart-container" id="resizablePm">
+                                <div id="pmChart"></div>
                             </div>
                         </div>
                     </div>
@@ -150,29 +151,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col">
-                        <div class="table-container">
-                            <!-- <div class="chart-container">
-                                <h3>Топ поломок за неделю</h3>
-                                <div id="topBreakdownsWeekTable"></div>
-                            </div> -->
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="table-container">
-                            <!-- <div class="chart-container">
-                                <h3>Ключевые линии (неделя)</h3>
-                                <div id="topBreakdownsWeekKeyLinesTable"></div>
-                            </div> -->
-                        </div>
-                    </div>
-                </div>
-                <div class="row"></div>
-                <div class="row">
+                <!-- <div class="row"></div> -->
+                <!-- <div class="row">
                     <div class="col"></div>
                     <div class="col"></div>
-                </div>
+                </div> -->
             </div>
 
         </div>

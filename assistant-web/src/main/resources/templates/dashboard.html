@@ -31,13 +31,12 @@
                         <li><a href="/failures">Заявки на поломки</a></li>
                         <li><a href="/top-causes">Топ причин</a></li>
                         <li class="has-submenu">
-                            <a href="#">Топ поломок</a>
+                            <a href="/top-causes">Топ поломок</a>
                             <ul class="submenu">
-                                <li><a href="#">Визуализация</a></li>
-                                <li><a href="#">Таблица</a></li>
+                                <li><a href="/top-equipment">Оборудование</a></li>
+                                <li><a href="/top_areas">Участки</a></li>
                             </ul>
                         </li>
-                        <li><a href="#">Лучшая смена</a></li>
                         <li><a href="/gantt">Диаграмма Ганта</a></li>
                     </ul>
                 </li>
@@ -105,9 +104,10 @@
             </div>
         </div>
 
-		<div class="main-content">
-			<style>
-				.main-content { padding-top: 16px; }
+        <div class="main-content">
+            <style>
+                .total-content { height: 90% !important; }
+				.main-content { height: 100% !important; padding-top: 16px; }
 				.container { height: 100%; box-sizing: border-box; padding: 0 16px; }
 				.dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; grid-gap: 16px; height: calc(100vh - 128px); }
 				.stack { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); grid-gap: 16px; height: 100%; min-height: 0; }
@@ -119,7 +119,7 @@
 				.chart-container { overflow: hidden; }
 				.table-container { height: 100%; overflow: auto; }
 			</style>
-			<div class="container">
+            <div class="container">
 				<div class="dashboard-grid">
 					<div class="stack">
 						<div class="card">

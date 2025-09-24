@@ -554,6 +554,27 @@ body {
     padding: 20px;
 }
 
+/* Index page: make bottom row stretch to viewport bottom with gap */
+.home-grid {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: calc(100vh - 136px);
+    gap: 8px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.home-grid .pm-row { height: 100%; }
+.home-grid .col { padding: 20px 20px; }
+.home-grid .pm-row .table-container,
+.home-grid .pm-row .chart-container,
+.home-grid #resizablePm,
+.home-grid #pmChart { height: 100% !important; }
+.home-grid .pm-row .table-container,
+.home-grid .pm-row .chart-container,
+.home-grid #resizablePm,
+.home-grid #pmChart { overflow: hidden; }
+.home-grid .pm-row, .home-grid .pm-row .col { min-height: 0; }
 
 
 /* ====== Адаптивность ====== */
