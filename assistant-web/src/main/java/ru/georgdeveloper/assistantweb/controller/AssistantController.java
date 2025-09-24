@@ -1,6 +1,5 @@
 package ru.georgdeveloper.assistantweb.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 
@@ -15,11 +14,18 @@ public class AssistantController {
         return "dashboard";
     }
     
-    @Autowired
-    private CoreServiceClient coreServiceClient;
+    private final CoreServiceClient coreServiceClient;
 
     @Value("${ai.enabled:true}")
     private boolean aiEnabled;
+    
+    /**
+     * Конструктор контроллера веб-интерфейса ассистента
+     * @param coreServiceClient HTTP клиент для взаимодействия с ядром
+     */
+    public AssistantController(CoreServiceClient coreServiceClient) {
+        this.coreServiceClient = coreServiceClient;
+    }
     
     @GetMapping("/")
     public String index() {

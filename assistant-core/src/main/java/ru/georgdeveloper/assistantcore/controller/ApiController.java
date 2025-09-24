@@ -1,6 +1,5 @@
 package ru.georgdeveloper.assistantcore.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ru.georgdeveloper.assistantcore.service.RepairAssistantService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +10,8 @@ import java.nio.file.Paths;
 import java.util.*;
 import ru.georgdeveloper.assistantcore.config.ResourcePaths;
 import ru.georgdeveloper.assistantcore.repository.MonitoringRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * REST API контроллер для взаимодействия между модулями системы.
@@ -29,14 +30,23 @@ import ru.georgdeveloper.assistantcore.repository.MonitoringRepository;
 @RequestMapping("/api")
 public class ApiController {
     
+    private static final Logger logger = LoggerFactory.getLogger(ApiController.class);
+    
     // Основной сервис для обработки запросов с интеграцией AI и БД
-    @Autowired
-    private RepairAssistantService repairAssistantService;
+    private final RepairAssistantService repairAssistantService;
 
+    // Используем MonitoringRepository вместо прямых SQL-запросов
+    private final MonitoringRepository monitoringRepository;
 
-    // Использование MonitoringRepository вместо прямых SQL-запросов
-    @Autowired
-    private MonitoringRepository monitoringRepository;
+    /**
+     * Конструктор контроллера
+     * @param repairAssistantService сервис бизнес-логики с AI
+     * @param monitoringRepository репозиторий для справочных данных
+     */
+    public ApiController(RepairAssistantService repairAssistantService, MonitoringRepository monitoringRepository) {
+        this.repairAssistantService = repairAssistantService;
+        this.monitoringRepository = monitoringRepository;
+    }
     
     /**
      * Основной эндпоинт для анализа запросов пользователей.
@@ -56,13 +66,13 @@ public class ApiController {
     @PostMapping(value = "/analyze", produces = "application/json;charset=UTF-8")
     public String analyzeRepairRequest(@RequestBody String request) {
         // Логирование для мониторинга и отладки
-        System.out.println("Получен запрос: " + request);
+        logger.info("Получен запрос: {}", request);
         
         // Основная обработка через сервисный слой
         String response = repairAssistantService.processRepairRequest(request);
         
         // Логирование ответа для контроля качества
-        System.out.println("Отправляем ответ: " + response);
+        logger.info("Отправляем ответ: {}", response);
         
         return response;
     }
@@ -98,6 +108,11 @@ public class ApiController {
 
         ObjectMapper mapper = new ObjectMapper();
         File file = new File(ResourcePaths.REPAIR_INSTRUCTIONS_JSON_ABS);
+        // Гарантируем существование директории перед записью файла
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
         List<Map<String, String>> all;
         if (file.exists()) {
             List<Map<String, String>> tempList = mapper.readValue(file, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, String>>>() {});
@@ -116,9 +131,14 @@ public class ApiController {
         String line = String.format("{\"input\": \"%s\", \"output\": \"%s\"}\n",
                 feedback.request.replace("\"", "\\\""),
                 feedback.response.replace("\"", "\\\""));
-        Files.write(Paths.get(ResourcePaths.QUERY_TRAINING_DATA_JSONL_ABS),
+        java.nio.file.Path target = Paths.get(ResourcePaths.QUERY_TRAINING_DATA_JSONL_ABS);
+        // Создаём директорию training при отсутствии
+        if (target.getParent() != null && !Files.exists(target.getParent())) {
+            Files.createDirectories(target.getParent());
+        }
+        Files.write(target,
                 line.getBytes(StandardCharsets.UTF_8),
-                Files.exists(Paths.get(ResourcePaths.QUERY_TRAINING_DATA_JSONL_ABS)) ? java.nio.file.StandardOpenOption.APPEND : java.nio.file.StandardOpenOption.CREATE);
+                Files.exists(target) ? java.nio.file.StandardOpenOption.APPEND : java.nio.file.StandardOpenOption.CREATE);
     }
 
     public static class FeedbackDto {
@@ -134,13 +154,23 @@ public class ApiController {
     }
 
     @GetMapping("/equipment")
-    public List<Map<String, Object>> getEquipment(@RequestParam int regionId) {
-        return monitoringRepository.getEquipment(regionId);
+    public org.springframework.http.ResponseEntity<List<Map<String, Object>>> getEquipment(@RequestParam String regionId) {
+        try {
+            int id = Integer.parseInt(regionId);
+            return org.springframework.http.ResponseEntity.ok(monitoringRepository.getEquipment(id));
+        } catch (NumberFormatException ex) {
+            return org.springframework.http.ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping("/nodes")
-    public List<Map<String, Object>> getNodes(@RequestParam int equipmentId) {
-        return monitoringRepository.getNodes(equipmentId);
+    public org.springframework.http.ResponseEntity<List<Map<String, Object>>> getNodes(@RequestParam String equipmentId) {
+        try {
+            int id = Integer.parseInt(equipmentId);
+            return org.springframework.http.ResponseEntity.ok(monitoringRepository.getNodes(id));
+        } catch (NumberFormatException ex) {
+            return org.springframework.http.ResponseEntity.badRequest().build();
+        }
     }
 
 }

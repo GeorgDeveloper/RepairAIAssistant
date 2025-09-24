@@ -17,6 +17,8 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.georgdeveloper.assistanttelegram.config.BotProperties;
 import ru.georgdeveloper.assistanttelegram.handler.CommandHandler;
 import ru.georgdeveloper.assistanttelegram.handler.MessageHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Основной класс Telegram бота для системы ремонта оборудования.
@@ -37,6 +39,8 @@ import ru.georgdeveloper.assistanttelegram.handler.MessageHandler;
  */
 @Component
 public class RepairAssistantBot extends TelegramLongPollingBot {
+    
+    private static final Logger logger = LoggerFactory.getLogger(RepairAssistantBot.class);
     
     private final BotProperties botProperties;
     private final CommandHandler commandHandler;
@@ -124,7 +128,7 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            System.err.println("Ошибка отправки сообщения с кнопками: " + e.getMessage());
+            logger.error("Ошибка отправки сообщения с кнопками: {}", e.getMessage(), e);
         }
     }
 
@@ -195,9 +199,9 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
         
         try {
             execute(chatAction);
-            System.out.println("Индикатор 'печатает' отправлен в чат " + chatId);
+            logger.debug("Индикатор 'печатает' отправлен в чат {}", chatId);
         } catch (TelegramApiException e) {
-            System.err.println("Ошибка отправки индикатора печати: " + e.getMessage());
+            logger.error("Ошибка отправки индикатора печати: {}", e.getMessage(), e);
         }
     }
     
@@ -222,8 +226,7 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
             execute(message);
         } catch (TelegramApiException e) {
             // Логирование ошибок для отладки
-            System.err.println("Ошибка отправки сообщения в Telegram: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Ошибка отправки сообщения в Telegram: {}", e.getMessage(), e);
         }
     }
 }

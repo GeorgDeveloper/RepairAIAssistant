@@ -1,6 +1,5 @@
 package ru.georgdeveloper.assistantcore.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import ru.georgdeveloper.assistantcore.repository.EquipmentMaintenanceRepository;
@@ -26,31 +25,37 @@ import java.util.List;
 public class RepairAssistantService {
     
     // Сервис для взаимодействия с Ollama AI (deepseek-coder:6.7b)
-    @Autowired
-    private OllamaService ollamaService;
+    private final OllamaService ollamaService;
     
+    // Репозитории БД (могут отсутствовать в профиле без БД)
+    private final EquipmentMaintenanceRepository equipmentMaintenanceRepository;
+    private final BreakdownReportRepository breakdownReportRepository;
+    private final SummaryOfSolutionsRepository summaryOfSolutionsRepository;
+    
+    // Сервис анализа запросов
+    private final QueryAnalysisService queryAnalysisService;
+    
+    // Сервис поиска по БД
+    private final DatabaseSearchService databaseSearchService;
 
-    
-    // Репозиторий для записей обслуживания оборудования (12,888+ записей)
-    @Autowired(required = false)
-    private EquipmentMaintenanceRepository equipmentMaintenanceRepository;
-    
-    // Репозиторий для отчетов о поломках (122MB данных)
-    @Autowired(required = false)
-    private BreakdownReportRepository breakdownReportRepository;
-    
-    // Репозиторий для сводок по сложным ремонтам
-    @Autowired(required = false)
-    private SummaryOfSolutionsRepository summaryOfSolutionsRepository;
-    
-    // Сервис для анализа пользовательских запросов
-    @Autowired
-    private QueryAnalysisService queryAnalysisService;
-    
-    
-    // Сервис для поиска данных по всем таблицам
-    @Autowired
-    private DatabaseSearchService databaseSearchService;
+    /**
+     * Конструктор сервиса
+     */
+    public RepairAssistantService(
+            OllamaService ollamaService,
+            EquipmentMaintenanceRepository equipmentMaintenanceRepository,
+            BreakdownReportRepository breakdownReportRepository,
+            SummaryOfSolutionsRepository summaryOfSolutionsRepository,
+            QueryAnalysisService queryAnalysisService,
+            DatabaseSearchService databaseSearchService
+    ) {
+        this.ollamaService = ollamaService;
+        this.equipmentMaintenanceRepository = equipmentMaintenanceRepository;
+        this.breakdownReportRepository = breakdownReportRepository;
+        this.summaryOfSolutionsRepository = summaryOfSolutionsRepository;
+        this.queryAnalysisService = queryAnalysisService;
+        this.databaseSearchService = databaseSearchService;
+    }
     
     /**
      * Главный метод обработки запросов пользователей.

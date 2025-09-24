@@ -1,6 +1,5 @@
 package ru.georgdeveloper.assistantweb.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -17,8 +16,14 @@ public class TopCausesWebController {
     @Value("${core.service.url:http://localhost:8080}")
     private String coreServiceUrl;
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
+
+    /**
+     * Конструктор контроллера причин отказов
+     */
+    public TopCausesWebController(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     @GetMapping("/data")
     public List<Map<String, Object>> data(@RequestParam(required = false) String dateFrom,

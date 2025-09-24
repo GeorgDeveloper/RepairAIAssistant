@@ -49,7 +49,7 @@ spring:
 
 # Настройки ИИ
 ai:
-  enabled: false
+  enabled: true
   ollama:
     url: http://localhost:11434/api
     model: mistral:latest
@@ -94,6 +94,13 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: logs/repair-assistant.log
+  # Ограничение размера и ротация лог-файлов (Logback RollingPolicy)
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB        # Максимальный размер одного лог-файла
+      total-size-cap: 200MB      # Общий предел для всех архивов
+      max-history: 14            # Хранить архивы за 14 последних дней
+      clean-history-on-start: true
 
 # Мониторинг
 management:

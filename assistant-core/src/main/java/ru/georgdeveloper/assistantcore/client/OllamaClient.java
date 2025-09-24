@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import ru.georgdeveloper.assistantcore.config.AssistantProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Клиент для взаимодействия с Ollama AI API.
@@ -22,6 +24,8 @@ import ru.georgdeveloper.assistantcore.config.AssistantProperties;
  */
 @Component
 public class OllamaClient {
+    
+    private static final Logger logger = LoggerFactory.getLogger(OllamaClient.class);
     
     // HTTP клиент для отправки запросов к Ollama API
     @Autowired
@@ -87,7 +91,7 @@ public class OllamaClient {
                 "\"options\": {\"temperature\": 0.7}" +
                 "}";
             
-            System.out.println("Ollama request: " + requestBody); // Отладочный вывод
+            logger.debug("Ollama request: {}", requestBody); // Отладочный вывод
             
             // Настройка HTTP заголовков для JSON API
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
@@ -98,7 +102,7 @@ public class OllamaClient {
             
             // Отправка запроса к Ollama серверу
             String response = restTemplate.postForObject(url, entity, String.class);
-            System.out.println("Ollama response: " + response); // Отладочный вывод
+            logger.debug("Ollama response: {}", response); // Отладочный вывод
             
             /*
              * Парсинг JSON ответа от Ollama
@@ -150,8 +154,7 @@ public class OllamaClient {
             
         } catch (Exception e) {
             // Логирование ошибок для отладки
-            System.err.println("Ollama API error: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Ollama API error: {}", e.getMessage(), e);
             return "Ошибка подключения к Ollama: " + e.getMessage();
         }
     }

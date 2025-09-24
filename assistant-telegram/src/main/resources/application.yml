@@ -6,6 +6,13 @@ spring:
   config:
     import: file:../application.yml
 
+# URL ядра (assistant-core) для обращения из Telegram бота
 core:
   service:
     url: http://localhost:${server.core.port:8080}/api
+
+# Telegram Bot (переменные среды перекрывают значения из корневого application.yml)
+telegram:
+  bot:
+    token: ${TELEGRAM_BOT_TOKEN:${telegram.bot.token}}
+    username: ${TELEGRAM_BOT_USERNAME:${telegram.bot.username}}

@@ -7,6 +7,7 @@ spring:
   config:
     import: ''
 
+# URL ядра (assistant-core) для проксирования запросов из веб-интерфейса
 core:
   service:
     url: http://localhost:${server.core.port:8080}

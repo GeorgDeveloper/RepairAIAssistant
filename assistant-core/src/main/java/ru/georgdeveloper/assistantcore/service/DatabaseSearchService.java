@@ -1,6 +1,5 @@
 package ru.georgdeveloper.assistantcore.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantcore.model.EquipmentMaintenanceRecord;
 import ru.georgdeveloper.assistantcore.model.SummaryOfSolutions;
@@ -15,15 +14,26 @@ import ru.georgdeveloper.assistantcore.nlp.TfidfKeywordExtractorService;
 
 @Service
 public class DatabaseSearchService {
+    
+    private final TfidfKeywordExtractorService tfidfKeywordExtractorService;
+    private final EquipmentMaintenanceRepository equipmentRepo;
+    private final SummaryOfSolutionsRepository summaryRepo;
+    private final BreakdownReportRepository breakdownRepo;
 
-    @Autowired
-    private TfidfKeywordExtractorService tfidfKeywordExtractorService;
-    @Autowired(required = false)
-    private EquipmentMaintenanceRepository equipmentRepo;
-    @Autowired(required = false)
-    private SummaryOfSolutionsRepository summaryRepo;
-    @Autowired(required = false)
-    private BreakdownReportRepository breakdownRepo;
+    /**
+     * Конструктор сервиса поиска
+     */
+    public DatabaseSearchService(
+            TfidfKeywordExtractorService tfidfKeywordExtractorService,
+            EquipmentMaintenanceRepository equipmentRepo,
+            SummaryOfSolutionsRepository summaryRepo,
+            BreakdownReportRepository breakdownRepo
+    ) {
+        this.tfidfKeywordExtractorService = tfidfKeywordExtractorService;
+        this.equipmentRepo = equipmentRepo;
+        this.summaryRepo = summaryRepo;
+        this.breakdownRepo = breakdownRepo;
+    }
 
     /**
      * Универсальный поиск по всем ключевым таблицам на основе динамических ключевых слов из запроса пользователя

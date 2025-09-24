@@ -1,19 +1,28 @@
 package ru.georgdeveloper.assistantcore.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ru.georgdeveloper.assistantcore.service.QueryAnalysisService;
 
 /**
  * Контроллер для управления обучением модели
+ * 
+ * Использует конструкторную инъекцию зависимостей для повышения тестируемости
+ * и прозрачности зависимостей.
  */
 @RestController
 @RequestMapping("/api/training")
 public class TrainingController {
-    
-    @Autowired
-    private QueryAnalysisService queryAnalysisService;
-    
+
+    private final QueryAnalysisService queryAnalysisService;
+
+    /**
+     * Конструктор контроллера
+     * @param queryAnalysisService сервис анализа запросов
+     */
+    public TrainingController(QueryAnalysisService queryAnalysisService) {
+        this.queryAnalysisService = queryAnalysisService;
+    }
+
     /**
      * Добавляет новый пример для обучения
      */
@@ -22,7 +31,7 @@ public class TrainingController {
         queryAnalysisService.addTrainingExample(input, output);
         return "Пример добавлен: " + input;
     }
-    
+
     /**
      * Тестирует анализ запроса
      */

@@ -1,6 +1,5 @@
 package ru.georgdeveloper.assistantweb.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -14,8 +13,14 @@ public class OnlineMetricsWebController {
     @Value("${core.service.url:http://localhost:8080}")
     private String coreServiceUrl;
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
+
+    /**
+     * Конструктор контроллера онлайн-метрик
+     */
+    public OnlineMetricsWebController(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     @SuppressWarnings("unchecked")
     @GetMapping("/bd")

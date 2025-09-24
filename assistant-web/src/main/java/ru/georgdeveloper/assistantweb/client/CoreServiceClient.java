@@ -1,13 +1,20 @@
 package ru.georgdeveloper.assistantweb.client;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 @Component
 public class CoreServiceClient {
-    @Autowired
-    private RestTemplate restTemplate;
+    /** HTTP клиент для взаимодействия с ядром (assistant-core) */
+    private final RestTemplate restTemplate;
+
+    /**
+     * Конструктор клиента для core-сервиса
+     * @param restTemplate HTTP клиент Spring
+     */
+    public CoreServiceClient(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     private static final String CORE_SERVICE_URL = "http://localhost:8080/api";
 

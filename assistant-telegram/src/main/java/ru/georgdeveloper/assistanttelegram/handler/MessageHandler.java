@@ -4,10 +4,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import ru.georgdeveloper.assistanttelegram.client.CoreServiceClient;
 import java.util.concurrent.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class MessageHandler {
     
+    private static final Logger logger = LoggerFactory.getLogger(MessageHandler.class);
 
     @Autowired
     private CoreServiceClient coreServiceClient;
@@ -50,11 +53,11 @@ public class MessageHandler {
             String result = mainTask.get(4, TimeUnit.MINUTES);
             return result;
         } catch (TimeoutException e) {
-            System.err.println("Таймаут: помощник не ответил за 4 минуты");
+            logger.warn("Таймаут: помощник не ответил за 4 минуты");
             mainTask.cancel(true);
             return "Помощник не справился с задачей. Попробуйте позже.";
         } catch (Exception e) {
-            System.err.println("Ошибка обработки: " + e.getMessage());
+            logger.error("Ошибка обработки: {}", e.getMessage(), e);
             return "Помощник не справился с задачей. Попробуйте позже.";
         } finally {
             progressTask.cancel(true);
@@ -63,7 +66,7 @@ public class MessageHandler {
     }
     
     public void sendMessage(Long chatId, String text) {
-        System.out.println("Отправка сообщения в чат " + chatId + ": " + text);
+        logger.info("Отправка сообщения в чат {}: {}", chatId, text);
     }
     
     @FunctionalInterface

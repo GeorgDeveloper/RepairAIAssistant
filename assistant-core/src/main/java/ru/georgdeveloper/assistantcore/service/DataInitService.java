@@ -3,6 +3,8 @@ package ru.georgdeveloper.assistantcore.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ru.georgdeveloper.assistantcore.repository.EquipmentMaintenanceRepository;
 import ru.georgdeveloper.assistantcore.repository.BreakdownReportRepository;
@@ -10,6 +12,8 @@ import ru.georgdeveloper.assistantcore.repository.SummaryOfSolutionsRepository;
 
 @Service
 public class DataInitService implements CommandLineRunner {
+    
+    private static final Logger logger = LoggerFactory.getLogger(DataInitService.class);
     
     @Autowired
     private EquipmentMaintenanceRepository equipmentMaintenanceRepository;
@@ -27,14 +31,13 @@ public class DataInitService implements CommandLineRunner {
             long breakdownCount = breakdownReportRepository.count();
             long summaryOfSolutionsCount = summaryOfSolutionsRepository.count();
 
-            System.out.println("✅ Подключение к базе данных успешно!");
-            System.out.println("🔧 Записей обслуживания: " + maintenanceCount);
-            System.out.println("⚠️ Отчетов о поломках: " + breakdownCount);
-            System.out.println("⚠️ Отчетов о сложных ремонтах: " + summaryOfSolutionsCount);
+            logger.info("✅ Подключение к базе данных успешно!");
+            logger.info("🔧 Записей обслуживания: {}", maintenanceCount);
+            logger.info("⚠️ Отчетов о поломках: {}", breakdownCount);
+            logger.info("⚠️ Отчетов о сложных ремонтах: {}", summaryOfSolutionsCount);
 
         } catch (Exception e) {
-            System.err.println("❌ Ошибка подключения к базе данных: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("❌ Ошибка подключения к базе данных: {}", e.getMessage(), e);
         }
     }
 }
