@@ -219,8 +219,11 @@ public class DataSyncService {
     @org.springframework.transaction.annotation.Transactional
     private void saveMetricsToMysql(String areaName, Double downtime, Double workingTime,
                                     Double downtimePercentage, Double availability) {
-        // Удаляем предыдущие строки для области
-        mysqlJdbcTemplate.update("DELETE FROM production_metrics_online WHERE area = ?", areaName);
+        // Удаляем только записи старше 24 часов для данной области
+        mysqlJdbcTemplate.update(
+            "DELETE FROM production_metrics_online WHERE area = ? AND last_update < DATE_SUB(NOW(), INTERVAL 24 HOUR)",
+            areaName
+        );
         // Вставляем новую запись (без возврата identity)
         mysqlJdbcTemplate.update(
             "INSERT INTO production_metrics_online " +
