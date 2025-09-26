@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 REM Скрипт запуска Repair AI Assistant
-REM Этот скрипт запускает все компоненты системы: core, web и telegram
+REM Этот скрипт запускает все компоненты системы: core, web, telegram и base_update
 echo Starting Repair AI Assistant...
 
 REM ========== БЛОК ПРОВЕРКИ JAVA (ЗАКОММЕНТИРОВАН) ==========
@@ -95,6 +95,12 @@ REM Start assistant-telegram
 echo Starting assistant-telegram...
 start "Assistant Telegram" cmd /k "cd assistant-telegram && mvn spring-boot:run"
 
+REM ========== ЗАПУСК МОДУЛЯ ОБНОВЛЕНИЯ БАЗЫ (ASSISTANT-BASE_UPDATE) ==========
+REM Модуль синхронизации данных между SQL Server и MySQL, запускается на 8084
+REM Start assistant-base_update
+echo Starting assistant-base_update...
+start "Assistant Base Update" cmd /k "cd assistant-base_update && mvn spring-boot:run"
+
 REM ========== ЗАВЕРШЕНИЕ ЗАПУСКА ==========
 REM Информация о запущенных сервисах и их адресах
 REM Final message
@@ -102,4 +108,5 @@ echo All services started successfully!
 echo Web interface: http://localhost:8081
 echo Core API: http://localhost:8080
 echo Telegram bot: Running on port 8082
+echo Base Update: http://localhost:8084
 pause

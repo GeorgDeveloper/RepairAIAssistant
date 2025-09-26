@@ -7,6 +7,7 @@
 - **assistant-core** (8080) - Основной API и бизнес-логика
 - **assistant-web** (8081) - Веб-интерфейс
 - **assistant-telegram** (8082) - Telegram бот
+- **assistant-base_update** (8084) - Синхронизация данных SQL Server -> MySQL каждые 3 минуты
 
 ## Быстрый старт
 
@@ -124,7 +125,7 @@ telegram:
 ### Логи
 - Файл: `logs/repair-assistant.log`
 - Уровень: DEBUG для приложения
-- Ротация: ежедневная
+- Ротация: с ограничением размера (max-file-size: 10MB, total-size-cap: 200MB, max-history: 14)
 
 ### Метрики
 - `/actuator/health` - Состояние системы
@@ -139,6 +140,7 @@ repair-ai-assistant/
 ├── assistant-core/          # Основной модуль
 ├── assistant-web/           # Веб-интерфейс  
 ├── assistant-telegram/      # Telegram бот
+├── assistant-base_update/   # Модуль синхронизации данных
 └── target/                  # Сборка
 ```
 
@@ -146,6 +148,11 @@ repair-ai-assistant/
 ```bash
 mvn clean package
 ```
+После сборки артефакты копируются скриптом `build.bat` в каталог `target`:
+
+- WAR: `target/jars/assistant-*.war` (включая `assistant-base-update-0.0.1-SNAPSHOT.war`)
+- Конфиги: `target/config/*-application.yml` (включая `base-update-application.yml`)
+- Скрипты запуска/остановки: `target/start.bat`, `target/stop.bat`
 
 ### Тестирование
 ```bash

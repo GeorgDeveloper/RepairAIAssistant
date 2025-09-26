@@ -49,6 +49,7 @@ echo [6/9] Copying application files...
 copy assistant-core\target\*.war target\jars\ >nul 2>&1
 copy assistant-web\target\*.war target\jars\ >nul 2>&1
 copy assistant-telegram\target\*.war target\jars\ >nul 2>&1
+copy assistant-base_update\target\*.war target\jars\ >nul 2>&1
 echo [OK] Application files copied
 
 echo.
@@ -56,6 +57,7 @@ echo [7/9] Copying configuration files...
 copy assistant-core\src\main\resources\application.yml target\config\core-application.yml >nul 2>&1
 copy assistant-web\src\main\resources\application.yml target\config\web-application.yml >nul 2>&1
 copy assistant-telegram\src\main\resources\application.yml target\config\telegram-application.yml >nul 2>&1
+copy assistant-base_update\src\main\resources\application.yml target\config\base-update-application.yml >nul 2>&1
 echo [OK] Configuration files copied
 
 echo.
@@ -74,6 +76,8 @@ echo timeout /t 10 /nobreak ^>nul >> target\start.bat
 echo start "Web" java -jar jars\assistant-web-0.0.1-SNAPSHOT.war >> target\start.bat
 echo timeout /t 5 /nobreak ^>nul >> target\start.bat
 echo start "Telegram" java -jar jars\assistant-telegram-0.0.1-SNAPSHOT.war >> target\start.bat
+echo timeout /t 5 /nobreak ^>nul >> target\start.bat
+echo start "Base Update" java -jar jars\assistant-base-update-0.0.1-SNAPSHOT.war >> target\start.bat
 echo echo All services started! >> target\start.bat
 echo pause >> target\start.bat
 
@@ -82,6 +86,7 @@ echo echo Stopping services... >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Core*" ^>nul 2^>^&1 >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Web*" ^>nul 2^>^&1 >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Telegram*" ^>nul 2^>^&1 >> target\stop.bat
+echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Base Update*" ^>nul 2^>^&1 >> target\stop.bat
 echo echo Services stopped. >> target\stop.bat
 echo pause >> target\stop.bat
 
