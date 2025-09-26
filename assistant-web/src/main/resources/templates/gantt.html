@@ -301,20 +301,20 @@
     </div>
 
 
-    <div class="total-content">
+    <div class="total-content" style="height: 100vh; overflow: hidden;">
         <div class="header">
             <div class="user_logo">
                 Привет, <a href="#">user</a>
             </div>
         </div>
 
-        <div class="main-content">
+        <div class="main-content" style="height: calc(100vh - 80px); overflow: hidden;">
             <style>
                 .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
                 .pm-row .table-container, .pm-row .chart-container { height: 100%; }
                 #resizablePm { height: 100% !important; }
             </style>
-            <div class="container">
+            <div class="container" style="height: 100%; display: flex; flex-direction: column;">
                 <h1>Диаграмма Ганта - Breakdown ремонты оборудования</h1>
                 
 
@@ -375,7 +375,7 @@
                 <div class="loading" id="loading">Загрузка данных...</div>
                 <div class="error" id="error"></div>
                 
-                <div class="gantt-container">
+                <div class="gantt-container" style="flex: 1; overflow: auto;">
                     <div class="gantt-header">
                         <div class="machine-name">Оборудование</div>
                         <div class="time-slots" id="time-header"></div>
