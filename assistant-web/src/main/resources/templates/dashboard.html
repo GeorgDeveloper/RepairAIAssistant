@@ -19,7 +19,7 @@
         <div class="nav-container">
             <ul class="nav-menu">
                 <li class="has-submenu">
-                    <a href="/dashboard">Дашборд</a>
+                    <a href="/dashboard">Инфопанель</a>
                 </li>
                 <li class="has-submenu">
                     <a href="/">Главная</a>
@@ -141,10 +141,10 @@
 								</div>
 							</div>
 						</div>
-						<div class="panel">
-							<h3>Ключевые линии</h3>
+                        <div class="panel">
+                            <h3 id="keyLinesHeader">Ключевые линии</h3>
 							<div id="topBreakdownsKeyLinesTable"></div>
-							<h3>Топ поломок за сутки</h3>
+                            <h3 id="topBreakdownsHeader">Топ поломок за сутки</h3>
 							<div id="topBreakdownsTable"></div>
 						</div>
 					</div>
@@ -374,7 +374,14 @@
             const topBreakdowns = await fetchData('http://localhost:8080/dashboard/top-breakdowns');
             createTopBreakdownsTable(topBreakdowns, 'topBreakdownsTable');
             const topBreakdownsKeyLines = await fetchData('http://localhost:8080/dashboard/top-breakdowns-key-lines');
-            createTopBreakdownsTable(topBreakdownsKeyLines, 'topBreakdownsKeyLinesTable');
+    createTopBreakdownsTable(topBreakdownsKeyLines, 'topBreakdownsKeyLinesTable', true);
+
+    // Добавляем в заголовки дату прошедших суток
+    const yesterday = new Date(Date.now() - 24*60*60*1000).toLocaleDateString('ru-RU');
+    const keyLinesHeader = document.getElementById('keyLinesHeader');
+    const topBreakdownsHeader = document.getElementById('topBreakdownsHeader');
+    if (keyLinesHeader) keyLinesHeader.textContent = `Ключевые линии — ${yesterday}`;
+    if (topBreakdownsHeader) topBreakdownsHeader.textContent = `Топ поломок за сутки — ${yesterday}`;
         }
 
         // Инициализация дашборда
