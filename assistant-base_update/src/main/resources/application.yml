@@ -7,10 +7,10 @@ spring:
     import: file:../application.yml
   # Основная БД (MySQL) для сохранения метрик
   datasource:
-    url: ${data_sync.mysql.url}
-    username: ${data_sync.mysql.username}
-    password: ${data_sync.mysql.password}
-    driver-class-name: ${data_sync.mysql.driver}
+    url: ${data-sync.mysql.url}
+    username: ${data-sync.mysql.username}
+    password: ${data-sync.mysql.password}
+    driver-class-name: ${data-sync.mysql.driver}
   jpa:
     hibernate:
       ddl-auto: none

@@ -12,7 +12,7 @@ import java.util.List;
  * а также конфигурацию областей для синхронизации.
  */
 @Component
-@ConfigurationProperties(prefix = "data_sync")
+@ConfigurationProperties(prefix = "data-sync")
 public class DataSyncProperties {
 
     private boolean enabled = true;

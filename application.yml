@@ -121,7 +121,7 @@ cache:
   max-size: 1000
 
 # Синхронизация данных между базами
-data_sync:
+data-sync:
   enabled: true
   schedule: "0 */3 * * * ?"  # Каждые 3 минуты
   sql_server:
