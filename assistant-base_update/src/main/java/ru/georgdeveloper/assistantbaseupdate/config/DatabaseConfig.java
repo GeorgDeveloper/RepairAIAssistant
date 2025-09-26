@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
+import com.zaxxer.hikari.HikariDataSource;
 
 /**
  * Конфигурация источников данных для синхронизации.
@@ -26,21 +27,17 @@ public class DatabaseConfig {
     @Bean(name = "sqlServerDataSource")
     @Primary
     public DataSource sqlServerDataSource() {
-        org.apache.tomcat.jdbc.pool.DataSource dataSource = new org.apache.tomcat.jdbc.pool.DataSource();
-        dataSource.setUrl(dataSyncProperties.getSqlServer().getUrl());
-        dataSource.setUsername(dataSyncProperties.getSqlServer().getUsername());
-        dataSource.setPassword(dataSyncProperties.getSqlServer().getPassword());
-        dataSource.setDriverClassName(dataSyncProperties.getSqlServer().getDriver());
-        dataSource.setInitialSize(1);
-        dataSource.setMaxActive(5);
-        dataSource.setMaxIdle(5);
-        dataSource.setMinIdle(1);
-        dataSource.setValidationQuery("SELECT 1");
-        dataSource.setTestOnBorrow(true);
-        dataSource.setTestWhileIdle(true);
-        dataSource.setTimeBetweenEvictionRunsMillis(30000);
-        dataSource.setMinEvictableIdleTimeMillis(60000);
-        return dataSource;
+        HikariDataSource ds = new HikariDataSource();
+        ds.setJdbcUrl(dataSyncProperties.getSqlServer().getUrl());
+        ds.setUsername(dataSyncProperties.getSqlServer().getUsername());
+        ds.setPassword(dataSyncProperties.getSqlServer().getPassword());
+        ds.setDriverClassName(dataSyncProperties.getSqlServer().getDriver());
+        ds.setMinimumIdle(1);
+        ds.setMaximumPoolSize(5);
+        ds.setIdleTimeout(60000);
+        ds.setConnectionTimeout(30000);
+        ds.setPoolName("sqlserver-hikari");
+        return ds;
     }
 
     /**
@@ -48,21 +45,17 @@ public class DatabaseConfig {
      */
     @Bean(name = "mysqlDataSource")
     public DataSource mysqlDataSource() {
-        org.apache.tomcat.jdbc.pool.DataSource dataSource = new org.apache.tomcat.jdbc.pool.DataSource();
-        dataSource.setUrl(dataSyncProperties.getMysql().getUrl());
-        dataSource.setUsername(dataSyncProperties.getMysql().getUsername());
-        dataSource.setPassword(dataSyncProperties.getMysql().getPassword());
-        dataSource.setDriverClassName(dataSyncProperties.getMysql().getDriver());
-        dataSource.setInitialSize(1);
-        dataSource.setMaxActive(5);
-        dataSource.setMaxIdle(5);
-        dataSource.setMinIdle(1);
-        dataSource.setValidationQuery("SELECT 1");
-        dataSource.setTestOnBorrow(true);
-        dataSource.setTestWhileIdle(true);
-        dataSource.setTimeBetweenEvictionRunsMillis(30000);
-        dataSource.setMinEvictableIdleTimeMillis(60000);
-        return dataSource;
+        HikariDataSource ds = new HikariDataSource();
+        ds.setJdbcUrl(dataSyncProperties.getMysql().getUrl());
+        ds.setUsername(dataSyncProperties.getMysql().getUsername());
+        ds.setPassword(dataSyncProperties.getMysql().getPassword());
+        ds.setDriverClassName(dataSyncProperties.getMysql().getDriver());
+        ds.setMinimumIdle(1);
+        ds.setMaximumPoolSize(5);
+        ds.setIdleTimeout(60000);
+        ds.setConnectionTimeout(30000);
+        ds.setPoolName("mysql-hikari");
+        return ds;
     }
 
     /**
