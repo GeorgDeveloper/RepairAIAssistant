@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import ru.georgdeveloper.assistantbaseupdate.entity.ProductionMetricsOnline;
 
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Репозиторий для работы с таблицей production_metrics_online.
@@ -22,7 +23,8 @@ public interface ProductionMetricsOnlineRepository extends JpaRepository<Product
      * Удаляет старые записи для области перед вставкой новых
      * @param area название области
      */
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
     @Query("DELETE FROM ProductionMetricsOnline p WHERE p.area = :area")
     void deleteByArea(@Param("area") String area);
 

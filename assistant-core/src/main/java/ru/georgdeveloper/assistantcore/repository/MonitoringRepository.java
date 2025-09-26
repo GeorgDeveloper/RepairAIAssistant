@@ -88,22 +88,16 @@ public class MonitoringRepository {
     }
 
     public List<Map<String, Object>> searchBreakDown() {
-        String sql = "SELECT DATE_FORMAT(last_update, '%d.%m.%Y %H:%i') as production_day, " +
-                "AVG(downtime_percentage) as downtime_percentage " +
-                "FROM production_metrics_online " +
-                "WHERE last_update >= DATE_SUB(NOW(), INTERVAL 30 DAY) " +
-                "GROUP BY DATE(last_update), HOUR(last_update) " +
-                "ORDER BY DATE(last_update), HOUR(last_update)";
+        String sql = "SELECT production_day, downtime_percentage "
+                + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) "
+                + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE()) ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
         return jdbcTemplate.queryForList(sql);
     }
 
     public List<Map<String, Object>> searchAvailability() {
-        String sql = "SELECT DATE_FORMAT(last_update, '%d.%m.%Y %H:%i') as production_day, " +
-                "AVG(availability) as availability " +
-                "FROM production_metrics_online " +
-                "WHERE last_update >= DATE_SUB(NOW(), INTERVAL 30 DAY) " +
-                "GROUP BY DATE(last_update), HOUR(last_update) " +
-                "ORDER BY DATE(last_update), HOUR(last_update)";
+        String sql = "SELECT production_day, availability "
+                + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) "
+                + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE()) ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
         return jdbcTemplate.queryForList(sql);
     }
 
@@ -126,23 +120,34 @@ public class MonitoringRepository {
 
     public Map<String, Object> getCurrentMetrics() {
         Map<String, Object> result = new java.util.HashMap<>();
-        String[] areas = {"NewMixingArea", "SemifinishingArea", "BuildingArea", "CuringArea", "FinishingArea", "Modules", "Plant"};
-        for (String area : areas) {
-            String sqlBdToday = "SELECT AVG(downtime_percentage) FROM production_metrics_online WHERE area = ? AND last_update >= DATE_SUB(NOW(), INTERVAL 1 DAY)";
-            Double bdToday = jdbcTemplate.queryForObject(sqlBdToday, Double.class, area);
-            result.put(area + "_bd_today", bdToday != null ? bdToday : 0.0);
+        String[][] tables = {
+            {"report_new_mixing_area", "report_new_mixing_area"},
+            {"report_semifinishing_area", "report_semifinishing_area"},
+            {"report_building_area", "report_building_area"},
+            {"report_curing_area", "report_curing_area"},
+            {"report_finishig_area", "report_finishig_area"},
+            {"report_modules", "report_modules"},
+            {"report_plant", "report_plant"}
+        };
+        for (String[] t : tables) {
+            String table = t[0];
+            String prefix = t[1];
 
-            String sqlBdMonth = "SELECT AVG(downtime_percentage) FROM production_metrics_online WHERE area = ? AND YEAR(last_update) = YEAR(CURDATE()) AND MONTH(last_update) = MONTH(CURDATE())";
-            Double bdMonth = jdbcTemplate.queryForObject(sqlBdMonth, Double.class, area);
-            result.put(area + "_bd_month", bdMonth != null ? bdMonth : 0.0);
+            String sqlToday = "SELECT AVG(downtime_percentage) as bd FROM " + table + " WHERE production_day = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '%d.%m.%Y')";
+            Double bdToday = jdbcTemplate.queryForObject(sqlToday, Double.class);
+            result.put(prefix + "_bd_today", bdToday != null ? bdToday : 0.0);
 
-            String sqlAvailToday = "SELECT AVG(availability) FROM production_metrics_online WHERE area = ? AND last_update >= DATE_SUB(NOW(), INTERVAL 1 DAY)";
-            Double aToday = jdbcTemplate.queryForObject(sqlAvailToday, Double.class, area);
-            result.put(area + "_availability_today", aToday != null ? aToday : 0.0);
+            String sqlMonth = "SELECT AVG(downtime_percentage) as bd FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE())";
+            Double bdMonth = jdbcTemplate.queryForObject(sqlMonth, Double.class);
+            result.put(prefix + "_bd_month", bdMonth != null ? bdMonth : 0.0);
 
-            String sqlAvailMonth = "SELECT AVG(availability) FROM production_metrics_online WHERE area = ? AND YEAR(last_update) = YEAR(CURDATE()) AND MONTH(last_update) = MONTH(CURDATE())";
-            Double aMonth = jdbcTemplate.queryForObject(sqlAvailMonth, Double.class, area);
-            result.put(area + "_availability_month", aMonth != null ? aMonth : 0.0);
+            String sqlTodayA = "SELECT AVG(availability) FROM " + table + " WHERE production_day = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '%d.%m.%Y')";
+            Double aToday = jdbcTemplate.queryForObject(sqlTodayA, Double.class);
+            result.put(prefix + "_availability_today", aToday != null ? aToday : 0.0);
+
+            String sqlMonthA = "SELECT AVG(availability) FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE())";
+            Double aMonth = jdbcTemplate.queryForObject(sqlMonthA, Double.class);
+            result.put(prefix + "_availability_month", aMonth != null ? aMonth : 0.0);
         }
         return result;
     }

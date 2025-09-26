@@ -216,17 +216,14 @@ public class DataSyncService {
     /**
      * Сохраняет метрики в MySQL
      */
-    private void saveMetricsToMysql(String areaName, Double downtime, Double workingTime, 
-                                   Double downtimePercentage, Double availability) {
-        // Удаляем старые записи для области
+    @org.springframework.transaction.annotation.Transactional
+    private void saveMetricsToMysql(String areaName, Double downtime, Double workingTime,
+                                    Double downtimePercentage, Double availability) {
         repository.deleteByArea(areaName);
-
-        // Создаем новую запись
         ProductionMetricsOnline metrics = new ProductionMetricsOnline(
-            areaName, downtime, workingTime, downtimePercentage, availability
+                areaName, downtime, workingTime, downtimePercentage, availability
         );
-
-        repository.save(metrics);
+        repository.saveAndFlush(metrics);
         logger.debug("Метрики для области {} сохранены в MySQL", areaName);
     }
 }
