@@ -13,7 +13,7 @@ import ru.georgdeveloper.assistantbaseupdate.repository.ProductionMetricsOnlineR
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
 
 /**
  * Основной сервис синхронизации данных между SQL Server и MySQL.
@@ -77,6 +77,14 @@ public class DataSyncService {
                 }
             }
 
+            // Дополнительно синхронизируем текущий ТОП поломок по участкам (онлайн)
+            try {
+                LocalDateTime[] dateRange = calculateDateRange();
+                syncCurrentTopBreakdowns(dateRange[0], dateRange[1]);
+            } catch (Exception e) {
+                logger.error("Ошибка синхронизации топ текущих поломок: {}", e.getMessage(), e);
+            }
+
             long duration = System.currentTimeMillis() - startTime;
             logger.info("Синхронизация завершена. Успешно: {}, Ошибок: {}, Время: {} мс", 
                        successCount, errorCount, duration);
@@ -115,6 +123,108 @@ public class DataSyncService {
 
         logger.debug("Область {} синхронизирована: downtime={}, wt={}, percentage={}, availability={}", 
                    area.getName(), downtime, workingTime, downtimePercentage, availability);
+    }
+
+    /**
+     * Синхронизирует таблицу top_breakdowns_current_status_online по данным из SQL Server за текущие сутки (с 08:00 до 08:00)
+     */
+    @org.springframework.transaction.annotation.Transactional
+    protected void syncCurrentTopBreakdowns(LocalDateTime startDate, LocalDateTime endDate) {
+        logger.info("Синхронизация top_breakdowns_current_status_online за период {} - {}", startDate, endDate);
+
+        // Запрос к SQL Server: берем записи с Comment, содержащим 'Cause:'
+        String sql = "SELECT PlantDepartmentGeographicalCodeName AS area, MachineName AS machine_name, Duration AS downtime, Comment " +
+                     "FROM REP_BreakdownReport " +
+                     "WHERE ((SDate_T1 >= ? AND SDate_T1 < ?) OR (SDate_T4 >= ? AND SDate_T4 < ?)) " +
+                     "AND Comment LIKE '%Cause:%' " +
+                     "ORDER BY PlantDepartmentGeographicalCodeName, MachineName";
+
+        List<Map<String, Object>> rows = sqlServerJdbcTemplate.queryForList(sql, startDate, endDate, startDate, endDate);
+
+        // Агрегируем по участку и машине
+        Map<String, Map<String, AggregatedMachine>> areaToMachines = new HashMap<>();
+        for (Map<String, Object> row : rows) {
+            String area = Objects.toString(row.get("area"), null);
+            String machineName = Objects.toString(row.get("machine_name"), null);
+            Double duration = row.get("downtime") == null ? 0.0 : ((Number) row.get("downtime")).doubleValue();
+            String comment = Objects.toString(row.get("Comment"), "");
+
+            if (area == null || machineName == null) {
+                continue;
+            }
+
+            areaToMachines.computeIfAbsent(area, a -> new HashMap<>());
+            Map<String, AggregatedMachine> machines = areaToMachines.get(area);
+            AggregatedMachine agg = machines.computeIfAbsent(machineName, m -> new AggregatedMachine());
+            agg.totalDowntimeMinutes += duration;
+            String cause = extractCause(comment);
+            if (cause != null && !cause.isBlank()) {
+                agg.causes.add(cause);
+            }
+        }
+
+        // Определяем топ-машину по каждому участку
+        List<Object[]> rowsToInsert = new ArrayList<>();
+        for (Map.Entry<String, Map<String, AggregatedMachine>> areaEntry : areaToMachines.entrySet()) {
+            String area = areaEntry.getKey();
+            String topMachine = null;
+            double maxMinutes = 0.0;
+            Set<String> causes = Collections.emptySet();
+            for (Map.Entry<String, AggregatedMachine> mEntry : areaEntry.getValue().entrySet()) {
+                AggregatedMachine agg = mEntry.getValue();
+                if (agg.totalDowntimeMinutes > maxMinutes) {
+                    maxMinutes = agg.totalDowntimeMinutes;
+                    topMachine = mEntry.getKey();
+                    causes = agg.causes;
+                }
+            }
+            if (topMachine != null) {
+                String downtimeTime = minutesToTime(maxMinutes);
+                String causesJoined = causes.isEmpty() ? "Причина не указана" : String.join(", ", causes);
+                rowsToInsert.add(new Object[]{area, topMachine, downtimeTime, causesJoined});
+            }
+        }
+
+        // Перезаписываем таблицу в одной транзакции
+        mysqlJdbcTemplate.update("TRUNCATE TABLE top_breakdowns_current_status_online");
+        if (!rowsToInsert.isEmpty()) {
+            mysqlJdbcTemplate.batchUpdate(
+                "INSERT INTO top_breakdowns_current_status_online (area, machine_name, machine_downtime, cause) VALUES (?, ?, ?, ?)",
+                rowsToInsert
+            );
+        }
+
+        logger.info("Синхронизация top_breakdowns_current_status_online завершена. Строк вставлено: {}", rowsToInsert.size());
+    }
+
+    private static class AggregatedMachine {
+        double totalDowntimeMinutes = 0.0;
+        Set<String> causes = new LinkedHashSet<>();
+    }
+
+    private String extractCause(String comment) {
+        if (comment == null || !comment.contains("Cause:")) {
+            return null;
+        }
+        try {
+            String[] parts = comment.split("Cause:", 2);
+            String causePart = parts.length > 1 ? parts[1] : "";
+            int dot = causePart.indexOf('.');
+            if (dot >= 0) {
+                causePart = causePart.substring(0, dot);
+            }
+            causePart = causePart.replace("pithon", "java").trim();
+            return causePart.isEmpty() ? null : causePart;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String minutesToTime(double totalMinutes) {
+        int hours = (int) Math.floor(totalMinutes / 60.0);
+        int minutes = (int) Math.floor(totalMinutes % 60.0);
+        int seconds = (int) Math.floor((totalMinutes * 60.0) % 60.0);
+        return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds);
     }
 
     /**

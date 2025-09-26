@@ -33,6 +33,12 @@ public class DashboardController {
         return monitoringRepository.getTopBreakdownsPerDayKeyLines();
     }
 
+    @GetMapping("/top-breakdowns-current")
+    @ResponseBody
+    public List<Map<String, Object>> getTopBreakdownsCurrent() {
+        return monitoringRepository.getTopBreakdownsCurrentStatusOnline();
+    }
+
     @Autowired
     private MonitoringRepository monitoringRepository;
     

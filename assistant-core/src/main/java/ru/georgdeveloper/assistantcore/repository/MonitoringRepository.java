@@ -86,6 +86,14 @@ public class MonitoringRepository {
         return jdbcTemplate.queryForList(sql);
     }
 
+    // Текущий ТОП (онлайн) по таблице top_breakdowns_current_status_online
+    public List<Map<String, Object>> getTopBreakdownsCurrentStatusOnline() {
+        String sql = "SELECT area, machine_name, machine_downtime, cause " +
+                "FROM top_breakdowns_current_status_online " +
+                "ORDER BY TIME_TO_SEC(machine_downtime) DESC";
+        return jdbcTemplate.queryForList(sql);
+    }
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
