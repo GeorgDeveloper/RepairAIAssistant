@@ -396,7 +396,7 @@
         };
         topCurrent.forEach(row => {
             const downtime = (row.machine_downtime_seconds != null) ? formatSeconds(row.machine_downtime_seconds) : (row.machine_downtime || '');
-            tableHTML += `<tr><td>${row.area || ''}</td><td>${row.machine_name || ''}</td><td>${downtime}</td><td>${row.cause || ''}</td></tr>`;
+            tableHTML += `<tr><td>${row.area || ''}</td><td>${row.machine_name || ''}</td><td>${downtime}</td><td>-</td></tr>`;
         });
         tableHTML += '</tbody></table>';
         const currentContainer = document.getElementById('topBreakdownsCurrentTable');
