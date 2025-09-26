@@ -47,7 +47,7 @@ public class DataSyncService {
     /**
      * Планируемая задача синхронизации данных каждые 3 минуты
      */
-    @Scheduled(cron = "${data_sync.schedule:0 */3 * * * ?}")
+    @Scheduled(cron = "${data-sync.schedule:0 */3 * * * ?}")
     public void syncData() {
         if (!dataSyncProperties.isEnabled()) {
             logger.debug("Синхронизация данных отключена в конфигурации");
@@ -219,11 +219,20 @@ public class DataSyncService {
     @org.springframework.transaction.annotation.Transactional
     private void saveMetricsToMysql(String areaName, Double downtime, Double workingTime,
                                     Double downtimePercentage, Double availability) {
-        repository.deleteByArea(areaName);
-        ProductionMetricsOnline metrics = new ProductionMetricsOnline(
-                areaName, downtime, workingTime, downtimePercentage, availability
+        // Удаляем предыдущие строки для области
+        mysqlJdbcTemplate.update("DELETE FROM production_metrics_online WHERE area = ?", areaName);
+        // Вставляем новую запись (без возврата identity)
+        mysqlJdbcTemplate.update(
+            "INSERT INTO production_metrics_online " +
+            "(area, last_update, machine_downtime, wt_min, downtime_percentage, preventive_maintenance_duration_min, availability) " +
+            "VALUES (?, NOW(), ?, ?, ?, ?, ?)",
+            areaName,
+            downtime,
+            workingTime,
+            downtimePercentage,
+            0.0,
+            availability
         );
-        repository.saveAndFlush(metrics);
-        logger.debug("Метрики для области {} сохранены в MySQL", areaName);
+        logger.debug("Метрики для области {} сохранены в MySQL (JdbcTemplate)", areaName);
     }
 }
