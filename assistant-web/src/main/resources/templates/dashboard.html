@@ -205,6 +205,20 @@
                 data: dataPoints
             };
 
+            // Если график уже инициализирован, обновляем данные и перерисовываем
+            try {
+                const chart = $(chartId).CanvasJSChart();
+                if (chart && chart.render) {
+                    chart.options.title = options.title;
+                    chart.options.axisX = options.axisX;
+                    chart.options.axisY = options.axisY;
+                    chart.options.data = options.data;
+                    chart.render();
+                    return;
+                }
+            } catch (e) { /* игнорируем инициализацию при первом запуске */ }
+
+            // Инициализация при первом создании
             $(containerId).resizable({
                 create: function() {
                     $(chartId).CanvasJSChart(options);
@@ -263,13 +277,25 @@
         // Функция для создания таблицы с показателями
         function createMetricsTable(bdData, availabilityData) {
             const currentDate = new Date().toLocaleDateString('ru-RU');
-            const areas = ['Резиносмешение', 'Сборка 1', 'Сборка 2', 'Вулканизация', 'УЗО', 'Модули', 'Завод'];
-            
-            // Получаем последние значения из данных графиков
-            const getCurrentValue = (data, area) => {
-                if (!data) return 0;
-                const areaData = data.filter(item => item.area === area);
-                return areaData.length > 0 ? areaData[areaData.length - 1].value : 0;
+            // Соответствие отображаемого названия области ключу area из БД
+            const areasMap = [
+                { label: 'Резиносмешение', key: 'NewMixingArea' },
+                { label: 'Сборка 1', key: 'SemifinishingArea' },
+                { label: 'Сборка 2', key: 'BuildingArea' },
+                { label: 'Вулканизация', key: 'CuringArea' },
+                { label: 'УЗО', key: 'FinishingArea' },
+                { label: 'Модули', key: 'Modules' },
+                { label: 'Завод', key: 'Plant' }
+            ];
+
+            // Получаем последние значения из данных графиков по ключу area
+            const getCurrentValue = (data, areaKey) => {
+                if (!data || !Array.isArray(data)) return 0;
+                const areaData = data.filter(item => item.area === areaKey);
+                if (areaData.length === 0) return 0;
+                const last = areaData[areaData.length - 1];
+                const val = Number(last && last.value);
+                return isNaN(val) ? 0 : val;
             };
 
             let tableHTML = `
@@ -284,13 +310,13 @@
                 <tbody>
         `;
 
-            areas.forEach(area => {
-                const bdValue = getCurrentValue(bdData, area);
-                const availabilityValue = getCurrentValue(availabilityData, area);
+            areasMap.forEach(({ label, key }) => {
+                const bdValue = getCurrentValue(bdData, key);
+                const availabilityValue = getCurrentValue(availabilityData, key);
                 
                 tableHTML += `
                 <tr class="section-header">
-                    <td colspan="3">${area}</td>
+                    <td colspan="3">${label}</td>
                 </tr>
                 <tr>
                     <td>BD</td>
@@ -355,9 +381,10 @@
         async function initializeDashboard() {
             await loadTopBreakdownsTables();
             await loadOnlineCharts();
-            
-            // Обновление графиков каждые 3 минуты
-            setInterval(loadOnlineCharts, 180000);
+            // Обновление графиков и блиц-панели каждые 60 секунд
+            setInterval(async () => {
+                await loadOnlineCharts();
+            }, 60000);
         }
 
         // Вызовем при инициализации
