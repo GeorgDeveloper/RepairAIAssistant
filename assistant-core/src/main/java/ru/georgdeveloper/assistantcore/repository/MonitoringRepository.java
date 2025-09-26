@@ -46,7 +46,7 @@ public class MonitoringRepository {
                 "WHERE start_bd_t1 >= DATE_SUB(NOW(), INTERVAL 24 HOUR) " +
                 "AND failure_type <> 'Другие' " +
                 "ORDER BY TIME_TO_SEC(machine_downtime) DESC " +
-                "LIMIT 5";
+                "LIMIT 3";
         return jdbcTemplate.queryForList(sql);
     }
 
@@ -67,7 +67,7 @@ public class MonitoringRepository {
         "AND stop_bd_t4 <= CONCAT(CURRENT_DATE(), ' 08:00:00') " +
         "AND failure_type <> 'Другие' " +
         "ORDER BY TIME_TO_SEC(machine_downtime) DESC " +
-        "LIMIT 5";
+        "LIMIT 3";
         // String sql = "SELECT code, machine_name, machine_downtime, cause " +
         //         "FROM equipment_maintenance_records " +
         //         "WHERE (" +
@@ -87,8 +87,9 @@ public class MonitoringRepository {
     }
 
     // Текущий ТОП (онлайн) по таблице top_breakdowns_current_status_online
+    // Возвращаем длительность в секундах, чтобы избежать JDBC-мэппинга TIME -> java.sql.Time
     public List<Map<String, Object>> getTopBreakdownsCurrentStatusOnline() {
-        String sql = "SELECT area, machine_name, machine_downtime, cause " +
+        String sql = "SELECT area, machine_name, TIME_TO_SEC(machine_downtime) AS machine_downtime_seconds, cause " +
                 "FROM top_breakdowns_current_status_online " +
                 "ORDER BY TIME_TO_SEC(machine_downtime) DESC";
         return jdbcTemplate.queryForList(sql);
