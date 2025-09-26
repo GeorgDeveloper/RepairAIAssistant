@@ -25,7 +25,6 @@ public class DatabaseConfig {
      * Источник данных для SQL Server (источник данных)
      */
     @Bean(name = "sqlServerDataSource")
-    @Primary
     public DataSource sqlServerDataSource() {
         HikariDataSource ds = new HikariDataSource();
         ds.setJdbcUrl(dataSyncProperties.getSqlServer().getUrl());
@@ -44,6 +43,7 @@ public class DatabaseConfig {
      * Источник данных для MySQL (назначение данных)
      */
     @Bean(name = "mysqlDataSource")
+    @Primary
     public DataSource mysqlDataSource() {
         HikariDataSource ds = new HikariDataSource();
         ds.setJdbcUrl(dataSyncProperties.getMysql().getUrl());

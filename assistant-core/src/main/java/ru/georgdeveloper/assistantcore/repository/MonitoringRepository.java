@@ -52,19 +52,32 @@ public class MonitoringRepository {
 
     // Топ-5 поломок по ключевым линиям за сутки (последние 24 часа)
     public List<Map<String, Object>> getTopBreakdownsPerDayKeyLines() {
-        String sql = "SELECT code, machine_name, machine_downtime, cause " +
-                "FROM equipment_maintenance_records " +
-                "WHERE (" +
-                " machine_name LIKE 'Mixer GK 270%' OR machine_name LIKE 'Mixer GK 320%' OR" +
-                " machine_name LIKE 'Calender %' OR machine_name LIKE 'Calender Complex %' OR" +
-                " machine_name LIKE 'Bandina%' OR machine_name LIKE 'Duplex%' OR" +
-                " machine_name LIKE 'Calender Comerio Ercole%' OR" +
-                " machine_name LIKE 'VMI APEX%' OR machine_name LIKE 'CMP APEX%' OR" +
-                " machine_name LIKE 'Trafila Quadruplex%' OR machine_name LIKE 'Bartell Bead Machine%' OR" +
-                " machine_name LIKE 'TTM fisher belt cutting%' OR machine_name LIKE 'VMI TPCS%' " +
-                ") " +
-                "AND start_bd_t1 >= DATE_SUB(NOW(), INTERVAL 24 HOUR) " +
-                "AND failure_type <> 'Другие' " +
+        // String sql = "SELECT code, machine_name, machine_downtime, cause " +
+        //         "FROM equipment_maintenance_records " +
+        //         "WHERE (" +
+        //         " machine_name LIKE 'Mixer GK 270%' OR machine_name LIKE 'Mixer GK 320%' OR" +
+        //         " machine_name LIKE 'Calender %' OR machine_name LIKE 'Calender Complex %' OR" +
+        //         " machine_name LIKE 'Bandina%' OR machine_name LIKE 'Duplex%' OR" +
+        //         " machine_name LIKE 'Calender Comerio Ercole%' OR" +
+        //         " machine_name LIKE 'VMI APEX%' OR machine_name LIKE 'CMP APEX%' OR" +
+        //         " machine_name LIKE 'Trafila Quadruplex%' OR machine_name LIKE 'Bartell Bead Machine%' OR" +
+        //         " machine_name LIKE 'TTM fisher belt cutting%' OR machine_name LIKE 'VMI TPCS%' " +
+        //         ") " +
+        //         "AND start_bd_t1 >= DATE_SUB(NOW(), INTERVAL 24 HOUR) " +
+        //         "AND failure_type <> 'Другие' " +
+        //         "ORDER BY TIME_TO_SEC(machine_downtime) DESC " +
+        //         "LIMIT 5";
+        String sql = "SELECT FROM top_breakdowns_per_day_key_lines (code, machine_name, machine_downtime, cause) " +
+                "SELECT code, machine_name, machine_downtime, cause " +
+                "FROM monitor_bd.equipment_maintenance_records " +
+                "WHERE machine_name IN ('Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', " +
+                "'Calender Complex Berstorf - 01', 'Bandina - 01', 'Duplex - 01', " +
+                "'Calender Comerio Ercole - 01', 'VMI APEX - 01', 'VMI APEX - 02', " +
+                "'Trafila Quadruplex - 01', 'Bartell Bead Machine - 01', " +
+                "'TTM fisher belt cutting - 01', 'VMI TPCS 1600-1000') " +
+                "AND start_bd_t1 >= CONCAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), ' 06:00:00') " +
+                "AND stop_bd_t4 <= CONCAT(CURRENT_DATE(), ' 08:00:00') " +
+                "AND NOT failure_type = 'Другие' " +
                 "ORDER BY TIME_TO_SEC(machine_downtime) DESC " +
                 "LIMIT 5";
         return jdbcTemplate.queryForList(sql);
