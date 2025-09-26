@@ -17,6 +17,8 @@ server:
     port: 8082
   analyzer:
     port: 8083
+  base_update:
+    port: 8084
   servlet:
     encoding:
       charset: UTF-8
@@ -117,3 +119,55 @@ cache:
   enabled: true
   ttl: 3600  # 1 час
   max-size: 1000
+
+# Синхронизация данных между базами
+data_sync:
+  enabled: true
+  schedule: "0 */3 * * * ?"  # Каждые 3 минуты
+  sql_server:
+    url: jdbc:sqlserver://pindapp466-39ru:1433;databaseName=CMMS;encrypt=false;trustServerCertificate=true
+    username: sa.CMMSreader001
+    password: JDFklm512@
+    driver: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    timeout: 30
+  mysql:
+    url: jdbc:mysql://10.130.142.142:3306/monitor_bd?useUnicode=true&characterEncoding=UTF-8
+    username: test_user
+    password: Password%123
+    driver: com.mysql.cj.jdbc.Driver
+  areas:
+    - name: Plant
+      working_time_table: working_time_of_plant
+      wt_column: wt_p_min
+      default_wt: 74880.0
+      filter_column: null  # Для Plant нет фильтра
+    - name: BuildingArea
+      working_time_table: working_time_of_building_area
+      wt_column: wt_ba_min
+      default_wt: 23040.0
+      filter_column: PlantDepartmentGeographicalCodeName
+      filter_value: BuildingArea
+    - name: CuringArea
+      working_time_table: working_time_of_curing_area
+      wt_column: wt_ca_min
+      default_wt: 74880.0
+      filter_column: PlantDepartmentGeographicalCodeName
+      filter_value: CuringArea
+    - name: FinishingArea
+      working_time_table: working_time_of_finishing_area
+      wt_column: wt_fa_min
+      default_wt: 23040.0
+      filter_column: PlantDepartmentGeographicalCodeName
+      filter_value: FinishingArea
+    - name: SemifinishingArea
+      working_time_table: working_time_of_semifinishing_area
+      wt_column: wt_sfa_min
+      default_wt: 23040.0
+      filter_column: PlantDepartmentGeographicalCodeName
+      filter_value: SemifinishingArea
+    - name: NewMixingArea
+      working_time_table: working_time_of_new_mixing_area
+      wt_column: wt_nma_min
+      default_wt: 23040.0
+      filter_column: PlantDepartmentGeographicalCodeName
+      filter_value: NewMixingArea

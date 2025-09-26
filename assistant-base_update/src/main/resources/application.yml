@@ -1,0 +1,17 @@
+# Конфигурация для assistant-base-update
+server:
+  port: ${server.base_update.port:8084}
+
+spring:
+  config:
+    import: file:../application.yml
+  # Основная БД (MySQL) для сохранения метрик
+  datasource:
+    url: ${data_sync.mysql.url}
+    username: ${data_sync.mysql.username}
+    password: ${data_sync.mysql.password}
+    driver-class-name: ${data_sync.mysql.driver}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false

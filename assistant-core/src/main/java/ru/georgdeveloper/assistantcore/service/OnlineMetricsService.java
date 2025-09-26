@@ -1,48 +1,36 @@
 package ru.georgdeveloper.assistantcore.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
 public class OnlineMetricsService {
 
-    private final String[] areas = {"Резиносмешение", "Сборка 1", "Сборка 2", "Вулканизация", "УЗО", "Модули", "Завод"};
-    private final Random random = new Random();
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
+    /**
+     * Возвращает метрики BD (downtime_percentage) за последние 24 часа по всем областям
+     */
     public List<Map<String, Object>> getBdMetrics() {
-        List<Map<String, Object>> metrics = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
-        
-        for (int i = 0; i < 24; i++) {
-            LocalDateTime time = now.minusHours(23 - i);
-            for (String area : areas) {
-                Map<String, Object> metric = new HashMap<>();
-                metric.put("area", area);
-                metric.put("timestamp", time.format(DateTimeFormatter.ofPattern("HH:mm")));
-                metric.put("value", Math.round((random.nextDouble() * 5 + 0.5) * 100.0) / 100.0);
-                metrics.add(metric);
-            }
-        }
-        return metrics;
+        String sql = "SELECT area, DATE_FORMAT(last_update, '%H:%i') as timestamp, downtime_percentage as value " +
+                     "FROM production_metrics_online " +
+                     "WHERE last_update >= DATE_SUB(NOW(), INTERVAL 24 HOUR) " +
+                     "ORDER BY last_update";
+        return jdbcTemplate.queryForList(sql);
     }
 
+    /**
+     * Возвращает метрики Availability за последние 24 часа по всем областям
+     */
     public List<Map<String, Object>> getAvailabilityMetrics() {
-        List<Map<String, Object>> metrics = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
-        
-        for (int i = 0; i < 24; i++) {
-            LocalDateTime time = now.minusHours(23 - i);
-            for (String area : areas) {
-                Map<String, Object> metric = new HashMap<>();
-                metric.put("area", area);
-                metric.put("timestamp", time.format(DateTimeFormatter.ofPattern("HH:mm")));
-                metric.put("value", Math.round((random.nextDouble() * 10 + 90) * 100.0) / 100.0);
-                metrics.add(metric);
-            }
-        }
-        return metrics;
+        String sql = "SELECT area, DATE_FORMAT(last_update, '%H:%i') as timestamp, availability as value " +
+                     "FROM production_metrics_online " +
+                     "WHERE last_update >= DATE_SUB(NOW(), INTERVAL 24 HOUR) " +
+                     "ORDER BY last_update";
+        return jdbcTemplate.queryForList(sql);
     }
 }
