@@ -418,10 +418,21 @@
         async function initializeDashboard() {
             await loadTopBreakdownsTables();
             await loadOnlineCharts();
+            
             // Обновление графиков и блиц-панели каждые 60 секунд
             setInterval(async () => {
                 await loadOnlineCharts();
             }, 60000);
+            
+            // Обновление таблиц топ поломок каждые 5 минут
+            setInterval(async () => {
+                await loadTopBreakdownsTables();
+            }, 300000); // 5 минут = 300000 мс
+            
+            // Полное обновление страницы каждый час
+            setInterval(() => {
+                window.location.reload();
+            }, 3600000); // 1 час = 3600000 мс
         }
 
         // Вызовем при инициализации
