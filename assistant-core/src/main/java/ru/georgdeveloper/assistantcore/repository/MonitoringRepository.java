@@ -13,7 +13,7 @@ public class MonitoringRepository {
     public List<Map<String, Object>> getTopBreakdownsPerWeek() {
         String sql = "SELECT machine_name, SEC_TO_TIME(SUM(TIME_TO_SEC(machine_downtime))) as machine_downtime " +
                 "FROM equipment_maintenance_records " +
-                "WHERE (CASE WHEN DAYOFWEEK(CURDATE()) = 2 THEN WEEK(CURDATE()) ELSE WEEK(CURDATE()) + 1 END) = WEEK(start_bd_t1) " +
+                "WHERE week_number = (CASE WHEN DAYOFWEEK(CURDATE()) = 2 THEN WEEK(CURDATE()) ELSE WEEK(CURDATE()) + 1 END) " +
                 "AND failure_type <> 'Другие' " +
                 "GROUP BY machine_name " +
                 "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
@@ -25,16 +25,14 @@ public class MonitoringRepository {
     public List<Map<String, Object>> getTopBreakdownsPerWeekKeyLines() {
         String sql = "SELECT machine_name, SEC_TO_TIME(SUM(TIME_TO_SEC(machine_downtime))) as machine_downtime " +
                 "FROM equipment_maintenance_records " +
-                "WHERE (CASE WHEN DAYOFWEEK(CURDATE()) = 2 THEN WEEK(CURDATE()) ELSE WEEK(CURDATE()) + 1 END) = WEEK(start_bd_t1) " +
+                "WHERE week_number = (CASE WHEN DAYOFWEEK(CURDATE()) = 2 THEN WEEK(CURDATE()) ELSE WEEK(CURDATE()) + 1 END) " +
                 "AND failure_type <> 'Другие' " +
-                "AND (" +
-                " machine_name LIKE 'Mixer GK 270%' OR machine_name LIKE 'Mixer GK 320%' OR" +
-                " machine_name LIKE 'Calender %' OR machine_name LIKE 'Calender Complex %' OR" +
-                " machine_name LIKE 'Bandina%' OR machine_name LIKE 'Duplex%' OR" +
-                " machine_name LIKE 'Calender Comerio Ercole%' OR" +
-                " machine_name LIKE 'VMI APEX%' OR machine_name LIKE 'CMP APEX%' OR" +
-                " machine_name LIKE 'Trafila Quadruplex%' OR machine_name LIKE 'Bartell Bead Machine%' OR" +
-                " machine_name LIKE 'TTM fisher belt cutting%' OR machine_name LIKE 'VMI TPCS%' " +
+                "AND machine_name IN (" +
+                "'Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', " +
+                "'Calender Complex Berstorf - 01', 'Bandina - 01', 'Duplex - 01', " +
+                "'Calender Comerio Ercole - 01', 'VMI APEX - 01', 'VMI APEX - 02', " +
+                "'Trafila Quadruplex - 01', 'Bartell Bead Machine - 01', " +
+                "'TTM fisher belt cutting - 01', 'VMI TPCS 1600-1000'" +
                 ") " +
                 "GROUP BY machine_name " +
                 "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
