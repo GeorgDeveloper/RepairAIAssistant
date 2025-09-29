@@ -17,7 +17,7 @@ public class MonitoringRepository {
                 "AND failure_type <> 'Другие' " +
                 "GROUP BY machine_name " +
                 "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
-                "LIMIT 5";
+                "LIMIT 4";
         return jdbcTemplate.queryForList(sql);
     }
 
@@ -36,7 +36,7 @@ public class MonitoringRepository {
                 ") " +
                 "GROUP BY machine_name " +
                 "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
-                "LIMIT 5";
+                "LIMIT 4";
         return jdbcTemplate.queryForList(sql);
     }
     // Топ-5 поломок за сутки (последние 24 часа)
