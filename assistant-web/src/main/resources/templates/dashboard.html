@@ -148,7 +148,7 @@
 							<div id="topBreakdownsTable"></div>
                             <h3 id="topBreakdownsCurrentHeader">Топ поломок — <span id="currentDateSpan"></span></h3>
                             <div id="topBreakdownsCurrentTable"></div>
-						</div>
+						</div>ыф
 					</div>
 				</div>
 			</div>
@@ -231,6 +231,17 @@
             });
         }
 
+        // Фиксированная цветовая схема для участков
+        const areaColors = {
+            'NewMixingArea': '#FF6B6B',      // Красный
+            'SemifinishingArea': '#4ECDC4',  // Бирюзовый
+            'BuildingArea': '#45B7D1',       // Голубой
+            'CuringArea': '#96CEB4',         // Зеленый
+            'FinishingArea': '#FFEAA7',      // Желтый
+            'Modules': '#DDA0DD',            // Фиолетовый
+            'Plant': '#98D8C8'               // Мятный
+        };
+
         // Функция для обработки данных графика
         function processChartData(rawData) {
             const groupedData = {};
@@ -249,6 +260,7 @@
                 type: "line",
                 name: area,
                 showInLegend: true,
+                color: areaColors[area] || '#666666', // Фиксированный цвет для участка
                 dataPoints: groupedData[area]
             }));
         }
