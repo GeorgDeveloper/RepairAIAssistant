@@ -13,7 +13,8 @@ public class MonitoringRepository {
     public List<Map<String, Object>> getTopBreakdownsPerWeek() {
         String sql = "SELECT machine_name, SEC_TO_TIME(SUM(TIME_TO_SEC(machine_downtime))) as machine_downtime " +
                 "FROM equipment_maintenance_records " +
-                "WHERE WEEK(CURDATE(), 1) = WEEK(start_bd_t1, 1) AND failure_type <> 'Другие' " +
+                "WHERE (CASE WHEN DAYOFWEEK(CURDATE()) = 2 THEN WEEK(CURDATE()) ELSE WEEK(CURDATE()) + 1 END) = WEEK(start_bd_t1) " +
+                "AND failure_type <> 'Другие' " +
                 "GROUP BY machine_name " +
                 "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
                 "LIMIT 5";
@@ -24,7 +25,8 @@ public class MonitoringRepository {
     public List<Map<String, Object>> getTopBreakdownsPerWeekKeyLines() {
         String sql = "SELECT machine_name, SEC_TO_TIME(SUM(TIME_TO_SEC(machine_downtime))) as machine_downtime " +
                 "FROM equipment_maintenance_records " +
-                "WHERE WEEK(CURDATE(), 1) = WEEK(start_bd_t1, 1) AND failure_type <> 'Другие' " +
+                "WHERE (CASE WHEN DAYOFWEEK(CURDATE()) = 2 THEN WEEK(CURDATE()) ELSE WEEK(CURDATE()) + 1 END) = WEEK(start_bd_t1) " +
+                "AND failure_type <> 'Другие' " +
                 "AND (" +
                 " machine_name LIKE 'Mixer GK 270%' OR machine_name LIKE 'Mixer GK 320%' OR" +
                 " machine_name LIKE 'Calender %' OR machine_name LIKE 'Calender Complex %' OR" +
