@@ -61,7 +61,7 @@ public class DataTransferService {
                 logger.info("Итог: перенесено {} записей, удалено {} отфильтрованных записей", 
                     transferredCount, deletedCount);
             } else {
-                logger.warning("Нет данных для обработки");
+                logger.warn("Нет данных для обработки");
             }
             
         } catch (Exception e) {
