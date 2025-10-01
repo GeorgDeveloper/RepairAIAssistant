@@ -61,7 +61,7 @@ public class GanttRepository {
         }
 
         sql.append("ORDER BY start_bd_t1 DESC ");
-        sql.append("LIMIT 1000");
+        // sql.append("LIMIT 1000");
 
         // Подготавливаем параметры
         Object[] params = buildParams(dateFrom, dateTo, area, equipment, failureType, status);

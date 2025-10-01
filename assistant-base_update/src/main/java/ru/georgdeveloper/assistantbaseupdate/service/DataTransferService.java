@@ -42,8 +42,8 @@ public class DataTransferService {
             
             // Получаем текущую дату и время для фильтрации
             LocalDate today = LocalDate.now();
-            LocalDateTime startDateTime = today.atTime(8, 0);
-            LocalDateTime endDateTime = today.plusDays(1).atTime(8, 0);
+            LocalDateTime startDateTime = today.minusDays(1).atTime(8, 0);
+            LocalDateTime endDateTime = today.atTime(8, 0);
             
             logger.info("Фильтрация данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
             logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);

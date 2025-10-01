@@ -29,6 +29,7 @@
                     <a href="#">Поломки</a>
                     <ul class="submenu">
                         <li><a href="/dinamic_bd">Динамика</a></li>
+                        <li><a href="/bdav">Динамика BD/AV</a></li>
                         <li><a href="/failures">Заявки на поломки</a></li>
                         <li><a href="/top-causes">Топ причин</a></li>
                         <li class="has-submenu">
@@ -333,6 +334,16 @@
             });
         }
 
+        // Вспомогательная функция форматирования секунд в HH:MM:SS
+        function formatSecondsToHHMMSS(totalSeconds) {
+            const s = Number(totalSeconds || 0);
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const sec = Math.floor(s % 60);
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+        }
+
         // Функция для создания таблицы с показателями
         function createMetricsTable(metricsData) {
             if (!metricsData) {
@@ -345,7 +356,7 @@
             const currentDate = new Date();
             const prevDate = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000);
             const prevDay = prevDate.toLocaleDateString('ru-RU');
-            const currentMonth = currentDate.toLocaleDateString('ru-RU', { month: 'long' });
+            const currentMonth = prevDate.toLocaleDateString('ru-RU', { month: 'long' }); // Исправлено: используем prevDate
 
             let tableHTML = `
             <table class="metrics-table">
@@ -429,7 +440,9 @@
             data.forEach(row => {
                 tableHTML += '<tr>';
                 if (isWeekly) {
-                    tableHTML += `<td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td>`;
+                    const seconds = row.machine_downtime_seconds;
+                    const downtime = seconds !== undefined && seconds !== null ? formatSecondsToHHMMSS(seconds) : (row.machine_downtime || '');
+                    tableHTML += `<td>${row.machine_name || ''}</td><td>${downtime}</td>`;
                 } else {
                     tableHTML += `<td>${row.code || ''}</td><td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td><td>${row.cause || ''}</td>`;
                 }

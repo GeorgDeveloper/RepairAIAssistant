@@ -79,6 +79,7 @@
                     <a href="#">Поломки</a>
                     <ul class="submenu">
                         <li><a href="/dinamic_bd">Динамика</a></li>
+                        <li><a href="/bdav">Динамика BD/AV</a></li>
                         <li><a href="/failures">Заявки на поломки</a></li>
                         <li><a href="/top-causes">Топ причин</a></li>
                         <li class="has-submenu">
@@ -219,7 +220,7 @@
         $(document).ready(function () {
             var table = $('#failuresTable').DataTable({
                 ajax: { 
-                    url: '/dashboard/equipment-maintenance-records?limit=5000', 
+                    url: '/dashboard/equipment-maintenance-records', 
                     dataSrc: '' 
                 },
                 autoWidth: false,

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Динамика BD/AV</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        html, body { height: 100vh; overflow: hidden; }
+        .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 6px; }
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-group label { font-weight: 600; margin-bottom: 6px; }
+        .filter-control { padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .btn { border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-weight: 600; }
+        .btn-apply { background: #e74c3c; color: #fff; }
+        .btn-toggle { background: #3498db; color: #fff; }
+        /* Вписать контент в экран */
+        .total-content { height: 100vh; overflow: hidden; }
+        .main-content { height: calc(100vh - 60px); overflow: hidden; padding-bottom: 16px; }
+        .container { height: 100%; display: flex; flex-direction: column; }
+        .chart-container { margin-top: 12px; margin-bottom: 16px; padding: 16px; background: #fff; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,.06); flex: 1 1 auto; min-height: 0; }
+        .chart-container canvas { width: 100% !important; height: 100% !important; }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo">
+            <img src="static/images/LogoPirelli3.png" alt="Логотип компании">
+        </div>
+
+        <div class="nav-container">
+            <ul class="nav-menu">
+                <li class="has-submenu">
+                    <a href="/dashboard">Инфопанель</a>
+                </li>
+                <li class="has-submenu">
+                    <a href="/">Главная</a>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Поломки</a>
+                    <ul class="submenu">
+                        <li><a href="/dinamic_bd">Динамика</a></li>
+                        <li><a href="/bdav">Динамика BD/AV</a></li>
+                        <li><a href="/failures">Заявки на поломки</a></li>
+                        <li><a href="/top-causes">Топ причин</a></li>
+                        <li class="has-submenu">
+                            <a href="/top-causes">Топ поломок</a>
+                            <ul class="submenu">
+                                <li><a href="/top-equipment">Оборудование</a></li>
+                                <li><a href="/top_areas">Участки</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="/gantt">Диаграмма Ганта</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">ППР</a>
+                    <ul class="submenu">
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Отчеты</a></li>
+                        <li><a href="#">Tag-PM-BD</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Диагностика</a>
+                    <ul class="submenu">
+                        <li><a href="#">Отчёты</a></li>
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Пневматика</a></li>
+                        <li><a href="#">Чек-листы</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Графики</a>
+                            <ul class="submenu">
+                                <li class="has-submenu">
+                                    <a href="#">Год</a>
+                                    <ul class="submenu">
+                                        <li class="has-submenu">
+                                            <a href="#">2025</a>
+                                            <ul class="submenu">
+                                                <li><a href="#">Январь</a></li>
+                                                <li><a href="#">Февраль</a></li>
+                                                <li><a href="#">Март</a></li>
+                                                <li><a href="#">Апрель</a></li>
+                                                <li><a href="#">Май</a></li>
+                                                <li><a href="#">Июнь</a></li>
+                                                <li><a href="#">Июль</a></li>
+                                                <li><a href="#">Август</a></li>
+                                                <li><a href="#">Сентябрь</a></li>
+                                                <li><a href="#">Октябрь</a></li>
+                                                <li><a href="#">Ноябрь</a></li>
+                                                <li><a href="#">Декабрь</a></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Ассистент KVANT AI </a>
+                    <ul class="submenu">
+                        <li><a href="/chat">Чат с ассистентом</a></li>
+                        <li><a href="/long_report">Отчеты</a></li>
+                        <li><a href="/manuals">Мануалы</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <style>
+                .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
+                .pm-row .table-container, .pm-row .chart-container { height: 100%; }
+                #resizablePm { height: 100% !important; }
+            </style>
+            <div class="container">
+                <h1>Динамика BD/AV</h1>
+
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="year">Год</label>
+                        <select id="year" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="month">Месяц</label>
+                        <select id="month" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="week">Неделя</label>
+                        <select id="week" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="area">Участок</label>
+                        <select id="area" class="filter-control">
+                            <option value="all">Все участки</option>
+                            <option value="Plant">Завод</option>
+                            <option value="NewMixingArea">Резиносмешение</option>
+                            <option value="SemifinishingArea">Сборка 1</option>
+                            <option value="BuildingArea">Сборка 2</option>
+                            <option value="CuringArea">Вулканизация</option>
+                            <option value="FinishingArea">УЗО</option>
+                            <option value="Modules">Модули</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="metric">Показатель</label>
+                        <select id="metric" class="filter-control">
+                            <option value="bd">BD</option>
+                            <option value="av">Доступность</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="align-self:end">
+                        <button id="apply" class="btn btn-apply">Применить</button>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div style="display:flex; gap:8px; margin-bottom:8px; justify-content:flex-end;">
+                        <button id="toggleLabels" class="btn btn-toggle">Значения: выкл</button>
+                        <button id="toggleType" class="btn btn-toggle">Столбики</button>
+                    </div>
+                    <canvas id="chart" height="480"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartType = 'line';
+        let chart;
+        let showLabels = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadYears();
+            document.getElementById('year').addEventListener('change', loadMonths);
+            document.getElementById('month').addEventListener('change', loadWeeks);
+            document.getElementById('apply').addEventListener('click', applyFilters);
+            document.getElementById('toggleType').addEventListener('click', () => {
+                chartType = chartType === 'line' ? 'bar' : 'line';
+                document.getElementById('toggleType').textContent = chartType === 'line' ? 'Столбики' : 'Линия';
+                applyFilters();
+            });
+            document.getElementById('toggleLabels').addEventListener('click', () => {
+                showLabels = !showLabels;
+                document.getElementById('toggleLabels').textContent = `Значения: ${showLabels ? 'вкл' : 'выкл'}`;
+                applyFilters();
+            });
+            await applyFilters();
+        });
+
+        async function loadYears() {
+            const res = await fetch('http://localhost:8080/bdav/years');
+            const data = await res.json();
+            const sel = document.getElementById('year');
+            sel.innerHTML = '<option value="all">Все</option>' + data.map(x => `<option value="${x.year}">${x.year}</option>`).join('');
+            const cur = new Date().getFullYear();
+            if ([...sel.options].some(o => +o.value === cur)) sel.value = cur;
+            await loadMonths();
+        }
+
+        async function loadMonths() {
+            const year = document.getElementById('year').value;
+            const sel = document.getElementById('month');
+            if (year === 'all') { sel.innerHTML = '<option value="all">Все</option>'; return; }
+            const res = await fetch(`http://localhost:8080/bdav/months?year=${year}`);
+            const data = await res.json();
+            const names = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            sel.innerHTML = '<option value="all">Все</option>' + data.map(x => `<option value="${x.month}">${names[x.month-1]}</option>`).join('');
+            await loadWeeks();
+        }
+
+        async function loadWeeks() {
+            const year = document.getElementById('year').value;
+            const month = document.getElementById('month').value;
+            const sel = document.getElementById('week');
+            if (year === 'all' || month === 'all') { sel.innerHTML = '<option value="all">Все</option>'; return; }
+            const res = await fetch(`http://localhost:8080/bdav/weeks?year=${year}&month=${month}`);
+            const data = await res.json();
+            sel.innerHTML = '<option value="all">Все</option>' + data.map(x => `<option value="${x.week}">${x.week}</option>`).join('');
+        }
+
+        async function applyFilters() {
+            const params = new URLSearchParams();
+            const year = document.getElementById('year').value;
+            const month = document.getElementById('month').value;
+            const week = document.getElementById('week').value;
+            const area = document.getElementById('area').value;
+            const metric = document.getElementById('metric').value;
+            if (year !== 'all') params.append('year', year);
+            if (month !== 'all') params.append('month', month);
+            if (week !== 'all') params.append('week', week);
+            params.append('area', area);
+            params.append('metric', metric);
+            const res = await fetch(`http://localhost:8080/bdav/data?${params.toString()}`);
+            const data = await res.json();
+            renderChart(data, metric, area);
+        }
+
+        function renderChart(rows, metric, area) {
+            const labels = [...new Set(rows.map(r => r.period_label))];
+            const ctx = document.getElementById('chart').getContext('2d');
+            if (chart) chart.destroy();
+            const datasets = [];
+            const areaColors = {
+                'Plant':'#34495e','NewMixingArea':'#e74c3c','SemifinishingArea':'#9b59b6','BuildingArea':'#f39c12',
+                'CuringArea':'#27ae60','FinishingArea':'#2980b9','Modules':'#8e44ad'
+            };
+            const areas = area === 'all' ? ['Plant','NewMixingArea','SemifinishingArea','BuildingArea','CuringArea','FinishingArea','Modules'] : [area];
+            areas.forEach(a => {
+                const color = areaColors[a] || '#2ecc71';
+                const values = labels.map(l => {
+                    const row = rows.find(r => String(r.period_label) === String(l) && r.area === a);
+                    return row ? +row.value : 0;
+                });
+                datasets.push({
+                    label: (metric === 'bd' ? 'BD % - ' : 'Доступность % - ') + a,
+                    data: values,
+                    borderColor: color,
+                    backgroundColor: color + '88',
+                    borderWidth: 2,
+                    tension: 0.2
+                });
+            });
+
+            // обязательно зарегистрировать плагин до создания графика
+            if (window.ChartDataLabels && !Chart.registry.plugins.get('datalabels')) {
+                Chart.register(window.ChartDataLabels);
+            }
+            chart = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: { enabled: true },
+                        datalabels: {
+                            display: showLabels,
+                            color: '#333',
+                            align: 'top',
+                            formatter: (v) => (v != null ? v.toFixed(1) : '')
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: metric === 'bd' ? 'BD, %' : 'Доступность, %' } },
+                        x: { title: { display: true, text: xAxisTitle() } }
+                    }
+                }
+            });
+        }
+
+        function xAxisTitle() {
+            const week = document.getElementById('week').value;
+            const month = document.getElementById('month').value;
+            const year = document.getElementById('year').value;
+            if (week !== 'all') return 'Дни месяца';
+            if (month !== 'all') return 'Номера недель';
+            if (year !== 'all') return 'Месяцы';
+            return 'Годы';
+        }
+    </script>
+</body>
+</html>
+
+

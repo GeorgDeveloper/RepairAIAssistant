@@ -11,9 +11,10 @@ import java.util.Map;
 public class MonitoringRepository {
     // Топ-5 поломок за неделю (общее)
     public List<Map<String, Object>> getTopBreakdownsPerWeek() {
-        String sql = "SELECT machine_name, SEC_TO_TIME(SUM(TIME_TO_SEC(machine_downtime))) as machine_downtime " +
+        String sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
                 "FROM equipment_maintenance_records " +
                 "WHERE week_number = (CASE WHEN DAYOFWEEK(CURDATE()) = 2 THEN WEEK(CURDATE()) ELSE WEEK(CURDATE()) + 1 END) " +
+                "AND YEAR(start_bd_t1) = YEAR(CURDATE()) " +
                 "AND failure_type <> 'Другие' " +
                 "GROUP BY machine_name " +
                 "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
@@ -23,9 +24,10 @@ public class MonitoringRepository {
 
     // Топ-5 поломок за неделю по ключевым линиям (используем шаблоны по именам)
     public List<Map<String, Object>> getTopBreakdownsPerWeekKeyLines() {
-        String sql = "SELECT machine_name, SEC_TO_TIME(SUM(TIME_TO_SEC(machine_downtime))) as machine_downtime " +
+        String sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
                 "FROM equipment_maintenance_records " +
                 "WHERE week_number = (CASE WHEN DAYOFWEEK(CURDATE()) = 2 THEN WEEK(CURDATE()) ELSE WEEK(CURDATE()) + 1 END) " +
+                "AND YEAR(start_bd_t1) = YEAR(CURDATE()) " +
                 "AND failure_type <> 'Другие' " +
                 "AND machine_name IN (" +
                 "'Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', " +
@@ -114,32 +116,54 @@ public class MonitoringRepository {
 
     public List<Map<String, Object>> searchBreakDown() {
         String sql = "SELECT production_day, downtime_percentage "
-                + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) "
-                + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE()) ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
+                + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) "
+                + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
         return jdbcTemplate.queryForList(sql);
     }
-
+    
     public List<Map<String, Object>> searchAvailability() {
         String sql = "SELECT production_day, availability "
-                + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) "
-                + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE()) ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
+                + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) "
+                + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
         return jdbcTemplate.queryForList(sql);
     }
-
+    
     // Данные для графика PM: план/факт/tag за текущий месяц
     public List<Map<String, Object>> getPmPlanFactTagPerMonth() {
         String sql = "SELECT production_day, quantity_pm_planned AS plan, quantity_pm_close AS fact, quantity_tag AS tag " +
-                "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) " +
-                "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE()) " +
+                "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) " +
+                "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) " +
                 "ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
         return jdbcTemplate.queryForList(sql);
     }
 
+    // public List<Map<String, Object>> searchBreakDown() {
+    //     String sql = "SELECT production_day, downtime_percentage "
+    //             + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) "
+    //             + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE()) ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
+    //     return jdbcTemplate.queryForList(sql);
+    // }
+
+    // public List<Map<String, Object>> searchAvailability() {
+    //     String sql = "SELECT production_day, availability "
+    //             + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) "
+    //             + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE()) ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
+    //     return jdbcTemplate.queryForList(sql);
+    // }
+
+    // // Данные для графика PM: план/факт/tag за текущий месяц
+    // public List<Map<String, Object>> getPmPlanFactTagPerMonth() {
+    //     String sql = "SELECT production_day, quantity_pm_planned AS plan, quantity_pm_close AS fact, quantity_tag AS tag " +
+    //             "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) " +
+    //             "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE()) " +
+    //             "ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
+    //     return jdbcTemplate.queryForList(sql);
+    // }
+
     // Все заявки на поломки (equipment_maintenance_records) с ограничением по количеству
-    public List<Map<String, Object>> getEquipmentMaintenanceRecords(int limit) {
-        String sql = "SELECT * " +
-                "FROM equipment_maintenance_records LIMIT ?";
-        return jdbcTemplate.queryForList(sql, limit);
+    public List<Map<String, Object>> getEquipmentMaintenanceRecords() {
+        String sql = "SELECT * FROM equipment_maintenance_records ORDER BY id DESC";
+        return jdbcTemplate.queryForList(sql);
     }
 
 
@@ -162,7 +186,7 @@ public class MonitoringRepository {
             Double bdToday = jdbcTemplate.queryForObject(sqlToday, Double.class);
             result.put(prefix + "_bd_today", bdToday != null ? bdToday : 0.0);
 
-            String sqlMonth = "SELECT AVG(downtime_percentage) as bd FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE())";
+            String sqlMonth = "SELECT AVG(downtime_percentage) as bd FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 DAY))";
             Double bdMonth = jdbcTemplate.queryForObject(sqlMonth, Double.class);
             result.put(prefix + "_bd_month", bdMonth != null ? bdMonth : 0.0);
 
@@ -170,7 +194,7 @@ public class MonitoringRepository {
             Double aToday = jdbcTemplate.queryForObject(sqlTodayA, Double.class);
             result.put(prefix + "_availability_today", aToday != null ? aToday : 0.0);
 
-            String sqlMonthA = "SELECT AVG(availability) FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(CURDATE())";
+            String sqlMonthA = "SELECT AVG(availability) FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 DAY))";
             Double aMonth = jdbcTemplate.queryForObject(sqlMonthA, Double.class);
             result.put(prefix + "_availability_month", aMonth != null ? aMonth : 0.0);
         }
