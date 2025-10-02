@@ -61,7 +61,7 @@ public class MonitoringRepository {
         " machine_name LIKE 'Calender %' OR machine_name LIKE 'Calender Complex %' OR" +
         " machine_name LIKE 'Bandina%' OR machine_name LIKE 'Duplex%' OR" +
         " machine_name LIKE 'Calender Comerio Ercole%' OR" +
-        " machine_name LIKE 'VMI APEX%' OR machine_name LIKE 'CMP APEX%' OR" +
+        " machine_name LIKE 'VMI APEX%' OR machine_name LIKE 'VMI APEX%' OR" +
         " machine_name LIKE 'Trafila Quadruplex%' OR machine_name LIKE 'Bartell Bead Machine%' OR" +
         " machine_name LIKE 'TTM fisher belt cutting%' OR machine_name LIKE 'VMI TPCS%' " +
         ") " +

@@ -52,6 +52,12 @@
         td.details-control::before { content: "+ "; font-weight: bold; }
         table.details-table { width: 100%; border-collapse: collapse; }
         table.details-table th, table.details-table td { border: 1px solid #e1e1e1; padding: 6px 8px; text-align: left; white-space: normal; }
+        .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin: 16px 0 8px 0; padding: 15px; background-color: #f5f5f5; border-radius: 6px; }
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-group label { font-weight: 600; margin-bottom: 5px; color: #333; }
+        .filter-control { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .btn-apply { background-color: #e74c3c; color: white; border: none; border-radius: 4px; padding: 10px 15px; cursor: pointer; font-weight: 600; grid-column: 1 / -1; margin-top: 10px; }
+        .btn-apply:hover { background-color: #c0392b; }
         /* Keep pagination visible and not offscreen */
         .dataTables_wrapper .dataTables_paginate { float: left !important; display: flex !important; gap: 6px; }
         .dataTables_wrapper .dataTables_info { float: right !important; }
@@ -163,9 +169,27 @@
                 #resizablePm { height: 100% !important; }
             </style>
             <div class="container">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="yearSelect">Год:</label>
+                        <select id="yearSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="monthSelect">Месяц:</label>
+                        <select id="monthSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="weekSelect">Неделя:</label>
+                        <select id="weekSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="areaSelect">Участок:</label>
+                        <select id="areaSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <button id="loadData" class="btn-apply">Загрузить</button>
+                </div>
                 <div class="row">
                     <div class="col">
-                        <h1 style="margin: 16px 0 8px 0;">Заявки на поломки</h1>
                         <table id="failuresTable" class="display nowrap" style="width:100%; min-width: 2000px;">
                             <thead>
                                 <tr>
@@ -213,15 +237,43 @@
                 var key = entry[0];
                 var value = entry[1];
                 if (value === null || value === undefined) { value = ''; }
+                // Форматируем даты в подробной информации
+                if (key.includes('_t') || key === 'created_at' || key === 'date') {
+                    value = formatDateTime(value);
+                }
                 return '<tr><th>'+ key +'</th><td>'+ value +'</td></tr>';
             }).join('');
             return '<table class="details-table">' + rows + '</table>';
         }
         $(document).ready(function () {
+            function formatDateTime(value) {
+                if (!value) return '';
+                const d = new Date(value);
+                if (isNaN(d.getTime())) return value;
+                const pad = (n) => String(n).padStart(2,'0');
+                return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            }
+
+            function getWeekNumber(dateObj) {
+                const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()))
+                const dayNum = d.getUTCDay() || 7; // 1..7 (Mon..Sun)
+                d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+                const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+                const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+                return weekNo;
+            }
+
             var table = $('#failuresTable').DataTable({
                 ajax: { 
                     url: '/dashboard/equipment-maintenance-records', 
-                    dataSrc: '' 
+                    dataSrc: function(json) {
+                        // Фильтруем по текущему году по умолчанию
+                        const currentYear = new Date().getFullYear();
+                        return json.filter(row => {
+                            const dt = new Date(row.start_bd_t1 || row.date);
+                            return !isNaN(dt.getTime()) && dt.getFullYear() === currentYear;
+                        });
+                    }
                 },
                 autoWidth: false,
                 columns: [
@@ -232,10 +284,10 @@
                     { data: 'description', title: 'Описание', width: '200px' },
                     { data: 'code', title: 'Код', width: '80px' },
                     { data: 'hp_bd', title: 'HP BD', width: '80px' },
-                    { data: 'start_bd_t1', title: 'Начало BD', width: '120px' },
-                    { data: 'start_maint_t2', title: 'Начало ремонта', width: '120px' },
-                    { data: 'stop_maint_t3', title: 'Окончание ремонта', width: '120px' },
-                    { data: 'stop_bd_t4', title: 'Окончание BD', width: '120px' },
+                    { data: 'start_bd_t1', title: 'Начало BD', width: '140px', render: function(d){ return formatDateTime(d); } },
+                    { data: 'start_maint_t2', title: 'Начало ремонта', width: '140px', render: function(d){ return formatDateTime(d); } },
+                    { data: 'stop_maint_t3', title: 'Окончание ремонта', width: '140px', render: function(d){ return formatDateTime(d); } },
+                    { data: 'stop_bd_t4', title: 'Окончание BD', width: '140px', render: function(d){ return formatDateTime(d); } },
                     { data: 'machine_downtime', title: 'Время простоя', width: '100px' },
                     { data: 'ttr', title: 'TTR', width: '80px' },
                     { data: 't2_minus_t1', title: 'T2-T1', width: '80px' },
@@ -244,11 +296,11 @@
                     { data: 'comments', title: 'Комментарии', width: '200px' },
                     { data: 'cause', title: 'Причина', width: '150px' },
                     { data: 'failure_type', title: 'Тип поломки', width: '120px' },
-                    { data: 'area', title: 'Зона', width: '100px' },
-                    { data: 'created_at', title: 'Создано', width: '120px' },
-                    { data: 'date', title: 'Дата', width: '100px' },
-                    { data: 'week_number', title: 'Неделя', width: '80px' },
-                    { data: 'month_name', title: 'Месяц', width: '100px' },
+                    { data: 'area', title: 'Зона', width: '120px' },
+                    { data: 'created_at', title: 'Создано', width: '140px', render: function(d){ return formatDateTime(d); } },
+                    { data: 'date', title: 'Дата', width: '120px', render: function(d){ return formatDateTime(d).split(' ')[0]; } },
+                    { data: 'week_number', title: 'Неделя', width: '90px' },
+                    { data: 'month_name', title: 'Месяц', width: '120px' },
                     { data: 'shift', title: 'Смена', width: '80px' },
                     { data: 'staff', title: 'Персонал', width: '100px' },
                     { data: 'crew', title: 'Бригада', width: '100px' },
@@ -294,6 +346,84 @@
                     }
                 ]
             });
+
+            let allData = []; // Хранилище всех данных
+
+            // Заполнение фильтров после загрузки данных
+            table.on('xhr', function(){
+                allData = table.ajax.json() || [];
+                populateFilters();
+                // Устанавливаем текущий год по умолчанию
+                $('#yearSelect').val(new Date().getFullYear());
+            });
+
+            function populateFilters() {
+                const data = allData;
+                const areas = Array.from(new Set(data.map(r => r.area).filter(Boolean))).sort();
+                const years = Array.from(new Set(data.map(r => { const d = new Date(r.start_bd_t1 || r.date); return isNaN(new Date(d).getTime())? null : new Date(d).getFullYear(); }).filter(Boolean))).sort((a,b)=>a-b);
+                $('#areaSelect').html('<option value="all">Все</option>' + areas.map(a=>`<option value="${a}">${a}</option>`).join(''));
+                $('#yearSelect').html('<option value="all">Все</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join(''));
+                // месяцы
+                const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+                $('#monthSelect').html('<option value="all">Все</option>' + monthNames.map((n,i)=>`<option value="${i+1}">${n}</option>`).join(''));
+                $('#weekSelect').html('<option value="all">Все</option>');
+            }
+
+            // Функция загрузки данных с фильтрацией
+            function loadFilteredData() {
+                const year = $('#yearSelect').val();
+                const month = $('#monthSelect').val();
+                const week = $('#weekSelect').val();
+                const area = $('#areaSelect').val();
+
+                let filteredData = allData;
+
+                if (year !== 'all') {
+                    filteredData = filteredData.filter(row => {
+                        const dt = new Date(row.start_bd_t1 || row.date);
+                        return !isNaN(dt.getTime()) && dt.getFullYear() === Number(year);
+                    });
+                }
+
+                if (month !== 'all') {
+                    filteredData = filteredData.filter(row => {
+                        const dt = new Date(row.start_bd_t1 || row.date);
+                        return !isNaN(dt.getTime()) && (dt.getMonth() + 1) === Number(month);
+                    });
+                }
+
+                if (week !== 'all') {
+                    filteredData = filteredData.filter(row => {
+                        const dt = new Date(row.start_bd_t1 || row.date);
+                        return !isNaN(dt.getTime()) && getWeekNumber(dt) === Number(week);
+                    });
+                }
+
+                if (area !== 'all') {
+                    filteredData = filteredData.filter(row => row.area === area);
+                }
+
+                table.clear().rows.add(filteredData).draw();
+            }
+
+            // Обновляем недели при выборе месяца/года
+            function refreshWeeks() {
+                const year = $('#yearSelect').val();
+                const month = $('#monthSelect').val();
+                if (year === 'all' || month === 'all') { $('#weekSelect').html('<option value="all">Все</option>'); return; }
+                const weeks = new Set();
+                allData.forEach(r => {
+                    const d = new Date(r.start_bd_t1 || r.date);
+                    if (!isNaN(d.getTime()) && d.getFullYear() === Number(year) && (d.getMonth()+1) === Number(month)) {
+                        weeks.add(getWeekNumber(d));
+                    }
+                });
+                const opts = Array.from(weeks).sort((a,b)=>a-b).map(w=>`<option value="${w}">${w}</option>`).join('');
+                $('#weekSelect').html('<option value="all">Все</option>' + opts);
+            }
+
+            $('#yearSelect, #monthSelect').on('change', refreshWeeks);
+            $('#loadData').on('click', loadFilteredData);
 
             // Recalculate column widths to ensure horizontal scroll is applied
             table.columns.adjust();
