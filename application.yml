@@ -53,15 +53,24 @@ spring:
 ai:
   enabled: true
   ollama:
-    url: http://localhost:11434/api
-    model: mistral:latest
+    url: http://localhost:11434
+    model: deepseek-r1:latest
+    chat-model: deepseek-r1:latest
+    embedding-model: nomic-embed-text
     temperature: 0.7
     timeout: 30000
+  chroma:
+    url: http://localhost:8000
+    collection-name: repair_knowledge
   training:
     enabled: true
     schedule: "0 0 3 * * ?"  # Каждый день в 3:00
     batch-size: 200
     max-examples: 1000
+  migration:
+    auto-migrate: true        # Автоматическая умная миграция при запуске
+    batch-size: 100          # Размер батча для обработки данных
+    smart-migration: true    # Включить умную инкрементальную миграцию
 
 # Telegram Bot
 telegram:

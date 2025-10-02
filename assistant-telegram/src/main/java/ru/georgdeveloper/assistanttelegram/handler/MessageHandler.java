@@ -53,12 +53,22 @@ public class MessageHandler {
             String result = mainTask.get(4, TimeUnit.MINUTES);
             return result;
         } catch (TimeoutException e) {
-            logger.warn("Таймаут: помощник не ответил за 4 минуты");
+            logger.warn("Таймаут: помощник не ответил за 4 минуты для чата {}", chatId);
             mainTask.cancel(true);
-            return "Помощник не справился с задачей. Попробуйте позже.";
+            return "⏰ Запрос обрабатывается слишком долго. Попробуйте упростить вопрос или повторить позже.";
+        } catch (ExecutionException e) {
+            logger.error("Ошибка выполнения задачи для чата {}: {}", chatId, e.getMessage(), e);
+            Throwable cause = e.getCause();
+            if (cause instanceof org.springframework.web.client.HttpClientErrorException) {
+                return "❌ Сервис временно недоступен. Попробуйте позже.";
+            } else if (cause instanceof org.springframework.web.client.ResourceAccessException) {
+                return "❌ Нет связи с сервисом. Обратитесь к администратору.";
+            } else {
+                return "❌ Произошла ошибка при обработке запроса. Попробуйте позже.";
+            }
         } catch (Exception e) {
-            logger.error("Ошибка обработки: {}", e.getMessage(), e);
-            return "Помощник не справился с задачей. Попробуйте позже.";
+            logger.error("Неожиданная ошибка обработки для чата {}: {}", chatId, e.getMessage(), e);
+            return "❌ Произошла неожиданная ошибка. Попробуйте перезапустить диалог командой /start";
         } finally {
             progressTask.cancel(true);
             executor.shutdownNow();

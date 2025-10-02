@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # ChromaDB - векторная база данных
+  chromadb:
+    image: chromadb/chroma:0.4.15
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - CHROMA_HOST=0.0.0.0
+      - CHROMA_PORT=8000
+      - CHROMA_LOG_LEVEL=INFO
+    networks:
+      - ai_network
+    restart: unless-stopped
+
+  # Ollama - локальная LLM
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - ai_network
+    restart: unless-stopped
+
+  # MySQL - основная база данных
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootPass
+      - MYSQL_DATABASE=monitoring_bd
+      - MYSQL_USER=dba
+      - MYSQL_PASSWORD=dbaPass
+    networks:
+      - ai_network
+    restart: unless-stopped
+
+volumes:
+  chroma_data:
+    driver: local
+  ollama_data:
+    driver: local
+  mysql_data:
+    driver: local
+
+networks:
+  ai_network:
+    driver: bridge

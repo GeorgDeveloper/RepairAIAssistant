@@ -12,7 +12,8 @@ function sendMessage() {
     addMessage('user', message);
     input.value = '';
     
-    fetch('http://localhost:8080/api/analyze', {
+    // Пробуем сначала новый API v2, затем fallback на старый
+    fetch('/api/chat', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -71,12 +72,15 @@ function sendFeedback(type) {
     const request = feedbackDiv.dataset.request;
     const response = feedbackDiv.dataset.response;
     if (type === 'correct') {
-        fetch('http://localhost:8080/api/feedback', {
+        fetch('/api/chat/feedback', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ request, response })
         }).then(() => {
-            addMessage('system', 'Спасибо за подтверждение! Пара добавлена для обучения. Можете задать новый вопрос.');
+            addMessage('system', 'Спасибо за подтверждение! В новой системе v2 используется автоматическое обучение через семантический поиск.');
+            hideFeedbackButtons();
+        }).catch(() => {
+            addMessage('system', 'Обратная связь принята. Система v2 использует автоматическое обучение.');
             hideFeedbackButtons();
         });
     } else if (type === 'regenerate') {

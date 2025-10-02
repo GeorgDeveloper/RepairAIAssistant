@@ -38,4 +38,8 @@ public interface BreakdownReportRepository extends JpaRepository<BreakdownReport
     /** Последние отчеты с лимитом */
     @Query("SELECT b FROM BreakdownReport b ORDER BY b.duration DESC")
     List<BreakdownReport> findRecentReports(Pageable pageable);
+    
+    /** Поиск записей с ID больше указанного (для инкрементальной миграции) */
+    @Query("SELECT b FROM BreakdownReport b WHERE b.idCode > :lastId ORDER BY b.idCode ASC")
+    List<BreakdownReport> findByIdGreaterThan(@Param("lastId") String lastId, Pageable pageable);
 }

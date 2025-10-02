@@ -52,7 +52,7 @@ public class OllamaClient {
     public String generateResponse(String prompt) {
         try {
             // Получаем конфигурацию Ollama сервера и модели с fallback значениями
-            String baseUrl = "http://localhost:11434/api";
+            String baseUrl = "http://localhost:11434";
             String model = "mistral:latest";
             
             if (properties != null && properties.getOllama() != null) {
@@ -64,7 +64,8 @@ public class OllamaClient {
                 }
             }
             
-            String url = baseUrl + "/generate";
+            // Правильный API эндпоинт для Ollama
+            String url = baseUrl + "/api/generate";
             
             /*
              * Экранирование спецсимволов для корректного JSON
@@ -84,6 +85,7 @@ public class OllamaClient {
              * - stream: false - получаем полный ответ сразу
              * - temperature: 0.7 - баланс между точностью и креативностью
              */
+            // Формирование корректного JSON запроса для Ollama API
             String requestBody = "{" +
                 "\"model\": \"" + model + "\"," +
                 "\"prompt\": \"" + escapedPrompt + "\"," +
@@ -152,10 +154,20 @@ public class OllamaClient {
             // Если не удалось распарсить ответ
             return "Ошибка обработки ответа от AI: " + response;
             
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            logger.error("HTTP ошибка при подключении к Ollama: {} {}", e.getStatusCode(), e.getMessage());
+            if (e.getStatusCode().value() == 404) {
+                logger.error("Ошибка 404: Проверьте правильность API эндпоинта. Используйте /api/generate");
+                return "Ошибка подключения к Ollama: неверный API эндпоинт. Проверьте настройки.";
+            }
+            return "Ошибка HTTP при обращении к Ollama: " + e.getStatusCode();
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            logger.error("Ошибка доступа к Ollama: {}", e.getMessage());
+            return "Ollama сервер недоступен. Убедитесь, что Ollama запущен на http://localhost:11434";
         } catch (Exception e) {
             // Логирование ошибок для отладки
-            logger.error("Ollama API error: {}", e.getMessage(), e);
-            return "Ошибка подключения к Ollama: " + e.getMessage();
+            logger.error("Неожиданная ошибка при подключении к Ollama: {}", e.getMessage(), e);
+            return "Произошла неожиданная ошибка при обработке запроса: " + e.getMessage();
         }
     }
 }

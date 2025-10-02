@@ -87,4 +87,8 @@ public interface EquipmentMaintenanceRepository extends JpaRepository<EquipmentM
            "LOWER(e.cause) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "ORDER BY e.startBdT1 DESC")
     List<EquipmentMaintenanceRecord> findByKeyword(@Param("keyword") String keyword, Pageable pageable);
+    
+    /** Поиск записей с ID больше указанного (для инкрементальной миграции) */
+    @Query("SELECT e FROM EquipmentMaintenanceRecord e WHERE e.id > :lastId ORDER BY e.id ASC")
+    List<EquipmentMaintenanceRecord> findByIdGreaterThan(@Param("lastId") Long lastId, Pageable pageable);
 }

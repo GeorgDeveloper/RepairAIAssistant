@@ -28,4 +28,8 @@ public interface SummaryOfSolutionsRepository extends JpaRepository<SummaryOfSol
 			    @Param("notes_on_the_operation_of_the_equipment") String notes_on_the_operation_of_the_equipment,
 			    @Param("measures_taken") String measures_taken,
 			    @Param("comments") String comments);
+    
+    /** Поиск записей с ID больше указанного (для инкрементальной миграции) */
+    @Query("SELECT s FROM SummaryOfSolutions s WHERE s.id > :lastId ORDER BY s.id ASC")
+    List<SummaryOfSolutions> findByIdGreaterThan(@Param("lastId") Long lastId);
 }
