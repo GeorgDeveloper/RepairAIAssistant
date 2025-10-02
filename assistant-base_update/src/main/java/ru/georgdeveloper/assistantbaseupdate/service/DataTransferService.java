@@ -196,6 +196,31 @@ public class DataTransferService {
         return null;
     }
 
+    private int executeWithRetry(java.util.function.Supplier<Integer> operation, String operationName) {
+        int maxRetries = 3;
+        int retryDelay = 1000; // 1 секунда
+        
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return operation.get();
+            } catch (org.springframework.dao.CannotAcquireLockException e) {
+                if (attempt == maxRetries) {
+                    logger.error("Критическая ошибка при {}: исчерпаны все попытки ({})", operationName, maxRetries);
+                    throw e;
+                }
+                logger.warn("Deadlock при {} (попытка {}/{}), повтор через {} мс", operationName, attempt, maxRetries, retryDelay);
+                try {
+                    Thread.sleep(retryDelay);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Прервано во время ожидания повтора", ie);
+                }
+                retryDelay *= 2; // Экспоненциальная задержка
+            }
+        }
+        return 0; // Никогда не достигается
+    }
+
     /**
      * Обработка всех дополнительных полей
      */
@@ -227,7 +252,7 @@ public class DataTransferService {
                   AND comments LIKE '%Cause:%'
                 """;
             
-            int causeCount = mysqlJdbcTemplate.update(updateCause);
+            int causeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateCause), "извлечение cause");
             logger.info("Извлечение cause из comments: обработано {} записей", causeCount);
             
             // 2. Очистка символов в cause
@@ -237,7 +262,7 @@ public class DataTransferService {
                 WHERE cause IS NOT NULL AND cause != ''
                 """;
             
-            int cleanCount = mysqlJdbcTemplate.update(cleanCause);
+            int cleanCount = executeWithRetry(() -> mysqlJdbcTemplate.update(cleanCause), "очистка символов в cause");
             logger.info("Очистка символов в cause: обработано {} записей", cleanCount);
             
             // 3. Удаление пробелов в cause
@@ -247,7 +272,7 @@ public class DataTransferService {
                 WHERE cause IS NOT NULL AND cause != ''
                 """;
             
-            int trimCount = mysqlJdbcTemplate.update(trimCause);
+            int trimCount = executeWithRetry(() -> mysqlJdbcTemplate.update(trimCause), "удаление пробелов в cause");
             logger.info("Удаление пробелов в cause: обработано {} записей", trimCount);
             
             // 4. Заполнение поля staff
@@ -270,7 +295,7 @@ public class DataTransferService {
                   AND comments LIKE '%[%]%'
                 """;
             
-            int staffCount = mysqlJdbcTemplate.update(updateStaff);
+            int staffCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateStaff), "заполнение поля staff");
             logger.info("Заполнение поля staff: обработано {} записей", staffCount);
             
             // 5. Заполнение поля date
@@ -281,7 +306,7 @@ public class DataTransferService {
                   AND start_bd_t1 IS NOT NULL
                 """;
             
-            int dateCount = mysqlJdbcTemplate.update(updateDate);
+            int dateCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateDate), "заполнение поля date");
             logger.info("Заполнение поля date: обработано {} записей", dateCount);
             
             // 6. Заполнение поля week_number
@@ -292,7 +317,7 @@ public class DataTransferService {
                   AND date IS NOT NULL AND date != ''
                 """;
             
-            int weekCount = mysqlJdbcTemplate.update(updateWeek);
+            int weekCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateWeek), "заполнение поля week_number");
             logger.info("Заполнение поля week_number: обработано {} записей", weekCount);
             
             // 7. Заполнение поля month_name
@@ -317,7 +342,7 @@ public class DataTransferService {
                   AND date IS NOT NULL AND date != ''
                 """;
             
-            int monthCount = mysqlJdbcTemplate.update(updateMonth);
+            int monthCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateMonth), "заполнение поля month_name");
             logger.info("Заполнение поля month_name: обработано {} записей", monthCount);
             
             // 8. Заполнение поля shift
@@ -334,7 +359,7 @@ public class DataTransferService {
                   AND start_bd_t1 IS NOT NULL
                 """;
             
-            int shiftCount = mysqlJdbcTemplate.update(updateShift);
+            int shiftCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateShift), "заполнение поля shift");
             logger.info("Заполнение поля shift: обработано {} записей", shiftCount);
             
             // 9. Обновление failure_type из staff_technical
@@ -345,7 +370,7 @@ public class DataTransferService {
                 WHERE (rp.failure_type IS NULL OR rp.failure_type = '')
                 """;
             
-            int failureTypeCount = mysqlJdbcTemplate.update(updateFailureType);
+            int failureTypeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateFailureType), "заполнение поля failure_type");
             logger.info("Заполнение поля failure_type: обработано {} записей", failureTypeCount);
             
             // 10. Обновление crew_de_facto из staff_technical
@@ -356,7 +381,7 @@ public class DataTransferService {
                 WHERE (rp.crew_de_facto IS NULL OR rp.crew_de_facto = '')
                 """;
             
-            int crewDeFactoCount = mysqlJdbcTemplate.update(updateCrewDeFacto);
+            int crewDeFactoCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateCrewDeFacto), "заполнение поля crew_de_facto");
             logger.info("Заполнение поля crew_de_facto: обработано {} записей", crewDeFactoCount);
             
             // 11. Обновление crew из график_работы_104
@@ -371,7 +396,7 @@ public class DataTransferService {
                   AND emr.shift IS NOT NULL
                 """;
             
-            int crewCount = mysqlJdbcTemplate.update(updateCrew);
+            int crewCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateCrew), "заполнение поля crew");
             logger.info("Заполнение поля crew: обработано {} записей", crewCount);
             
             // 12. Заполнение production_day
@@ -417,7 +442,7 @@ public class DataTransferService {
                 WHERE (production_day IS NULL OR production_day = '')
                 """;
             
-            int productionDayCount = mysqlJdbcTemplate.update(updateProductionDay);
+            int productionDayCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateProductionDay), "заполнение поля production_day");
             logger.info("Заполнение поля production_day: обработано {} записей", productionDayCount);
             
             // 13. Обновление failure_type для специфичных причин
@@ -429,7 +454,7 @@ public class DataTransferService {
                    OR cause LIKE '%Простой по вине с. качества%'
                 """;
             
-            int specificFailureTypeCount = mysqlJdbcTemplate.update(updateSpecificFailureType);
+            int specificFailureTypeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateSpecificFailureType), "заполнение поля failure_type (specific)");
             logger.info("Обновление failure_type для специфичных причин: обработано {} записей", specificFailureTypeCount);
             
             logger.info("Обработка всех дополнительных полей завершена успешно");
@@ -461,7 +486,7 @@ public class DataTransferService {
                     OR status LIKE '%В исполнении%'
                 """;
             
-            int deletedCount = mysqlJdbcTemplate.update(deleteQuery);
+            int deletedCount = executeWithRetry(() -> mysqlJdbcTemplate.update(deleteQuery), "удаление отфильтрованных записей");
             logger.info("Удалено отфильтрованных записей: {}", deletedCount);
             
             return deletedCount;
