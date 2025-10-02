@@ -24,7 +24,7 @@
         .total-content, .container, .row { overflow: visible !important; }
         /* Force scrollbars inside DataTables area */
         .dataTables_scroll { overflow: auto !important; }
-        .dataTables_scrollBody { overflow-x: scroll !important; overflow-y: auto !important; height: 60vh !important; max-height: 60vh !important; }
+        .dataTables_scrollBody { overflow-x: scroll !important; overflow-y: auto !important; height: calc(60vh - 80px) !important; max-height: calc(60vh - 80px) !important; }
         /* Ensure inner tables are wider than viewport to trigger horizontal scroll */
         .dataTables_scrollHeadInner, .dataTables_scrollBody > table { min-width: 2200px !important; }
         .dataTables_scrollHead, .dataTables_scrollBody {
@@ -232,6 +232,14 @@
         </div>
     </div>
     <script th:inline="none">
+        function formatDateTime(value) {
+            if (!value) return '';
+            const d = new Date(value);
+            if (isNaN(d.getTime())) return value;
+            const pad = (n) => String(n).padStart(2,'0');
+            return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
         function formatDetailsRow(d) {
             var rows = Object.entries(d || {}).map(function(entry){
                 var key = entry[0];
@@ -246,13 +254,6 @@
             return '<table class="details-table">' + rows + '</table>';
         }
         $(document).ready(function () {
-            function formatDateTime(value) {
-                if (!value) return '';
-                const d = new Date(value);
-                if (isNaN(d.getTime())) return value;
-                const pad = (n) => String(n).padStart(2,'0');
-                return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-            }
 
             function getWeekNumber(dateObj) {
                 const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()))
@@ -308,7 +309,7 @@
                     { data: 'production_day', title: 'Производственный день', width: '150px' }
                 ],
                 scrollX: true,
-                scrollY: '60vh',
+                scrollY: 'calc(60vh - 80px)',
                 scrollCollapse: true,
                 paging: true,
                 pagingType: 'full_numbers',
