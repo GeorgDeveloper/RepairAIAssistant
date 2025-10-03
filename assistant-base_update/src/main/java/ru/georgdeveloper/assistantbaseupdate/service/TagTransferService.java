@@ -33,11 +33,12 @@ public class TagTransferService {
     /**
      * Ежедневный перенос Tag данных в 8:00 утра
      */
-    @Scheduled(cron = "0 0 8 * * *")
+    @Scheduled(cron = "0 0 8 * * *", zone = "Europe/Moscow")
     @Transactional
     public void transferTagDataDaily() {
         try {
-            logger.info("=== Начало ежедневного переноса Tag данных...");
+            java.time.ZonedDateTime triggerTime = java.time.ZonedDateTime.now(java.time.ZoneId.of("Europe/Moscow"));
+            logger.info("=== Начало ежедневного переноса Tag данных... Trigger at {} (zone Europe/Moscow)", triggerTime);
             
             // Получаем текущую дату и время для фильтрации
             LocalDate today = LocalDate.now();
@@ -46,6 +47,7 @@ public class TagTransferService {
             
             logger.info("Фильтрация Tag данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
             logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
+            logger.info("SQL params (Tag): startDateTime={}, endDateTime={}", startDateTime, endDateTime);
             
             // Выполняем перенос данных
             int transferredCount = transferTagDataFromSqlServer(startDateTime, endDateTime);

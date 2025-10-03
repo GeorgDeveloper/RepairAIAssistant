@@ -34,11 +34,12 @@ public class DataTransferService {
     /**
      * Ежедневный перенос данных в 8:00 утра
      */
-    @Scheduled(cron = "0 0 8 * * *")
+    @Scheduled(cron = "0 0 8 * * *", zone = "Europe/Moscow")
     @Transactional
     public void transferDataDaily() {
         try {
-            logger.info("=== Начало ежедневного переноса данных...");
+            java.time.ZonedDateTime triggerTime = java.time.ZonedDateTime.now(java.time.ZoneId.of("Europe/Moscow"));
+            logger.info("=== Начало ежедневного переноса данных... Trigger at {} (zone Europe/Moscow)", triggerTime);
             
             // Получаем текущую дату и время для фильтрации
             LocalDate today = LocalDate.now();
@@ -47,6 +48,7 @@ public class DataTransferService {
             
             logger.info("Фильтрация данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
             logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
+            logger.info("SQL params: startDateTime={}, endDateTime={}", startDateTime, endDateTime);
             
             // Выполняем перенос данных
             int transferredCount = transferDataFromSqlServer(startDateTime, endDateTime);
@@ -71,6 +73,29 @@ public class DataTransferService {
     }
 
     /**
+     * Ручной запуск переноса данных с указанным интервалом времени
+     */
+    @Transactional
+    public void runTransfer(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        try {
+            logger.info("=== Ручной запуск переноса данных... Интервал [{} .. {}] (Europe/Moscow)", startDateTime, endDateTime);
+
+            int transferredCount = transferDataFromSqlServer(startDateTime, endDateTime);
+
+            if (transferredCount > 0) {
+                processAdditionalFields();
+                int deletedCount = cleanupFilteredRecords();
+                logger.info("Ручной запуск: перенесено {} записей, удалено {} отфильтрованных записей", transferredCount, deletedCount);
+            } else {
+                logger.warn("Ручной запуск: нет данных для обработки");
+            }
+        } catch (Exception e) {
+            logger.error("Критическая ошибка при ручном переносе данных: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
      * Перенос данных из SQL Server в MySQL
      */
     private int transferDataFromSqlServer(LocalDateTime startDateTime, LocalDateTime endDateTime) {
@@ -90,7 +115,7 @@ public class DataTransferService {
         List<Map<String, Object>> rows = sqlServerJdbcTemplate.queryForList(sql, 
             startDateTime, endDateTime, startDateTime, endDateTime);
         
-        logger.info("Найдено {} записей для переноса", rows.size());
+        logger.info("Найдено {} записей для переноса (диапазон [{} .. {}])", rows.size(), startDateTime, endDateTime);
         
         String insertSql = """
             INSERT INTO equipment_maintenance_records (
