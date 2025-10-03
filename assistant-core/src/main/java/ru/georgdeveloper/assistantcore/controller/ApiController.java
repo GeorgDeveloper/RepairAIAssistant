@@ -1,7 +1,9 @@
 package ru.georgdeveloper.assistantcore.controller;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import ru.georgdeveloper.assistantcore.service.LangChainAssistantService;
+import ru.georgdeveloper.assistantcore.service.FallbackAssistantService;
 import ru.georgdeveloper.assistantcore.service.OllamaHealthService;
 import ru.georgdeveloper.assistantcore.service.MigrationDiagnosticService;
 import ru.georgdeveloper.assistantcore.service.FastMigrationService;
@@ -35,8 +37,13 @@ public class ApiController {
     
     private static final Logger logger = LoggerFactory.getLogger(ApiController.class);
     
-    // Основной сервис для обработки запросов с интеграцией AI и БД
-    private final LangChainAssistantService assistantService;
+    // Основной сервис для обработки запросов с интеграцией AI и БД (опциональный)
+    @Autowired(required = false)
+    private LangChainAssistantService langChainAssistantService;
+    
+    // Fallback сервис для случаев когда AI отключен
+    @Autowired(required = false)
+    private FallbackAssistantService fallbackService;
 
     // Используем MonitoringRepository вместо прямых SQL-запросов
     private final MonitoringRepository monitoringRepository;
@@ -52,18 +59,15 @@ public class ApiController {
 
     /**
      * Конструктор контроллера
-     * @param assistantService сервис бизнес-логики с AI на основе LangChain
      * @param monitoringRepository репозиторий для справочных данных
      * @param ollamaHealthService сервис проверки состояния Ollama
      * @param migrationDiagnosticService сервис диагностики миграции
      * @param fastMigrationService сервис быстрой миграции
      */
-    public ApiController(LangChainAssistantService assistantService, 
-                        MonitoringRepository monitoringRepository,
+    public ApiController(MonitoringRepository monitoringRepository,
                         OllamaHealthService ollamaHealthService,
                         MigrationDiagnosticService migrationDiagnosticService,
                         FastMigrationService fastMigrationService) {
-        this.assistantService = assistantService;
         this.monitoringRepository = monitoringRepository;
         this.ollamaHealthService = ollamaHealthService;
         this.migrationDiagnosticService = migrationDiagnosticService;
@@ -90,8 +94,15 @@ public class ApiController {
         // Логирование для мониторинга и отладки
         logger.info("Получен запрос: {}", request);
         
-        // Основная обработка через новый сервисный слой на основе LangChain
-        String response = assistantService.processQuery(request);
+        // Выбираем сервис в зависимости от доступности AI
+        String response;
+        if (langChainAssistantService != null) {
+            response = langChainAssistantService.processQuery(request);
+        } else if (fallbackService != null) {
+            response = fallbackService.processQuery(request);
+        } else {
+            response = "❌ Сервис временно недоступен. AI отключен и fallback сервис не найден.";
+        }
         
         // Логирование ответа для контроля качества
         logger.info("Отправляем ответ: {}", response);
