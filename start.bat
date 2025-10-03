@@ -59,7 +59,7 @@ REM ========== ЗАПУСК ОСНОВНОГО СЕРВИСА (ASSISTANT-CORE) =
 REM Запуск основного сервиса на порту 8080 - содержит API и бизнес-логику
 REM Start assistant-core
 echo Starting assistant-core...
-start "Assistant Core" cmd /k "cd assistant-core && mvn spring-boot:run"
+start "Assistant Core" cmd /k "cd assistant-core && mvnw.cmd -DskipTests spring-boot:run"
 
 REM Ожидание запуска основного сервиса
 REM Проверяем доступность health endpoint каждые 5 секунд
@@ -76,7 +76,7 @@ REM ========== ЗАПУСК ВЕБ-ИНТЕРФЕЙСА (ASSISTANT-WEB) ========
 REM Запуск веб-интерфейса на порту 8081 - пользовательский интерфейс
 REM Start assistant-web
 echo Starting assistant-web...
-start "Assistant Web" cmd /k "cd assistant-web && mvn spring-boot:run"
+start "Assistant Web" cmd /k "cd assistant-web && mvnw.cmd -f ..\pom.xml -pl assistant-web -am -DskipTests spring-boot:run"
 
 REM Ожидание запуска веб-сервиса
 REM Проверяем доступность веб-интерфейса каждые 3 секунды
@@ -93,13 +93,13 @@ REM ========== ЗАПУСК TELEGRAM-БОТА (ASSISTANT-TELEGRAM) ==========
 REM Запуск Telegram-бота на порту 8082 - интеграция с мессенджером
 REM Start assistant-telegram
 echo Starting assistant-telegram...
-start "Assistant Telegram" cmd /k "cd assistant-telegram && mvn spring-boot:run"
+start "Assistant Telegram" cmd /k "cd assistant-telegram && mvnw.cmd -DskipTests spring-boot:run"
 
 REM ========== ЗАПУСК МОДУЛЯ ОБНОВЛЕНИЯ БАЗЫ (ASSISTANT-BASE_UPDATE) ==========
 REM Модуль синхронизации данных между SQL Server и MySQL, запускается на 8084
 REM Start assistant-base_update
 echo Starting assistant-base_update...
-start "Assistant Base Update" cmd /k "cd assistant-base_update && mvn spring-boot:run"
+start "Assistant Base Update" cmd /k "cd assistant-base_update && mvnw.cmd -DskipTests spring-boot:run"
 
 REM ========== ЗАВЕРШЕНИЕ ЗАПУСКА ==========
 REM Информация о запущенных сервисах и их адресах

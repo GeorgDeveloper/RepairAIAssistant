@@ -9,9 +9,7 @@ REM ========================================
 REM Завершение Java процессов Spring Boot приложений
 REM Ищем процессы java.exe, которые содержат "spring-boot" в командной строке
 REM ========================================
-for /f "tokens=2" %%i in ('tasklist /fi "imagename eq java.exe" /fo csv ^| findstr "spring-boot"') do (
-    taskkill /pid %%i /f >nul 2>&1
-)
+for /f "tokens=2 delims=,\"" %%i in ('wmic process where "name='java.exe' and commandline like '%%spring-boot:run%%'" get ProcessId /format:csv ^| findstr /r "^[^,]*,[0-9][0-9]*$"') do taskkill /f /pid %%i >nul 2>&1
 
 REM ========================================
 REM Завершение процессов по портам
