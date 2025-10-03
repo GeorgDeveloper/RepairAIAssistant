@@ -37,6 +37,9 @@ public class DataMigrationService {
     private final BreakdownReportRepository breakdownReportRepository;
     private final MigrationTrackingRepository migrationTrackingRepository;
     
+    @Value("${ai.enabled:true}")
+    private boolean aiEnabled;
+    
     @Value("${ai.migration.auto-migrate:true}")
     private boolean autoMigrate;
     
@@ -55,6 +58,11 @@ public class DataMigrationService {
     @EventListener(ApplicationReadyEvent.class)
     @Order(2) // Выполняется после DatabaseInitializationService
     public void smartMigrateOnStartup() {
+        if (!aiEnabled) {
+            log.info("AI отключен (ai.enabled=false), миграция данных пропущена");
+            return;
+        }
+        
         if (!autoMigrate) {
             log.info("Автоматическая миграция отключена (ai.migration.auto-migrate=false)");
             return;

@@ -12,21 +12,34 @@ function sendMessage() {
     addMessage('user', message);
     input.value = '';
     
-    // Отправляем как обычный текст, чтобы избежать двойного JSON-кодирования
+    // Показываем индикатор загрузки
+    const loadingMessage = addMessage('assistant', '🤔 Обрабатываю ваш запрос...');
+    
+    // Отправляем в правильном JSON формате как в Telegram
     fetch('/api/chat', {
         method: 'POST',
         headers: {
-            'Content-Type': 'text/plain;charset=UTF-8',
+            'Content-Type': 'application/json;charset=UTF-8',
         },
-        body: message
+        body: JSON.stringify(message)
     })
-    .then(response => response.text())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.text();
+    })
     .then(data => {
+        // Удаляем индикатор загрузки
+        loadingMessage.remove();
         addMessage('assistant', data);
         showFeedbackButtons(message, data);
     })
     .catch(error => {
-        addMessage('assistant', 'Ошибка: ' + error.message);
+        // Удаляем индикатор загрузки
+        loadingMessage.remove();
+        console.error('Ошибка запроса:', error);
+        addMessage('assistant', '❌ Ошибка соединения с сервером: ' + error.message + '. Попробуйте позже.');
     });
 }
 
@@ -43,9 +56,22 @@ function addMessage(sender, text) {
         messageDiv.style.padding = '10px';
         messageDiv.style.borderRadius = '5px';
     }
+    
+    // Стили для сообщений загрузки
+    if (text.includes('Обрабатываю') || text.includes('Генерирую')) {
+        messageDiv.style.fontStyle = 'italic';
+        messageDiv.style.color = '#666';
+        messageDiv.style.backgroundColor = '#f0f0f0';
+        messageDiv.style.padding = '8px';
+        messageDiv.style.borderRadius = '4px';
+        messageDiv.classList.add('loading-message');
+    }
 
     messages.appendChild(messageDiv);
     messages.scrollTop = messages.scrollHeight;
+    
+    // Возвращаем элемент для возможности удаления
+    return messageDiv;
 }
 
 function showFeedbackButtons(request, response) {
@@ -94,18 +120,34 @@ function sendFeedback(type) {
 
 function sendMessageAgain(message) {
     addMessage('user', message);
+    
+    // Показываем индикатор загрузки
+    const loadingMessage = addMessage('assistant', '🔄 Генерирую новый ответ...');
+    
     fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json;charset=UTF-8'
+        },
         body: JSON.stringify(message)
     })
-    .then(response => response.text())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.text();
+    })
     .then(data => {
+        // Удаляем индикатор загрузки
+        loadingMessage.remove();
         addMessage('assistant', data);
         showFeedbackButtons(message, data);
     })
     .catch(error => {
-        addMessage('assistant', 'Ошибка: ' + error.message);
+        // Удаляем индикатор загрузки
+        loadingMessage.remove();
+        console.error('Ошибка повторного запроса:', error);
+        addMessage('assistant', '❌ Ошибка при повторной генерации: ' + error.message);
     });
 }
 

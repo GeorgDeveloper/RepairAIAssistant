@@ -8,6 +8,7 @@ import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.chroma.ChromaEmbeddingStore;
 import dev.langchain4j.data.segment.TextSegment;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -17,6 +18,7 @@ import java.time.Duration;
  * Конфигурация LangChain4j для AI ассистента
  */
 @Configuration
+@ConditionalOnProperty(name = "ai.enabled", havingValue = "true", matchIfMissing = false)
 public class LangChainConfig {
 
     @Value("${ai.ollama.url:http://localhost:11434}")
@@ -38,6 +40,7 @@ public class LangChainConfig {
      * Модель чата для генерации ответов
      */
     @Bean
+    @ConditionalOnProperty(name = "ai.enabled", havingValue = "true")
     public ChatLanguageModel chatLanguageModel() {
         return OllamaChatModel.builder()
                 .baseUrl(ollamaUrl)
@@ -51,6 +54,7 @@ public class LangChainConfig {
      * Модель эмбеддингов для векторизации текста
      */
     @Bean
+    @ConditionalOnProperty(name = "ai.enabled", havingValue = "true")
     public EmbeddingModel embeddingModel() {
         return OllamaEmbeddingModel.builder()
                 .baseUrl(ollamaUrl)
@@ -63,6 +67,7 @@ public class LangChainConfig {
      * Векторное хранилище ChromaDB
      */
     @Bean
+    @ConditionalOnProperty(name = "ai.enabled", havingValue = "true")
     public EmbeddingStore<TextSegment> embeddingStore() {
         return ChromaEmbeddingStore.builder()
                 .baseUrl(chromaUrl)

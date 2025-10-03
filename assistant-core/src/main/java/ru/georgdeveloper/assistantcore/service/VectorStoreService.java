@@ -15,6 +15,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.georgdeveloper.assistantcore.model.EquipmentMaintenanceRecord;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "ai.enabled", havingValue = "true", matchIfMissing = false)
 public class VectorStoreService {
 
     private final EmbeddingStore<TextSegment> embeddingStore;

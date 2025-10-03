@@ -2,9 +2,12 @@ package ru.georgdeveloper.assistantcore.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.georgdeveloper.assistantcore.service.DataMigrationService;
+import ru.georgdeveloper.assistantcore.service.FallbackAssistantService;
 import ru.georgdeveloper.assistantcore.service.LangChainAssistantService;
 import ru.georgdeveloper.assistantcore.service.VectorStoreService;
 
@@ -20,9 +23,19 @@ import java.util.Map;
 @Slf4j
 public class NewApiController {
 
-    private final LangChainAssistantService assistantService;
     private final DataMigrationService migrationService;
-    private final VectorStoreService vectorStoreService;
+    
+    @Autowired(required = false)
+    private LangChainAssistantService assistantService;
+    
+    @Autowired(required = false) 
+    private VectorStoreService vectorStoreService;
+    
+    @Autowired(required = false)
+    private FallbackAssistantService fallbackService;
+    
+    @Value("${ai.enabled:true}")
+    private boolean aiEnabled;
 
     /**
      * Основной эндпоинт для обработки запросов пользователей
@@ -39,8 +52,17 @@ public class NewApiController {
 
             log.info("Получен запрос: {}", userQuery);
 
-            // Обрабатываем запрос через новый сервис
-            String response = assistantService.processQuery(userQuery);
+            // Обрабатываем запрос через соответствующий сервис
+            String response;
+            if (!aiEnabled || assistantService == null) {
+                if (fallbackService != null) {
+                    response = fallbackService.processQuery(userQuery);
+                } else {
+                    response = "🚫 AI функции отключены. Обратитесь к администратору.";
+                }
+            } else {
+                response = assistantService.processQuery(userQuery);
+            }
 
             log.info("Ответ сгенерирован, длина: {} символов", response.length());
 
@@ -76,10 +98,18 @@ public class NewApiController {
             log.info("Получен фильтрованный запрос: {}, тип: {}", userQuery, dataType);
 
             String response;
-            if ("all".equals(dataType)) {
-                response = assistantService.processQuery(userQuery);
+            if (!aiEnabled || assistantService == null) {
+                if (fallbackService != null) {
+                    response = fallbackService.processQuery(userQuery);
+                } else {
+                    response = "🚫 AI функции отключены. Обратитесь к администратору.";
+                }
             } else {
-                response = assistantService.processQueryWithFilter(userQuery, dataType);
+                if ("all".equals(dataType)) {
+                    response = assistantService.processQuery(userQuery);
+                } else {
+                    response = assistantService.processQueryWithFilter(userQuery, dataType);
+                }
             }
 
             return ResponseEntity.ok(Map.of(
@@ -118,8 +148,12 @@ public class NewApiController {
 
             log.info("Сохранение обратной связи: запрос длиной {} символов", userQuery.length());
 
-            // Сохраняем в векторную базу данных
-            vectorStoreService.addUserFeedback(userQuery, assistantResponse);
+            // Сохраняем в векторную базу данных (если AI включен)
+            if (aiEnabled && vectorStoreService != null) {
+                vectorStoreService.addUserFeedback(userQuery, assistantResponse);
+            } else {
+                log.info("Обратная связь получена, но AI отключен - сохранение пропущено");
+            }
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
@@ -146,9 +180,10 @@ public class NewApiController {
                     "version", "v2-langchain",
                     "timestamp", System.currentTimeMillis(),
                     "components", Map.of(
-                            "langchain", "active",
-                            "vectorStore", "active",
-                            "embeddings", "active"
+                            "ai", aiEnabled ? "enabled" : "disabled",
+                            "langchain", (aiEnabled && assistantService != null) ? "active" : "inactive",
+                            "vectorStore", (aiEnabled && vectorStoreService != null) ? "active" : "inactive",
+                            "fallback", (!aiEnabled && fallbackService != null) ? "active" : "inactive"
                     )
             ));
         } catch (Exception e) {

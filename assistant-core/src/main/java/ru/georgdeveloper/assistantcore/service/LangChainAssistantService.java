@@ -4,10 +4,13 @@ import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -17,10 +20,12 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "ai.enabled", havingValue = "true", matchIfMissing = false)
 public class LangChainAssistantService {
 
     private final ChatLanguageModel chatModel;
     private final VectorStoreService vectorStoreService;
+    private final QueryEnhancementService queryEnhancementService;
 
     // Шаблоны промптов
     // (removed legacy template in favor of SmartPromptBuilder)
@@ -30,19 +35,24 @@ public class LangChainAssistantService {
     // (removed legacy template in favor of SmartPromptBuilder)
 
     /**
-     * Главный метод обработки запросов пользователей
+     * Главный метод обработки запросов пользователей с улучшениями
      */
     public String processQuery(String userQuery) {
         try {
             log.info("Обработка запроса: {}", userQuery);
+            
+            // Улучшаем и нормализуем запрос
+            String enhancedQuery = queryEnhancementService.enhanceQuery(userQuery);
+            QueryEnhancementService.QueryPriority priority = queryEnhancementService.determineQueryPriority(userQuery);
+            log.debug("Улучшенный запрос: '{}', приоритет: {}", enhancedQuery, priority);
 
             // Определяем тип запроса
             QueryType queryType = classifyQuery(userQuery);
             log.debug("Тип запроса: {}", queryType);
 
-            // Классификация: общий/ремонтный/статистика уже выполнена выше (эвристики)
-            // Смарт-поиск: гибрид + метаданные (пока без фильтров)
-            List<TextSegment> relevantSegments = vectorStoreService.searchSmart(userQuery, 10);
+            // Используем улучшенный запрос для семантического поиска
+            List<TextSegment> relevantSegments = vectorStoreService.searchSmart(enhancedQuery, 
+                priority == QueryEnhancementService.QueryPriority.HIGH ? 15 : 10);
             String context = buildContext(relevantSegments);
 
             // Генерируем ответ в зависимости от типа запроса
@@ -52,12 +62,12 @@ public class LangChainAssistantService {
                 case GENERAL -> generateGeneralResponse(userQuery, context);
             };
 
-            log.info("Ответ сгенерирован, длина: {} символов", response.length());
+            log.info("Ответ сгенерирован, длина: {} символов, приоритет: {}", response.length(), priority);
             return response;
 
         } catch (Exception e) {
             log.error("Ошибка обработки запроса: {}", userQuery, e);
-            return "Извините, произошла ошибка при обработке вашего запроса. Попробуйте переформулировать вопрос.";
+            return "❌ Извините, произошла ошибка при обработке вашего запроса. Попробуйте переформулировать вопрос или обратитесь к техническому специалисту.";
         }
     }
 
@@ -66,7 +76,13 @@ public class LangChainAssistantService {
      */
     public String processQueryWithFilter(String userQuery, String dataType) {
         try {
-            List<TextSegment> relevantSegments = vectorStoreService.searchSmart(userQuery, 10, Map.of("type", dataType));
+            // Улучшаем запрос для лучшего поиска
+            String enhancedQuery = queryEnhancementService.enhanceQuery(userQuery);
+            QueryEnhancementService.QueryPriority priority = queryEnhancementService.determineQueryPriority(userQuery);
+            
+            List<TextSegment> relevantSegments = vectorStoreService.searchSmart(enhancedQuery, 
+                priority == QueryEnhancementService.QueryPriority.HIGH ? 15 : 10, 
+                Map.of("type", dataType));
             String context = buildContext(relevantSegments);
 
             QueryType queryType = classifyQuery(userQuery);
@@ -78,40 +94,54 @@ public class LangChainAssistantService {
 
         } catch (Exception e) {
             log.error("Ошибка обработки запроса с фильтром: {}", userQuery, e);
-            return "Ошибка обработки запроса.";
+            return "❌ Ошибка обработки запроса с фильтрацией.";
         }
     }
 
+    // Константы для классификации запросов
+    private static final Set<String> REPAIR_KEYWORDS = Set.of(
+        "как починить", "как устранить", "инструкция", "что делать", 
+        "утечка", "не работает", "поломка", "ремонт", "неисправность",
+        "сломался", "починить", "устранить", "исправить"
+    );
+    
+    private static final Set<String> STATISTICS_KEYWORDS = Set.of(
+        "статистика", "сколько", "топ", "самые", "частые", 
+        "анализ", "тенденции", "отчет", "данные", "показатели"
+    );
+
     /**
-     * Классификация типа запроса
+     * Улучшенная классификация типа запроса с null-безопасностью
      */
     private QueryType classifyQuery(String query) {
-        String lowerQuery = query.toLowerCase();
+        if (query == null || query.trim().isEmpty()) {
+            return QueryType.GENERAL;
+        }
+        
+        String lowerQuery = query.toLowerCase(Locale.ROOT);
 
-        // Запросы на инструкции по ремонту
-        if (lowerQuery.contains("как починить") || 
-            lowerQuery.contains("как устранить") ||
-            lowerQuery.contains("инструкция") ||
-            lowerQuery.contains("что делать") ||
-            lowerQuery.contains("утечка") ||
-            lowerQuery.contains("не работает") ||
-            lowerQuery.contains("поломка")) {
+        // Проверяем ключевые слова для ремонта
+        if (REPAIR_KEYWORDS.stream().anyMatch(lowerQuery::contains)) {
             return QueryType.REPAIR_INSTRUCTION;
         }
 
-        // Статистические запросы
-        if (lowerQuery.contains("статистика") ||
-            lowerQuery.contains("сколько") ||
-            lowerQuery.contains("топ") ||
-            lowerQuery.contains("самые") ||
-            lowerQuery.contains("частые") ||
-            lowerQuery.contains("анализ") ||
-            lowerQuery.contains("тенденции")) {
+        // Проверяем ключевые слова для статистики
+        if (STATISTICS_KEYWORDS.stream().anyMatch(lowerQuery::contains)) {
             return QueryType.STATISTICS;
         }
 
         // Общие запросы
         return QueryType.GENERAL;
+    }
+    
+    /**
+     * Проверка является ли запрос связанным с ремонтом
+     */
+    private boolean isRepairIntent(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return false;
+        }
+        return classifyQuery(query) == QueryType.REPAIR_INSTRUCTION;
     }
 
     /**
@@ -125,7 +155,7 @@ public class LangChainAssistantService {
             );
             return chatModel.generate(promptText);
         } catch (Exception e) {
-            log.error("Ошибка генерации инструкции по ремонту: {}", e.getMessage());
+            log.error("Ошибка генерации инструкции по ремонту для запроса: '{}'", query, e);
             return generateFallbackRepairResponse(query, context);
         }
     }
@@ -141,7 +171,7 @@ public class LangChainAssistantService {
             );
             return chatModel.generate(promptText);
         } catch (Exception e) {
-            log.error("Ошибка генерации статистического анализа: {}", e.getMessage());
+            log.error("Ошибка генерации статистического анализа для запроса: '{}'", query, e);
             return generateFallbackStatisticsResponse(query, context);
         }
     }
@@ -161,7 +191,7 @@ public class LangChainAssistantService {
                         "• техническими рекомендациями";
             }
 
-            boolean isRepairIntent = lowerQuery.contains("утечка") || lowerQuery.contains("ремонт") || lowerQuery.contains("не работает") || lowerQuery.contains("поломка") || lowerQuery.contains("как починить") || lowerQuery.contains("как устранить") || lowerQuery.contains("инструкция") || lowerQuery.contains("что делать");
+            boolean isRepairIntent = isRepairIntent(query);
             String promptText = SmartPromptBuilder.buildGeneral(
                     context,
                     query,
@@ -169,7 +199,7 @@ public class LangChainAssistantService {
             );
             return chatModel.generate(promptText);
         } catch (Exception e) {
-            log.error("Ошибка генерации общего ответа: {}", e.getMessage());
+            log.error("Ошибка генерации общего ответа для запроса: '{}'", query, e);
             return generateFallbackGeneralResponse(query, context);
         }
     }

@@ -1,6 +1,7 @@
 package ru.georgdeveloper.assistantweb.controller;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,9 @@ public class AssistantController {
 
     @Value("${ai.enabled:true}")
     private boolean aiEnabled;
+    
+    @Autowired(required = false)
+    private ru.georgdeveloper.assistantcore.service.FallbackAssistantService fallbackService;
     
     /**
      * Конструктор контроллера веб-интерфейса ассистента
@@ -99,9 +103,29 @@ public class AssistantController {
     @ResponseBody
     public String processChat(@RequestBody String message) {
         if (!aiEnabled) {
-            return "AI is disabled";
+            return "🚫 AI отключен в конфигурации (ai.enabled=false). Обратитесь к администратору для включения.";
         }
-        return coreServiceClient.analyzeRepairRequest(message);
+        
+        // Очищаем сообщение от лишних кавычек JSON
+        String cleanMessage = message;
+        if (message.startsWith("\"") && message.endsWith("\"")) {
+            cleanMessage = message.substring(1, message.length() - 1);
+        }
+        
+        // Используем fallback сервис если AI отключен
+        if (!aiEnabled && fallbackService != null) {
+            return fallbackService.processQuery(cleanMessage);
+        }
+        
+        try {
+            // Логируем запрос для отладки
+            System.out.println("Web запрос: " + cleanMessage);
+            
+            return coreServiceClient.analyzeRepairRequest(cleanMessage);
+        } catch (Exception e) {
+            System.err.println("Ошибка обработки веб-запроса: " + e.getMessage());
+            return "❌ Ошибка обработки запроса. Попробуйте позже.";
+        }
     }
 
     @PostMapping("/api/chat/feedback")
