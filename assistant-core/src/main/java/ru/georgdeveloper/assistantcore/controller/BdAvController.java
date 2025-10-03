@@ -1,7 +1,6 @@
 package ru.georgdeveloper.assistantcore.controller;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,8 +17,6 @@ import java.util.*;
 @RestController
 @RequestMapping("/bdav")
 public class BdAvController {
-
-    private static final Logger logger = LoggerFactory.getLogger(BdAvController.class);
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

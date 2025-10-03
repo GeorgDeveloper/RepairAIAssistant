@@ -6,7 +6,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantcore.model.MigrationTracking;
 import ru.georgdeveloper.assistantcore.repository.MigrationTrackingRepository;
-import ru.georgdeveloper.assistantcore.service.DataMigrationService;
 
 import java.util.*;
 

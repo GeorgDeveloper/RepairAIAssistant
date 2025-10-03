@@ -6,6 +6,7 @@ import org.springframework.stereotype.Controller;
 
 import org.springframework.web.bind.annotation.*;
 import ru.georgdeveloper.assistantweb.client.CoreServiceClient;
+import ru.georgdeveloper.assistantcore.service.FallbackAssistantService;
 
 @Controller
 public class AssistantController {
@@ -21,7 +22,7 @@ public class AssistantController {
     private boolean aiEnabled;
     
     @Autowired(required = false)
-    private ru.georgdeveloper.assistantcore.service.FallbackAssistantService fallbackService;
+    private FallbackAssistantService fallbackService;
     
     /**
      * Конструктор контроллера веб-интерфейса ассистента
