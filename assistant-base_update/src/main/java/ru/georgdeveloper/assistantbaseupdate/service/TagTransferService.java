@@ -3,6 +3,7 @@ package ru.georgdeveloper.assistantbaseupdate.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -30,14 +32,31 @@ public class TagTransferService {
     @Autowired
     private JdbcTemplate mysqlJdbcTemplate;
 
+    @Autowired
+    private TransferRunTracker transferRunTracker;
+
+    @Value("${transfer.enabled:true}")
+    private boolean transferEnabled;
+
     /**
      * Ежедневный перенос Tag данных в 8:00 утра
      */
-    @Scheduled(cron = "0 0 8 * * *")
+    @Scheduled(cron = "0 0 8 * * *", zone = "${app.timezone:Europe/Moscow}")
     @Transactional
     public void transferTagDataDaily() {
         try {
+            if (!transferEnabled) {
+                String msg = "Перенос Tag данных отключен конфигурацией (transfer.enabled=false).";
+                System.out.println(msg);
+                logger.warn(msg);
+                return;
+            }
+
+            transferRunTracker.markPlannedRun("tag");
+            transferRunTracker.markActualRun("tag");
+
             logger.info("=== Начало ежедневного переноса Tag данных...");
+            logger.info("Текущее время: {} TZ: {}", LocalDateTime.now(), ZoneId.systemDefault());
             
             // Получаем текущую дату и время для фильтрации
             LocalDate today = LocalDate.now();
@@ -60,7 +79,11 @@ public class TagTransferService {
                 logger.info("Итог Tag: перенесено {} записей, удалено {} отфильтрованных записей", 
                     transferredCount, deletedCount);
             } else {
-                logger.warn("Нет Tag данных для обработки");
+                String noDataMsg = String.format(
+                    "Нет Tag данных для обработки за период [%s, %s). Возможные причины: пустые данные источника, неверный формат дат или "+
+                    "несовпадение часового пояса.", startDateTime, endDateTime);
+                System.out.println(noDataMsg);
+                logger.warn(noDataMsg);
             }
             
         } catch (Exception e) {
@@ -109,8 +132,17 @@ public class TagTransferService {
                 
                 // Преобразование времени из строкового формата
                 Time machineDowntime = parseTagSqlTime((String) row.get("SDuration"));
+                if (machineDowntime == null && row.get("SDuration") != null) {
+                    logger.warn("[Tag] Не удалось распарсить SDuration='{}' (ожидаем чч:мм[:cc] или минуты)", row.get("SDuration"));
+                }
                 Time ttr = parseTagSqlTime((String) row.get("STTR"));
+                if (ttr == null && row.get("STTR") != null) {
+                    logger.warn("[Tag] Не удалось распарсить STTR='{}' (ожидаем чч:мм[:cc] или минуты)", row.get("STTR"));
+                }
                 Time t2MinusT1 = parseTagSqlTime((String) row.get("SLogisticTimeMin"));
+                if (t2MinusT1 == null && row.get("SLogisticTimeMin") != null) {
+                    logger.warn("[Tag] Не удалось распарсить SLogisticTimeMin='{}' (ожидаем чч:мм[:cc] или минуты)", row.get("SLogisticTimeMin"));
+                }
                 
                 // Подготовка данных для вставки
                 Object[] data = {
@@ -205,6 +237,7 @@ public class TagTransferService {
             logger.warn("Ошибка преобразования Tag времени '{}': {}", timeStr, e.getMessage());
         }
         
+        logger.debug("[Tag] Формат времени '{}' не распознан. Возвращено null.", timeStr);
         return null;
     }
 
