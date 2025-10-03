@@ -8,7 +8,7 @@
 - **LangChain4j** - Фреймворк для LLM приложений
 - **ChromaDB** - Векторная база данных для семантического поиска  
 - **nomic-embed-text** - Модель эмбеддингов для векторизации
-- **deepseek-r1:latest** - Основная языковая модель
+- **phi3:mini** - Основная языковая модель (по умолчанию)
 - **Ollama** - Локальный сервер для LLM
 
 ### Ключевые улучшения
@@ -49,29 +49,16 @@
 # Java 17+
 java -version
 
-# Docker & Docker Compose
-docker --version
-docker-compose --version
-
 # Maven 3.6+
 mvn --version
 ```
 
-### 2. Запуск инфраструктуры
+### 2. Установка инфраструктуры
+
+Рекомендуется использовать автоматический скрипт установки, который настраивает MySQL, ChromaDB и Ollama как systemd-сервисы:
 
 ```bash
-# Запуск ChromaDB и Ollama
-docker-compose up -d
-
-# Проверка статуса
-docker-compose ps
-
-# Настройка моделей Ollama
-# Windows:
-setup-ollama.bat
-
-# Linux/Mac:
-./setup-ollama.sh
+sudo ./install-server.sh
 ```
 
 ### 3. Запуск приложения
@@ -146,7 +133,7 @@ curl -X POST http://localhost:8080/api/v2/query \
 ai:
   ollama:
     url: http://localhost:11434
-    chat-model: deepseek-r1:latest
+    chat-model: phi3:mini
     embedding-model: nomic-embed-text
   chroma:
     url: http://localhost:8000
@@ -167,32 +154,11 @@ telegram:
     username: js_mai_bot
 ```
 
-### Docker Compose
+### Сервисы
 
-```yaml
-services:
-  chromadb:
-    image: chromadb/chroma:0.4.15
-    ports:
-      - "8000:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-
-  mysql:
-    image: mysql:8.0
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: monitoring_bd
-```
+- MySQL: systemd `mysql.service` (порт 3306)
+- ChromaDB: systemd `chromadb.service` (порт 8000)
+- Ollama: systemd `ollama.service` (порт 11434)
 
 ## 🔄 Умная миграция данных
 
@@ -312,7 +278,6 @@ curl -X POST http://localhost:8080/api/v2/admin/clear
 ```
 repair-ai-assistant/
 ├── application.yml              # Единая конфигурация
-├── docker-compose.yml           # Инфраструктура
 ├── assistant-core/              # Основной модуль (LangChain4j)
 ├── assistant-web/               # Веб-интерфейс  
 ├── assistant-telegram/          # Telegram бот
@@ -351,14 +316,10 @@ INFO  DataMigrationService - Новых данных не обнаружено, 
 # Логи приложения
 tail -f assistant-core/logs/repair-assistant.log
 
-# Логи ChromaDB
-docker logs -f chromadb
-
-# Логи Ollama
-docker logs -f ollama
-
-# Статистика ресурсов
-docker stats
+# Логи сервисов
+journalctl -u chromadb -f
+journalctl -u ollama -f
+journalctl -u mysql -f
 ```
 
 ## 🚨 Устранение неполадок
@@ -465,14 +426,13 @@ sudo ./install-server.sh
 ```
 
 **Скрипт автоматически установит:**
-- Java 17, Maven, Docker, Docker Compose
-- MySQL 8.0 с настроенной БД `monitoring_bd` и внешним доступом
-- ChromaDB 0.4.15 для векторного поиска
-- Ollama с моделями `deepseek-r1:latest` и `nomic-embed-text`
+- Java 17, Maven
+- MySQL 8.0 (native) с БД `monitoring_bd` и пользователями
+- ChromaDB 0.4.15 (native, как systemd сервис)
+- Ollama (native) с моделями `phi3:mini` и `nomic-embed-text`
 - Systemd сервисы для автозапуска
-- Файрвол UFW с правильными настройками
+- Файрвол UFW
 - Пользователя `repairai` и директории приложения
-- Пользователей MySQL для DBeaver подключения
 
 ### Проверка установки
 

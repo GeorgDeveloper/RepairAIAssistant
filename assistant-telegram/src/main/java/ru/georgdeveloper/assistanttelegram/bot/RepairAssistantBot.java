@@ -27,15 +27,15 @@ import org.slf4j.LoggerFactory;
  * 1. Telegram API -> RepairAssistantBot (получение сообщений)
  * 2. RepairAssistantBot -> CommandHandler/MessageHandler (обработка)
  * 3. MessageHandler -> CoreServiceClient (запрос к assistant-core)
- * 4. CoreServiceClient -> RepairAssistantService (бизнес-логика)
- * 5. RepairAssistantService -> OllamaClient (AI анализ)
+ * 4. CoreServiceClient -> LangChainAssistantService (бизнес-логика)
+ * 5. LangChainAssistantService -> ChromaDB + Ollama (семантический поиск + AI анализ)
  * 6. Ответ возвращается по цепочке обратно в Telegram
  * 
  * Особенности:
  * - Использует Long Polling для получения обновлений от Telegram
  * - Поддерживает автоматическую пагинацию длинных сообщений (>4096 символов)
  * - Интегрируется с реальными данными из производственной БД
- * - Фильтрует технические размышления AI модели deepseek-coder:6.7b
+ * - Фильтрует технические размышления AI модели deepseek-r1:latest
  */
 @Component
 public class RepairAssistantBot extends TelegramLongPollingBot {
@@ -145,7 +145,7 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
                 // Сохраняем пару запрос-ответ через CoreServiceClient
                 try {
                     messageHandler.getCoreServiceClient().saveFeedback(pair.userQuery, pair.answer);
-                    sendTextMessage(chatId, "Спасибо! Ответ сохранён для дообучения модели. Можете задать новый вопрос.");
+                    sendTextMessage(chatId, "✅ Спасибо за подтверждение! Ваш вопрос и ответ сохранены в векторную базу данных для улучшения будущих ответов. Можете задать новый вопрос.");
                 } catch (Exception e) {
                     sendTextMessage(chatId, "Ошибка при сохранении обратной связи: " + e.getMessage());
                 }

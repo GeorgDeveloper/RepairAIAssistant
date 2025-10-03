@@ -45,10 +45,8 @@ chmod +x check-installation.sh
 ### Системные компоненты
 - ✅ **Java 17** - OpenJDK для запуска приложения
 - ✅ **Maven** - Сборка и управление зависимостями
-- ✅ **Docker** - Контейнеризация сервисов
-- ✅ **Docker Compose** - Оркестрация контейнеров
 
-### Базы данных и сервисы
+### Базы данных и сервисы (native)
 - ✅ **MySQL 8.0** - Основная реляционная БД
   - База: `monitoring_bd`
   - Пользователь: `dba` / `dbaPass`
@@ -56,7 +54,7 @@ chmod +x check-installation.sh
 - ✅ **ChromaDB 0.4.15** - Векторная БД для семантического поиска
   - Порт: `8000`
   - Коллекция: `repair_knowledge`
-- ✅ **Ollama** - Локальный LLM сервер
+- ✅ **Ollama** - Локальный LLM сервер (systemd)
   - Порт: `11434`
   - Модели: `deepseek-r1:latest`, `nomic-embed-text`
 
@@ -72,7 +70,7 @@ chmod +x check-installation.sh
 ```
 /opt/repair-ai-assistant/
 ├── application.yml          # Конфигурация приложения
-├── docker-compose.yml       # Docker сервисы
+├── chroma-env/              # Виртуальное окружение ChromaDB (venv)
 ├── start.sh                 # Запуск всех сервисов
 ├── stop.sh                  # Остановка всех сервисов
 ├── status.sh                # Проверка статуса
@@ -143,16 +141,13 @@ curl http://localhost:8081/                 # Web Interface
 curl http://localhost:8000/api/v1/heartbeat # ChromaDB
 curl http://localhost:11434/api/tags        # Ollama
 
-# Проверка баз данных
-docker exec repair_mysql mysql -u dba -pdbaPass -e "SHOW DATABASES;"
-
-# Проверка контейнеров
-docker ps --filter name=repair_
-
 # Проверка сервисов
 systemctl status repair-ai-core
 systemctl status repair-ai-web
 systemctl status repair-ai-telegram
+systemctl status mysql
+systemctl status chromadb
+systemctl status ollama
 ```
 
 ## 🛠️ Управление сервисами
@@ -190,18 +185,13 @@ sudo systemctl enable repair-ai-web
 sudo systemctl enable repair-ai-telegram
 ```
 
-### Docker команды
+### Полезные systemd команды
 
 ```bash
-# Управление контейнерами
-docker start repair_mysql repair_chromadb repair_ollama
-docker stop repair_mysql repair_chromadb repair_ollama
-docker restart repair_mysql repair_chromadb repair_ollama
-
-# Просмотр логов
-docker logs -f repair_mysql
-docker logs -f repair_chromadb
-docker logs -f repair_ollama
+sudo systemctl start|stop|restart mysql chromadb ollama
+journalctl -u mysql -f
+journalctl -u chromadb -f
+journalctl -u ollama -f
 ```
 
 ## 📊 Мониторинг
@@ -217,18 +207,15 @@ journalctl -u repair-ai-core -f
 journalctl -u repair-ai-web -f
 journalctl -u repair-ai-telegram -f
 
-# Логи Docker контейнеров
-docker logs -f repair_mysql
-docker logs -f repair_chromadb
-docker logs -f repair_ollama
+# Логи сервисов
+journalctl -u mysql -f
+journalctl -u chromadb -f
+journalctl -u ollama -f
 ```
 
 ### Мониторинг ресурсов
 
 ```bash
-# Использование ресурсов контейнерами
-docker stats
-
 # Системные ресурсы
 htop
 free -h
@@ -239,19 +226,18 @@ df -h
 
 ### Частые проблемы
 
-1. **Контейнеры не запускаются**
+1. **Сервис не запускается**
    ```bash
    # Проверьте логи
-   docker logs repair_mysql
-   
-   # Перезапустите
-   docker-compose -f /opt/repair-ai-assistant/docker-compose.yml restart
+   journalctl -u mysql -f
+   journalctl -u chromadb -f
+   journalctl -u ollama -f
    ```
 
 2. **Приложение не подключается к БД**
    ```bash
    # Проверьте подключение к MySQL
-   docker exec repair_mysql mysql -u dba -pdbaPass -e "SELECT 1;"
+   mysql -u dba -pdbaPass -e "SELECT 1;"
    
    # Проверьте настройки в application.yml
    ```
@@ -259,8 +245,8 @@ df -h
 3. **Ollama модели не загружаются**
    ```bash
    # Загрузите модели вручную
-   docker exec repair_ollama ollama pull deepseek-r1:latest
-   docker exec repair_ollama ollama pull nomic-embed-text
+   ollama pull phi3:mini
+   ollama pull nomic-embed-text
    ```
 
 4. **Порты заняты**
@@ -275,10 +261,8 @@ df -h
 
 ```bash
 # Полная очистка
-sudo systemctl stop repair-ai-*
-docker stop $(docker ps -q --filter name=repair_)
-docker rm $(docker ps -aq --filter name=repair_)
-docker volume rm $(docker volume ls -q | grep repair)
+sudo systemctl stop repair-ai-core repair-ai-web repair-ai-telegram
+sudo systemctl stop mysql chromadb ollama
 sudo rm -rf /opt/repair-ai-assistant
 
 # Повторная установка

@@ -20,8 +20,7 @@ import ru.georgdeveloper.assistantcore.repository.MigrationTrackingRepository;
 import ru.georgdeveloper.assistantcore.repository.SummaryOfSolutionsRepository;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -41,8 +40,14 @@ public class DataMigrationService {
     @Value("${ai.migration.auto-migrate:true}")
     private boolean autoMigrate;
     
-    @Value("${ai.migration.batch-size:100}")
+    @Value("${ai.migration.batch-size:1000}")
     private int batchSize;
+    
+    @Value("${ai.migration.parallel-threads:4}")
+    private int parallelThreads;
+    
+    @Value("${ai.migration.fetch-size:5000}")
+    private int fetchSize;
 
     /**
      * Умная миграция при запуске приложения
@@ -262,11 +267,16 @@ public class DataMigrationService {
                     break;
                 }
 
-                for (EquipmentMaintenanceRecord record : records) {
-                    if (isValidRecord(record)) {
-                        vectorStoreService.addMaintenanceRecord(record);
-                        totalMigrated++;
-                        maxId = Math.max(maxId, record.getId());
+                // Публичная обработка записей в батчах
+                List<List<EquipmentMaintenanceRecord>> batches = partitionList(records, parallelThreads);
+                
+                for (List<EquipmentMaintenanceRecord> batch : batches) {
+                    for (EquipmentMaintenanceRecord record : batch) {
+                        if (isValidRecord(record)) {
+                            vectorStoreService.addMaintenanceRecord(record);
+                            totalMigrated++;
+                            maxId = Math.max(maxId, record.getId());
+                        }
                     }
                 }
 
@@ -279,7 +289,23 @@ public class DataMigrationService {
 
             // Обновляем отслеживание миграции
             long totalCount = equipmentMaintenanceRepository.count();
-            migrationTrackingRepository.updateMigrationInfo(tableName, maxId, LocalDateTime.now(), totalCount);
+            
+            try {
+                MigrationTracking tracking = migrationTrackingRepository.findByTableName(tableName).orElse(null);
+                if (tracking == null) {
+                    tracking = new MigrationTracking(tableName);
+                    tracking.setLastMigratedId(maxId);
+                    tracking.setLastMigrationTime(LocalDateTime.now());
+                    tracking.setRecordsCount(totalCount);
+                    migrationTrackingRepository.save(tracking);
+                    log.info("Создана новая запись отслеживания для таблицы: {}", tableName);
+                } else {
+                    migrationTrackingRepository.updateMigrationInfo(tableName, maxId, LocalDateTime.now(), totalCount);
+                    log.info("Обновлена запись отслеживания для таблицы: {}", tableName);
+                }
+            } catch (Exception e) {
+                log.error("Ошибка обновления отслеживания миграции для таблицы: {}", tableName, e);
+            }
 
             log.info("Мигрировано {} записей обслуживания (всего в БД: {})", totalMigrated, totalCount);
 
@@ -332,7 +358,23 @@ public class DataMigrationService {
 
             // Обновляем отслеживание миграции
             long totalCount = summaryOfSolutionsRepository.count();
-            migrationTrackingRepository.updateMigrationInfo(tableName, maxId, LocalDateTime.now(), totalCount);
+            
+            try {
+                MigrationTracking tracking = migrationTrackingRepository.findByTableName(tableName).orElse(null);
+                if (tracking == null) {
+                    tracking = new MigrationTracking(tableName);
+                    tracking.setLastMigratedId(maxId);
+                    tracking.setLastMigrationTime(LocalDateTime.now());
+                    tracking.setRecordsCount(totalCount);
+                    migrationTrackingRepository.save(tracking);
+                    log.info("Создана новая запись отслеживания для таблицы: {}", tableName);
+                } else {
+                    migrationTrackingRepository.updateMigrationInfo(tableName, maxId, LocalDateTime.now(), totalCount);
+                    log.info("Обновлена запись отслеживания для таблицы: {}", tableName);
+                }
+            } catch (Exception e) {
+                log.error("Ошибка обновления отслеживания миграции для таблицы: {}", tableName, e);
+            }
 
             log.info("Мигрировано {} решений (всего в БД: {})", totalMigrated, totalCount);
 
@@ -405,7 +447,23 @@ public class DataMigrationService {
             // Обновляем отслеживание миграции
             long totalCount = breakdownReportRepository.count();
             Long maxIdLong = maxId.equals("0") ? 0L : Long.parseLong(maxId);
-            migrationTrackingRepository.updateMigrationInfo(tableName, maxIdLong, LocalDateTime.now(), totalCount);
+            
+            try {
+                MigrationTracking tracking = migrationTrackingRepository.findByTableName(tableName).orElse(null);
+                if (tracking == null) {
+                    tracking = new MigrationTracking(tableName);
+                    tracking.setLastMigratedId(maxIdLong);
+                    tracking.setLastMigrationTime(LocalDateTime.now());
+                    tracking.setRecordsCount(totalCount);
+                    migrationTrackingRepository.save(tracking);
+                    log.info("Создана новая запись отслеживания для таблицы: {}", tableName);
+                } else {
+                    migrationTrackingRepository.updateMigrationInfo(tableName, maxIdLong, LocalDateTime.now(), totalCount);
+                    log.info("Обновлена запись отслеживания для таблицы: {}", tableName);
+                }
+            } catch (Exception e) {
+                log.error("Ошибка обновления отслеживания миграции для таблицы: {}", tableName, e);
+            }
 
             log.info("Мигрировано {} отчетов о поломках (всего в БД: {})", totalMigrated, totalCount);
 
@@ -460,5 +518,55 @@ public class DataMigrationService {
         return breakdown != null &&
                breakdown.getMachineName() != null && !breakdown.getMachineName().trim().isEmpty() &&
                breakdown.getComment() != null && !breakdown.getComment().trim().isEmpty();
+    }
+    
+    /**
+     * Разделение списка на части для публичной обработки
+     */
+    private <T> List<List<T>> partitionList(List<T> list, int partitions) {
+        List<List<T>> result = new ArrayList<>();
+        if (list.isEmpty()) {
+            return result;
+        }
+        
+        int size = list.size();
+        int partitionSize = (int) Math.ceil((double) size / partitions);
+        
+        for (int i = 0; i < size; i += partitionSize) {
+            int end = Math.min(i + partitionSize, size);
+            result.add(new ArrayList<>(list.subList(i, end)));
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Получение статистики миграции
+     */
+    public Map<String, Object> getMigrationStats() {
+        Map<String, Object> stats = new HashMap<>();
+        
+        try {
+            List<MigrationTracking> tracking = migrationTrackingRepository.findAll();
+            stats.put("trackingRecords", tracking);
+            stats.put("totalTables", tracking.size());
+            
+            // Статистика по таблицам
+            Map<String, Object> tableStats = new HashMap<>();
+            tableStats.put("equipmentMaintenanceRecord", equipmentMaintenanceRepository.count());
+            tableStats.put("summaryOfSolutions", summaryOfSolutionsRepository.count());
+            tableStats.put("breakdownReport", breakdownReportRepository.count());
+            stats.put("tableStats", tableStats);
+            
+            stats.put("batchSize", batchSize);
+            stats.put("parallelThreads", parallelThreads);
+            stats.put("autoMigrate", autoMigrate);
+            
+        } catch (Exception e) {
+            log.error("Ошибка получения статистики миграции", e);
+            stats.put("error", e.getMessage());
+        }
+        
+        return stats;
     }
 }

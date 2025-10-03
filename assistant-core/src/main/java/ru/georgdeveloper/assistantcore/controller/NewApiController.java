@@ -18,7 +18,6 @@ import java.util.Map;
 @RequestMapping("/api/v2")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class NewApiController {
 
     private final LangChainAssistantService assistantService;
@@ -95,6 +94,44 @@ public class NewApiController {
             log.error("Ошибка обработки фильтрованного запроса", e);
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "Внутренняя ошибка сервера: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Эндпоинт для сохранения обратной связи пользователей в векторную БД
+     */
+    @PostMapping(value = "/feedback", produces = "application/json;charset=UTF-8")
+    public ResponseEntity<Map<String, Object>> saveFeedback(@RequestBody Map<String, String> request) {
+        try {
+            String userQuery = request.get("request");
+            String assistantResponse = request.get("response");
+            
+            if (userQuery == null || userQuery.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Запрос пользователя не может быть пустым"));
+            }
+            
+            if (assistantResponse == null || assistantResponse.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Ответ ассистента не может быть пустым"));
+            }
+
+            log.info("Сохранение обратной связи: запрос длиной {} символов", userQuery.length());
+
+            // Сохраняем в векторную базу данных
+            vectorStoreService.addUserFeedback(userQuery, assistantResponse);
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "Обратная связь сохранена в векторную базу данных",
+                    "timestamp", System.currentTimeMillis(),
+                    "version", "v2-langchain"
+            ));
+
+        } catch (Exception e) {
+            log.error("Ошибка сохранения обратной связи", e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Ошибка сохранения обратной связи: " + e.getMessage()));
         }
     }
 
@@ -256,6 +293,7 @@ public class NewApiController {
                 "endpoints", Map.of(
                         "query", "/api/v2/query",
                         "filteredQuery", "/api/v2/query/filtered",
+                        "feedback", "/api/v2/feedback",
                         "health", "/api/v2/health",
                         "migrate", "/api/v2/admin/migrate",
                         "migrateIncremental", "/api/v2/admin/migrate/incremental",

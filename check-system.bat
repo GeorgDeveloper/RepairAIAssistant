@@ -21,17 +21,15 @@ if %errorlevel% equ 0 (
 )
 goto :eof
 
-REM Функция для проверки Docker контейнера
-:check_docker_container
-set container_name=%1
-set service_name=%2
-
-echo Проверка контейнера %service_name%...
-docker ps --format "table {{.Names}}" | findstr /C:"%container_name%" >nul 2>&1
+REM Функция для проверки Windows сервиса (или подсистемы)
+:check_service
+set service_name=%1
+echo Проверка сервиса %service_name%...
+sc query "%service_name%" | findstr /I "RUNNING" >nul 2>&1
 if %errorlevel% equ 0 (
-    echo   ✓ Запущен
+    echo   ✓ Активен
 ) else (
-    echo   ✗ Не найден
+    echo   ⚠ Не активен
 )
 goto :eof
 
@@ -54,25 +52,7 @@ echo.
 echo 1. Системные требования
 echo ------------------------
 
-REM Проверка Docker
-echo Проверка Docker...
-docker --version >nul 2>&1
-if %errorlevel% equ 0 (
-    for /f "tokens=3" %%i in ('docker --version') do set docker_version=%%i
-    echo   ✓ Версия: !docker_version!
-) else (
-    echo   ✗ Не установлен
-)
-
-REM Проверка Docker Compose
-echo Проверка Docker Compose...
-docker-compose --version >nul 2>&1
-if %errorlevel% equ 0 (
-    for /f "tokens=3" %%i in ('docker-compose --version') do set compose_version=%%i
-    echo   ✓ Версия: !compose_version!
-) else (
-    echo   ✗ Не установлен
-)
+REM Пропускаем проверки Docker/Compose (не используются)
 
 REM Проверка Java
 echo Проверка Java...
@@ -98,14 +78,12 @@ echo Проверка свободного места...
 for /f "tokens=3" %%i in ('dir /-c ^| findstr "bytes free"') do set free_space=%%i
 echo   ✓ Свободное место проверено
 
-REM Проверка Docker контейнеров
+REM Проверка основных сервисов (если запущены как службы в Windows)
 echo.
-echo 2. Docker контейнеры
-echo ---------------------
-
-call :check_docker_container "chromadb" "ChromaDB"
-call :check_docker_container "ollama" "Ollama"  
-call :check_docker_container "mysql" "MySQL"
+echo 2. Сервисы
+echo ----------
+call :check_service "MySQL80"
+call :check_service "Ollama"
 
 REM Проверка портов
 echo.
@@ -181,9 +159,7 @@ echo Система проверена. Детали см. выше.
 echo.
 echo 💡 Полезные команды
 echo ===================
-echo Перезапуск всех сервисов:    docker-compose restart
-echo Просмотр логов ChromaDB:     docker logs chromadb -f
-echo Просмотр логов Ollama:       docker logs ollama -f
+echo Просмотр логов Ollama:       (используйте терминал Ollama или журнал системы)
 echo Проверка здоровья:           curl http://localhost:8080/api/v2/health
 
 echo.

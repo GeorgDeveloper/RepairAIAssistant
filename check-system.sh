@@ -35,25 +35,14 @@ check_http() {
     fi
 }
 
-# Функция для проверки Docker контейнера
-check_docker_container() {
-    local container_name=$1
-    local service_name=$2
-    
-    echo -n "Проверка контейнера $service_name... "
-    
-    if docker ps --format "table {{.Names}}" | grep -q "$container_name"; then
-        status=$(docker ps --format "table {{.Names}}\t{{.Status}}" | grep "$container_name" | awk '{print $2}')
-        if [[ "$status" == "Up" ]]; then
-            echo -e "${GREEN}✓ Запущен${NC}"
-            return 0
-        else
-            echo -e "${YELLOW}⚠ Статус: $status${NC}"
-            return 1
-        fi
+# Функция для проверки systemd сервиса
+check_service() {
+    local service=$1
+    echo -n "Проверка сервиса $service... "
+    if systemctl is-active --quiet "$service"; then
+        echo -e "${GREEN}✓ Активен${NC}"
     else
-        echo -e "${RED}✗ Не найден${NC}"
-        return 1
+        echo -e "${RED}✗ Не активен${NC}"
     fi
 }
 
@@ -77,23 +66,10 @@ check_port() {
 echo -e "\n${BLUE}1. Системные требования${NC}"
 echo "------------------------"
 
-# Проверка Docker
-echo -n "Docker установлен... "
-if command -v docker &> /dev/null; then
-    docker_version=$(docker --version | cut -d' ' -f3 | cut -d',' -f1)
-    echo -e "${GREEN}✓ Версия: $docker_version${NC}"
-else
-    echo -e "${RED}✗ Не установлен${NC}"
-fi
-
-# Проверка Docker Compose
-echo -n "Docker Compose установлен... "
-if command -v docker-compose &> /dev/null; then
-    compose_version=$(docker-compose --version | cut -d' ' -f3 | cut -d',' -f1)
-    echo -e "${GREEN}✓ Версия: $compose_version${NC}"
-else
-    echo -e "${RED}✗ Не установлен${NC}"
-fi
+# Проверка systemd сервисов
+check_service mysql
+check_service chromadb
+check_service ollama
 
 # Проверка Java
 echo -n "Java установлена... "
@@ -127,13 +103,12 @@ else
     echo -e "${YELLOW}⚠ Не удалось определить${NC}"
 fi
 
-# Проверка Docker контейнеров
-echo -e "\n${BLUE}2. Docker контейнеры${NC}"
-echo "---------------------"
-
-check_docker_container "chromadb" "ChromaDB"
-check_docker_container "ollama" "Ollama"
-check_docker_container "mysql" "MySQL"
+# Проверка сервисов
+echo -e "\n${BLUE}2. Сервисы${NC}"
+echo "------------"
+check_service mysql
+check_service chromadb
+check_service ollama
 
 # Проверка портов
 echo -e "\n${BLUE}3. Сетевые порты${NC}"
@@ -158,10 +133,10 @@ echo "-----------------"
 
 echo -n "Проверка моделей... "
 if models_response=$(curl -s http://localhost:11434/api/tags 2>/dev/null); then
-    if echo "$models_response" | grep -q "deepseek-r1"; then
-        echo -e "${GREEN}✓ deepseek-r1 найдена${NC}"
+    if echo "$models_response" | grep -q "phi3:mini"; then
+        echo -e "${GREEN}✓ phi3:mini найдена${NC}"
     else
-        echo -e "${RED}✗ deepseek-r1 не найдена${NC}"
+        echo -e "${RED}✗ phi3:mini не найдена${NC}"
     fi
     
     if echo "$models_response" | grep -q "nomic-embed-text"; then

@@ -1,49 +1,23 @@
 package ru.georgdeveloper.assistantcore.config;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.lang.NonNull;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * Конфигурация веб-слоя для CORS
+ */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
-    @Override
-    public void configureMessageConverters(@NonNull List<HttpMessageConverter<?>> converters) {
-        StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
-        stringConverter.setWriteAcceptCharset(false);
-        converters.add(0, stringConverter);
-    }
 
     @Override
     public void addCorsMappings(@NonNull CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:8081")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
+                .allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*") // Используем allowedOriginPatterns вместо allowedOrigins
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .allowCredentials(true);
-        registry.addMapping("/manuals/**") // Added mapping for manuals
-                .allowedOrigins("http://localhost:8081")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
-                .allowedHeaders("*")
-                .allowCredentials(true);
-        registry.addMapping("/api/summary-of-solutions/**") // Added mapping for manuals
-                .allowedOrigins("http://localhost:8081")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
-                .allowedHeaders("*")
-                .allowCredentials(true);
-        registry.addMapping("/dashboard/**") // Added mapping for manuals
-                .allowedOrigins("http://localhost:8081")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
-                .allowedHeaders("*")
-                .allowCredentials(true);
-        registry.addMapping("/gantt/**") // Added mapping for gantt
-                .allowedOrigins("http://localhost:8081")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "UPDATE")
-                .allowedHeaders("*")
-                .allowCredentials(true);
+                .allowCredentials(true)
+                .maxAge(3600);
     }
 }

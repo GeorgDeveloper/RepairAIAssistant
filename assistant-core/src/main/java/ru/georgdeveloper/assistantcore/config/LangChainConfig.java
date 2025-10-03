@@ -22,7 +22,7 @@ public class LangChainConfig {
     @Value("${ai.ollama.url:http://localhost:11434}")
     private String ollamaUrl;
 
-    @Value("${ai.ollama.chat-model:deepseek-r1:latest}")
+    @Value("${ai.ollama.chat-model:phi3:mini}")
     private String chatModel;
 
     @Value("${ai.ollama.embedding-model:nomic-embed-text}")
@@ -43,7 +43,7 @@ public class LangChainConfig {
                 .baseUrl(ollamaUrl)
                 .modelName(chatModel)
                 .temperature(0.7)
-                .timeout(Duration.ofSeconds(60))
+                .timeout(Duration.ofSeconds(120))  // Увеличиваем таймаут до 2 минут
                 .build();
     }
 
@@ -55,7 +55,7 @@ public class LangChainConfig {
         return OllamaEmbeddingModel.builder()
                 .baseUrl(ollamaUrl)
                 .modelName(embeddingModel)
-                .timeout(Duration.ofSeconds(30))
+                .timeout(Duration.ofSeconds(60))  // Увеличиваем таймаут для эмбеддингов
                 .build();
     }
 

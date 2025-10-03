@@ -23,9 +23,10 @@ public class CoreServiceClient {
             // Формируем запрос в формате JSON для нового API v2
             String requestBody = String.format("{\"query\":\"%s\"}", request.replace("\"", "\\\""));
             
-            // Устанавливаем правильные заголовки
+            // Устанавливаем правильные заголовки (UTF-8 как в Telegram)
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            headers.setContentType(new org.springframework.http.MediaType("application", "json", java.nio.charset.StandardCharsets.UTF_8));
+            headers.setAccept(java.util.List.of(org.springframework.http.MediaType.APPLICATION_JSON));
             
             org.springframework.http.HttpEntity<String> entity = 
                 new org.springframework.http.HttpEntity<>(requestBody, headers);
@@ -40,7 +41,16 @@ public class CoreServiceClient {
                 int end = response.lastIndexOf("\",\"query\"");
                 if (end == -1) end = response.lastIndexOf("\"}");
                 if (start > 11 && end > start) {
-                    return response.substring(start, end).replace("\\\"", "\"");
+                    String extracted = response.substring(start, end)
+                            .replace("\\\"", "\"")
+                            .replace("\\n", "\n")
+                            .replace("\\r", "\r")
+                            .replace("\\t", "\t");
+                    // Убираем случайные обрамляющие кавычки
+                    if (extracted.startsWith("\"") && extracted.endsWith("\"") && extracted.length() >= 2) {
+                        extracted = extracted.substring(1, extracted.length() - 1);
+                    }
+                    return extracted;
                 }
             }
             return response;
@@ -48,7 +58,10 @@ public class CoreServiceClient {
         } catch (Exception e) {
             // Fallback на старый API если новый недоступен
             try {
-                return restTemplate.postForObject(CORE_SERVICE_URL + "/analyze", request, String.class);
+                org.springframework.http.HttpHeaders h2 = new org.springframework.http.HttpHeaders();
+                h2.setContentType(new org.springframework.http.MediaType("text", "plain", java.nio.charset.StandardCharsets.UTF_8));
+                org.springframework.http.HttpEntity<String> e2 = new org.springframework.http.HttpEntity<>(request, h2);
+                return restTemplate.postForObject(CORE_SERVICE_URL + "/analyze", e2, String.class);
             } catch (Exception fallbackException) {
                 return "Ошибка соединения с сервисом: " + e.getMessage();
             }
@@ -57,13 +70,32 @@ public class CoreServiceClient {
 
     public String sendFeedback(Object feedback) {
         try {
-            // Пробуем отправить в старый эндпоинт для совместимости
-            return restTemplate.postForObject(CORE_SERVICE_URL + "/feedback", feedback, String.class);
+            // Устанавливаем правильные заголовки
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            
+            org.springframework.http.HttpEntity<Object> entity = 
+                new org.springframework.http.HttpEntity<>(feedback, headers);
+            
+            // Сначала пробуем новый API v2 для сохранения в векторную БД
+            try {
+                org.springframework.http.ResponseEntity<String> result = restTemplate.postForEntity(
+                    CORE_SERVICE_URL + "/v2/feedback", entity, String.class);
+                System.out.println("Обратная связь успешно сохранена в векторную БД: " + result.getStatusCode());
+                return "Обратная связь сохранена в векторную базу данных для улучшения ответов";
+            } catch (org.springframework.web.client.HttpClientErrorException e) {
+                if (e.getStatusCode() == org.springframework.http.HttpStatus.NOT_FOUND) {
+                    // Fallback на старый эндпоинт для совместимости
+                    restTemplate.postForObject(CORE_SERVICE_URL + "/feedback", feedback, String.class);
+                    return "Обратная связь сохранена через старый API";
+                } else {
+                    throw e;
+                }
+            }
         } catch (Exception e) {
-            // В новой системе v2 обратная связь может не требоваться
-            // так как система использует семантический поиск и автоматическое обучение
-            System.out.println("Feedback endpoint not available in v2 architecture: " + e.getMessage());
-            return "Обратная связь принята (v2 система использует автоматическое обучение)";
+            // В новой системе обратная связь критически важна для обучения
+            System.err.println("Ошибка сохранения обратной связи: " + e.getMessage());
+            return "Ошибка сохранения обратной связи: " + e.getMessage();
         }
     }
 

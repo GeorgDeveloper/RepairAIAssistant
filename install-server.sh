@@ -154,66 +154,7 @@ install_maven() {
     print_success "Maven установлен"
 }
 
-# Установка Docker
-install_docker() {
-    print_header "Установка Docker"
-    
-    if command -v docker &> /dev/null; then
-        DOCKER_VERSION=$(docker --version | awk '{print $3}' | sed 's/,//')
-        print_info "Docker уже установлен: $DOCKER_VERSION"
-    else
-        print_info "Добавление официального GPG ключа Docker..."
-        curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-        
-        print_info "Добавление репозитория Docker..."
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-        
-        print_info "Обновление списка пакетов..."
-        apt-get update -y
-        
-        print_info "Установка Docker..."
-        apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
-        
-        print_success "Docker установлен"
-    fi
-    
-    # Запуск и автозагрузка Docker
-    systemctl start docker
-    systemctl enable docker
-    
-    # Добавление пользователя в группу docker (если не root)
-    if [[ -n "$SUDO_USER" ]]; then
-        usermod -aG docker $SUDO_USER
-        print_info "Пользователь $SUDO_USER добавлен в группу docker"
-    fi
-    
-    # Проверка установки
-    docker --version
-    print_success "Docker настроен и запущен"
-}
-
-# Установка Docker Compose
-install_docker_compose() {
-    print_header "Установка Docker Compose"
-    
-    if command -v docker-compose &> /dev/null; then
-        COMPOSE_VERSION=$(docker-compose --version | awk '{print $4}' | sed 's/,//')
-        print_info "Docker Compose уже установлен: $COMPOSE_VERSION"
-        return
-    fi
-    
-    print_info "Установка Docker Compose..."
-    apt-get install -y docker-compose-plugin
-    
-    # Создание символической ссылки для совместимости
-    if [[ ! -f /usr/local/bin/docker-compose ]]; then
-        ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
-    fi
-    
-    # Проверка установки
-    docker-compose --version
-    print_success "Docker Compose установлен"
-}
+# (Удалено) Установка Docker и Docker Compose — больше не используются
 
 # Создание пользователя для приложения
 create_app_user() {
@@ -227,7 +168,6 @@ create_app_user() {
     else
         print_info "Создание пользователя $APP_USER..."
         useradd -r -m -d $APP_HOME -s /bin/bash $APP_USER
-        usermod -aG docker $APP_USER
         print_success "Пользователь $APP_USER создан"
     fi
     
@@ -238,40 +178,19 @@ create_app_user() {
     print_success "Директории приложения созданы"
 }
 
-# Настройка MySQL
+# Настройка MySQL (native)
 setup_mysql() {
-    print_header "Настройка MySQL"
+    print_header "Установка и настройка MySQL (native)"
     
-    print_info "Запуск MySQL контейнера..."
+    print_info "Установка пакета mysql-server..."
+    apt-get install -y mysql-server
     
-    # Создаем docker-compose.yml для MySQL
-    cat > /tmp/mysql-compose.yml << 'EOF'
-version: '3.8'
-services:
-  mysql:
-    image: mysql:8.0
-    container_name: repair_mysql
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
-    environment:
-      - MYSQL_ROOT_PASSWORD=rootPass
-      - MYSQL_DATABASE=monitoring_bd
-      - MYSQL_USER=dba
-      - MYSQL_PASSWORD=dbaPass
-    restart: unless-stopped
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --bind-address=0.0.0.0
-
-volumes:
-  mysql_data:
-    driver: local
-EOF
+    print_info "Запуск и автозагрузка MySQL..."
+    systemctl enable --now mysql
     
-    # Создаем скрипт инициализации базы данных
-    mkdir -p /tmp/mysql-init
-    cat > /tmp/mysql-init/01-init.sql << 'EOF'
+    print_info "Настройка БД и пользователей..."
+    # Создаем временный SQL файл и применяем его от root без пароля (локально)
+    cat > /tmp/repairai_init.sql << 'EOF'
 -- Создание базы данных с правильной кодировкой
 CREATE DATABASE IF NOT EXISTS monitoring_bd CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -287,179 +206,101 @@ GRANT ALL PRIVILEGES ON *.* TO 'admin'@'%' WITH GRANT OPTION;
 CREATE USER IF NOT EXISTS 'readonly'@'%' IDENTIFIED BY 'ReadOnlyPass123!';
 GRANT SELECT ON monitoring_bd.* TO 'readonly'@'%';
 
--- Создание основных таблиц (базовая структура)
-USE monitoring_bd;
-
--- Таблица записей обслуживания оборудования
-CREATE TABLE IF NOT EXISTS equipment_maintenance_records (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    machine_name VARCHAR(255) NOT NULL,
-    description TEXT,
-    failure_type VARCHAR(255),
-    machine_downtime DECIMAL(10,2),
-    comments TEXT,
-    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_machine_name (machine_name),
-    INDEX idx_failure_type (failure_type),
-    INDEX idx_created_date (created_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Таблица сводки решений
-CREATE TABLE IF NOT EXISTS summary_of_solutions (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    problem_description TEXT NOT NULL,
-    solution_description TEXT NOT NULL,
-    equipment_type VARCHAR(255),
-    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_equipment_type (equipment_type),
-    INDEX idx_created_date (created_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Таблица отчетов о поломках
-CREATE TABLE IF NOT EXISTS breakdown_reports (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_code VARCHAR(100) UNIQUE NOT NULL,
-    equipment_name VARCHAR(255) NOT NULL,
-    breakdown_description TEXT,
-    repair_actions TEXT,
-    downtime_hours DECIMAL(10,2),
-    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_id_code (id_code),
-    INDEX idx_equipment_name (equipment_name),
-    INDEX idx_created_date (created_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Таблица руководств
-CREATE TABLE IF NOT EXISTS manuals (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    content LONGTEXT,
-    equipment_type VARCHAR(255),
-    file_path VARCHAR(500),
-    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_title (title),
-    INDEX idx_equipment_type (equipment_type)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Вставка тестовых данных
-INSERT IGNORE INTO equipment_maintenance_records (machine_name, description, failure_type, machine_downtime, comments) VALUES
-('Пресс GK270', 'Утечка масла в гидравлической системе', 'Гидравлическая неисправность', 4.5, 'Заменены уплотнения, проверена система'),
-('Форматор F150', 'Не работает система подачи азота', 'Пневматическая неисправность', 2.0, 'Очищены фильтры, заменен клапан'),
-('Насос P200', 'Повышенная вибрация и шум', 'Механическая неисправность', 6.0, 'Заменены подшипники, отбалансирован ротор');
-
-INSERT IGNORE INTO summary_of_solutions (problem_description, solution_description, equipment_type) VALUES
-('Утечка масла в гидросистеме', 'Проверить состояние уплотнений, заменить изношенные детали, проверить давление в системе', 'Гидравлическое оборудование'),
-('Не работает подача азота', 'Очистить фильтры, проверить клапаны, убедиться в правильности настроек давления', 'Пневматическое оборудование'),
-('Повышенная вибрация насоса', 'Проверить крепления, состояние подшипников, отбалансировать ротор', 'Насосное оборудование');
-
-INSERT IGNORE INTO breakdown_reports (id_code, equipment_name, breakdown_description, repair_actions, downtime_hours) VALUES
-('BR001', 'Пресс GK270', 'Критическая утечка масла', 'Полная замена гидравлических уплотнений', 8.0),
-('BR002', 'Форматор F150', 'Отказ системы азота', 'Замена пневматических клапанов', 4.0),
-('BR003', 'Насос P200', 'Механический износ', 'Замена подшипникового узла', 12.0);
-
 FLUSH PRIVILEGES;
 EOF
     
-    # Запуск MySQL
-    cd /tmp
-    docker-compose -f mysql-compose.yml up -d
+    # Выполняем SQL
+    mysql -u root < /tmp/repairai_init.sql || true
+    rm -f /tmp/repairai_init.sql
     
-    # Ожидание запуска MySQL
-    print_info "Ожидание запуска MySQL..."
-    sleep 30
-    
-    # Проверка подключения
-    for i in {1..10}; do
-        if docker exec repair_mysql mysql -u dba -pdbaPass -e "SELECT 1;" &>/dev/null; then
-            print_success "MySQL успешно настроен и запущен"
-            break
-        else
-            print_info "Попытка подключения к MySQL ($i/10)..."
-            sleep 10
-        fi
-    done
-    
-    # Очистка временных файлов
-    rm -rf /tmp/mysql-compose.yml /tmp/mysql-init
+    print_success "MySQL установлен и настроен"
 }
 
-# Установка и настройка ChromaDB
+# Установка и настройка ChromaDB (native)
 setup_chromadb() {
-    print_header "Настройка ChromaDB"
+    print_header "Установка и настройка ChromaDB (native)"
     
-    print_info "Запуск ChromaDB контейнера..."
+    APP_HOME="/opt/repair-ai-assistant"
+    CHROMA_ENV="$APP_HOME/chroma-env"
+    CHROMA_DATA="$APP_HOME/chroma-data"
     
-    docker run -d \
-        --name repair_chromadb \
-        --restart unless-stopped \
-        -p 8000:8000 \
-        -v chroma_data:/chroma/chroma \
-        -e CHROMA_HOST=0.0.0.0 \
-        -e CHROMA_PORT=8000 \
-        -e CHROMA_LOG_LEVEL=INFO \
-        chromadb/chroma:0.4.15
+    print_info "Установка Python и pip..."
+    apt-get install -y python3 python3-venv python3-pip
     
-    # Ожидание запуска ChromaDB
+    print_info "Создание виртуального окружения ChromaDB..."
+    mkdir -p "$CHROMA_DATA"
+    python3 -m venv "$CHROMA_ENV"
+    . "$CHROMA_ENV/bin/activate"
+    pip install --upgrade pip
+    pip install "chromadb[server]==0.4.15"
+    deactivate
+    
+    print_info "Создание systemd сервиса для ChromaDB..."
+    cat > /etc/systemd/system/chromadb.service << EOF
+[Unit]
+Description=ChromaDB Server
+After=network.target
+
+[Service]
+Type=simple
+User=repairai
+Group=repairai
+WorkingDirectory=$APP_HOME
+ExecStart=$CHROMA_ENV/bin/chroma run --host 0.0.0.0 --port 8000 --path $CHROMA_DATA
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    systemctl daemon-reload
+    systemctl enable --now chromadb
+    
     print_info "Ожидание запуска ChromaDB..."
-    sleep 20
+    sleep 10
     
-    # Проверка работы ChromaDB
-    for i in {1..5}; do
+    for i in {1..10}; do
         if curl -s http://localhost:8000/api/v1/heartbeat &>/dev/null; then
             print_success "ChromaDB успешно запущен"
             break
-        else
-            print_info "Ожидание запуска ChromaDB ($i/5)..."
-            sleep 10
         fi
+        sleep 3
     done
 }
 
-# Установка и настройка Ollama
+# Установка и настройка Ollama (native)
 setup_ollama() {
-    print_header "Установка и настройка Ollama"
+    print_header "Установка и настройка Ollama (native)"
     
-    print_info "Запуск Ollama контейнера..."
+    if ! command -v ollama &> /dev/null; then
+        print_info "Установка Ollama..."
+        curl -fsSL https://ollama.com/install.sh | sh
+    else
+        print_info "Ollama уже установлена"
+    fi
     
-    docker run -d \
-        --name repair_ollama \
-        --restart unless-stopped \
-        -p 11434:11434 \
-        -v ollama_data:/root/.ollama \
-        -e OLLAMA_HOST=0.0.0.0 \
-        ollama/ollama:latest
+    print_info "Запуск и автозагрузка службы Ollama..."
+    systemctl enable --now ollama
     
-    # Ожидание запуска Ollama
     print_info "Ожидание запуска Ollama..."
-    sleep 30
+    sleep 10
     
-    # Проверка работы Ollama
-    for i in {1..5}; do
+    for i in {1..10}; do
         if curl -s http://localhost:11434/api/tags &>/dev/null; then
-            print_success "Ollama успешно запущен"
+            print_success "Ollama успешно запущена"
             break
-        else
-            print_info "Ожидание запуска Ollama ($i/5)..."
-            sleep 10
         fi
+        sleep 3
     done
     
-    # Установка моделей
-    print_info "Установка модели deepseek-r1:latest..."
-    docker exec repair_ollama ollama pull deepseek-r1:latest
+    print_info "Загрузка необходимых моделей..."
+    ollama pull phi3:mini || true
+    ollama pull nomic-embed-text || true
     
-    print_info "Установка модели nomic-embed-text..."
-    docker exec repair_ollama ollama pull nomic-embed-text
-    
-    # Проверка установленных моделей
-    print_info "Проверка установленных моделей..."
-    docker exec repair_ollama ollama list
-    
-    print_success "Ollama и модели установлены"
+    print_success "Модели Ollama готовы"
 }
 
 # Настройка файрвола
@@ -500,8 +341,8 @@ create_systemd_services() {
     cat > /etc/systemd/system/repair-ai-core.service << EOF
 [Unit]
 Description=Repair AI Assistant Core Service
-After=network.target docker.service
-Requires=docker.service
+After=network.target chromadb.service ollama.service mysql.service
+Requires=chromadb.service mysql.service
 
 [Service]
 Type=simple
@@ -586,12 +427,14 @@ create_management_scripts() {
 
 echo "Запуск Repair AI Assistant..."
 
-# Запуск Docker контейнеров
-echo "Запуск баз данных..."
-docker start repair_mysql repair_chromadb repair_ollama
+# Запуск инфраструктурных сервисов
+echo "Запуск MySQL, ChromaDB и Ollama..."
+sudo systemctl start mysql
+sudo systemctl start chromadb
+sudo systemctl start ollama
 
-# Ожидание запуска баз данных
-sleep 30
+# Ожидание запуска
+sleep 20
 
 # Запуск сервисов приложения
 echo "Запуск сервисов приложения..."
@@ -623,9 +466,10 @@ sudo systemctl stop repair-ai-telegram
 sudo systemctl stop repair-ai-web
 sudo systemctl stop repair-ai-core
 
-# Остановка Docker контейнеров
-echo "Остановка баз данных..."
-docker stop repair_mysql repair_chromadb repair_ollama
+echo "Остановка инфраструктурных сервисов..."
+sudo systemctl stop ollama
+sudo systemctl stop chromadb
+sudo systemctl stop mysql
 
 echo "Repair AI Assistant остановлен!"
 EOF
@@ -637,14 +481,12 @@ EOF
 echo "=== Статус Repair AI Assistant ==="
 echo
 
-echo "Docker контейнеры:"
-docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" --filter name=repair_
-
-echo
 echo "Systemd сервисы:"
 sudo systemctl status repair-ai-core --no-pager -l | head -3
 sudo systemctl status repair-ai-web --no-pager -l | head -3
 sudo systemctl status repair-ai-telegram --no-pager -l | head -3
+sudo systemctl status chromadb --no-pager -l | head -3
+sudo systemctl status ollama --no-pager -l | head -3
 
 echo
 echo "Проверка портов:"
@@ -742,55 +584,6 @@ logging:
 EOF
     }
     
-    # Docker Compose файл
-    cat > $APP_HOME/docker-compose.yml << 'EOF'
-version: '3.8'
-
-services:
-  mysql:
-    image: mysql:8.0
-    container_name: repair_mysql
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    environment:
-      - MYSQL_ROOT_PASSWORD=rootPass
-      - MYSQL_DATABASE=monitoring_bd
-      - MYSQL_USER=dba
-      - MYSQL_PASSWORD=dbaPass
-    restart: unless-stopped
-    command: --default-authentication-plugin=mysql_native_password --bind-address=0.0.0.0
-
-  chromadb:
-    image: chromadb/chroma:0.4.15
-    container_name: repair_chromadb
-    ports:
-      - "8000:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-    environment:
-      - CHROMA_HOST=0.0.0.0
-      - CHROMA_PORT=8000
-    restart: unless-stopped
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: repair_ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-    restart: unless-stopped
-
-volumes:
-  mysql_data:
-  chroma_data:
-  ollama_data:
-EOF
-    
     chown -R repairai:repairai $APP_HOME
     
     print_success "Конфигурационные файлы созданы"
@@ -816,23 +609,10 @@ final_check() {
         print_error "✗ Maven не установлен"
     fi
     
-    # Docker
-    if docker --version &>/dev/null; then
-        print_success "✓ Docker установлен"
-    else
-        print_error "✗ Docker не установлен"
-    fi
-    
-    # Docker Compose
-    if docker-compose --version &>/dev/null; then
-        print_success "✓ Docker Compose установлен"
-    else
-        print_error "✗ Docker Compose не установлен"
-    fi
-    
-    # Проверка контейнеров
-    print_info "Проверка Docker контейнеров..."
-    docker ps --format "table {{.Names}}\t{{.Status}}"
+    # Сервисы инфраструктуры
+    systemctl is-active --quiet mysql && print_success "✓ MySQL запущен" || print_error "✗ MySQL не запущен"
+    systemctl is-active --quiet chromadb && print_success "✓ ChromaDB запущен" || print_error "✗ ChromaDB не запущен"
+    systemctl is-active --quiet ollama && print_success "✓ Ollama запущена" || print_error "✗ Ollama не запущена"
     
     # Проверка портов
     print_info "Проверка открытых портов..."
@@ -906,8 +686,6 @@ main() {
     update_system
     install_java
     install_maven
-    install_docker
-    install_docker_compose
     create_app_user
     setup_mysql
     setup_chromadb

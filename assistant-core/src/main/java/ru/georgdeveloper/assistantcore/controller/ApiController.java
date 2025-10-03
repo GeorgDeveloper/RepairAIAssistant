@@ -1,7 +1,10 @@
 package ru.georgdeveloper.assistantcore.controller;
 
 import org.springframework.web.bind.annotation.*;
-import ru.georgdeveloper.assistantcore.service.RepairAssistantService;
+import ru.georgdeveloper.assistantcore.service.LangChainAssistantService;
+import ru.georgdeveloper.assistantcore.service.OllamaHealthService;
+import ru.georgdeveloper.assistantcore.service.MigrationDiagnosticService;
+import ru.georgdeveloper.assistantcore.service.FastMigrationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -33,19 +36,38 @@ public class ApiController {
     private static final Logger logger = LoggerFactory.getLogger(ApiController.class);
     
     // Основной сервис для обработки запросов с интеграцией AI и БД
-    private final RepairAssistantService repairAssistantService;
+    private final LangChainAssistantService assistantService;
 
     // Используем MonitoringRepository вместо прямых SQL-запросов
     private final MonitoringRepository monitoringRepository;
+    
+    // Сервис для проверки состояния Ollama
+    private final OllamaHealthService ollamaHealthService;
+    
+    // Сервис для диагностики миграции
+    private final MigrationDiagnosticService migrationDiagnosticService;
+    
+    // Сервис для быстрой миграции
+    private final FastMigrationService fastMigrationService;
 
     /**
      * Конструктор контроллера
-     * @param repairAssistantService сервис бизнес-логики с AI
+     * @param assistantService сервис бизнес-логики с AI на основе LangChain
      * @param monitoringRepository репозиторий для справочных данных
+     * @param ollamaHealthService сервис проверки состояния Ollama
+     * @param migrationDiagnosticService сервис диагностики миграции
+     * @param fastMigrationService сервис быстрой миграции
      */
-    public ApiController(RepairAssistantService repairAssistantService, MonitoringRepository monitoringRepository) {
-        this.repairAssistantService = repairAssistantService;
+    public ApiController(LangChainAssistantService assistantService, 
+                        MonitoringRepository monitoringRepository,
+                        OllamaHealthService ollamaHealthService,
+                        MigrationDiagnosticService migrationDiagnosticService,
+                        FastMigrationService fastMigrationService) {
+        this.assistantService = assistantService;
         this.monitoringRepository = monitoringRepository;
+        this.ollamaHealthService = ollamaHealthService;
+        this.migrationDiagnosticService = migrationDiagnosticService;
+        this.fastMigrationService = fastMigrationService;
     }
     
     /**
@@ -54,10 +76,10 @@ public class ApiController {
      * Процесс обработки:
      * 1. Получение запроса от клиента (Telegram бот или веб-интерфейс)
      * 2. Логирование входящего запроса для отладки
-     * 3. Передача в RepairAssistantService для обработки
-     * 4. RepairAssistantService формирует контекст из БД
-     * 5. Отправка контекста + запроса в Ollama (deepseek-r1)
-     * 6. Получение и фильтрация ответа от AI
+     * 3. Передача в LangChainAssistantService для обработки
+     * 4. LangChainAssistantService выполняет семантический поиск в ChromaDB
+     * 5. Формирование контекста из найденных релевантных сегментов
+     * 6. Отправка контекста + запроса в Ollama (deepseek-r1) через LangChain
      * 7. Возврат обработанного ответа клиенту
      * 
      * @param request Текстовый запрос пользователя (например: "Посчитай ремонты со статусом временно закрыто")
@@ -68,8 +90,8 @@ public class ApiController {
         // Логирование для мониторинга и отладки
         logger.info("Получен запрос: {}", request);
         
-        // Основная обработка через сервисный слой
-        String response = repairAssistantService.processRepairRequest(request);
+        // Основная обработка через новый сервисный слой на основе LangChain
+        String response = assistantService.processQuery(request);
         
         // Логирование ответа для контроля качества
         logger.info("Отправляем ответ: {}", response);
@@ -171,6 +193,91 @@ public class ApiController {
         } catch (NumberFormatException ex) {
             return org.springframework.http.ResponseEntity.badRequest().build();
         }
+    }
+
+    /**
+     * Эндпоинт для проверки состояния Ollama AI сервера
+     * @return статус Ollama сервера и доступных моделей
+     */
+    @GetMapping("/health/ollama")
+    public Map<String, Object> getOllamaHealth() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            boolean isAvailable = ollamaHealthService.isOllamaAvailable();
+            String status = ollamaHealthService.getOllamaStatus();
+            
+            response.put("available", isAvailable);
+            response.put("status", status);
+            response.put("timestamp", new java.util.Date());
+            
+            if (isAvailable) {
+                response.put("chatModelAvailable", ollamaHealthService.isModelAvailable("phi3:mini"));
+                response.put("embeddingModelAvailable", ollamaHealthService.isModelAvailable("nomic-embed-text:latest"));
+            }
+            
+        } catch (Exception e) {
+            logger.error("Ошибка проверки состояния Ollama: {}", e.getMessage());
+            response.put("available", false);
+            response.put("status", "❌ Ошибка проверки состояния: " + e.getMessage());
+            response.put("timestamp", new java.util.Date());
+        }
+        
+        return response;
+    }
+
+    /**
+     * Эндпоинт для проверки состояния миграции данных
+     * @return статус миграции и информация о таблице migration_tracking
+     */
+    @GetMapping("/health/migration")
+    public Map<String, Object> getMigrationHealth() {
+        return migrationDiagnosticService.getFullDiagnostic();
+    }
+
+    /**
+     * Эндпоинт для принудительной инициализации отслеживания миграции
+     * @return результат инициализации
+     */
+    @PostMapping("/migration/initialize")
+    public Map<String, Object> initializeMigrationTracking() {
+        return migrationDiagnosticService.forceInitializeMigrationTracking();
+    }
+
+    /**
+     * Эндпоинт для сброса отслеживания миграции
+     * @return результат сброса
+     */
+    @PostMapping("/migration/reset")
+    public Map<String, Object> resetMigrationTracking() {
+        return migrationDiagnosticService.resetMigrationTracking();
+    }
+
+    /**
+     * Эндпоинт для получения расширенной статистики миграции
+     * @return подробная статистика миграции и настроек
+     */
+    @GetMapping("/migration/stats")
+    public Map<String, Object> getMigrationStats() {
+        return migrationDiagnosticService.getExtendedMigrationStats();
+    }
+
+    /**
+     * Эндпоинт для быстрой миграции всех данных
+     * @return результат быстрой миграции с временными метриками
+     */
+    @PostMapping("/migration/fast")
+    public Map<String, Object> fastMigrateAllData() {
+        return fastMigrationService.fastMigrateAllData();
+    }
+
+    /**
+     * Эндпоинт для получения рекомендаций по модели на основе доступной памяти
+     * @return рекомендации по AI модели
+     */
+    @GetMapping("/ai/model-recommendation")
+    public Map<String, Object> getModelRecommendation() {
+        return ollamaHealthService.getModelRecommendation();
     }
 
 }

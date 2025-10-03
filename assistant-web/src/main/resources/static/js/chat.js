@@ -12,13 +12,13 @@ function sendMessage() {
     addMessage('user', message);
     input.value = '';
     
-    // Пробуем сначала новый API v2, затем fallback на старый
+    // Отправляем как обычный текст, чтобы избежать двойного JSON-кодирования
     fetch('/api/chat', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'text/plain;charset=UTF-8',
         },
-        body: JSON.stringify(message)
+        body: message
     })
     .then(response => response.text())
     .then(data => {
@@ -77,10 +77,10 @@ function sendFeedback(type) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ request, response })
         }).then(() => {
-            addMessage('system', 'Спасибо за подтверждение! В новой системе v2 используется автоматическое обучение через семантический поиск.');
+            addMessage('system', '✅ Спасибо за подтверждение! Ваш вопрос и ответ сохранены в векторную базу данных для улучшения будущих ответов.');
             hideFeedbackButtons();
         }).catch(() => {
-            addMessage('system', 'Обратная связь принята. Система v2 использует автоматическое обучение.');
+            addMessage('system', '✅ Обратная связь принята. Данные сохранены для обучения системы.');
             hideFeedbackButtons();
         });
     } else if (type === 'regenerate') {

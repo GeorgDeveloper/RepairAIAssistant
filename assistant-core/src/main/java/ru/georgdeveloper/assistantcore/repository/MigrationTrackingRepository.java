@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import ru.georgdeveloper.assistantcore.model.MigrationTracking;
 
 import java.time.LocalDateTime;
@@ -24,7 +25,8 @@ public interface MigrationTrackingRepository extends JpaRepository<MigrationTrac
     /**
      * Обновить информацию о последней миграции
      */
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
     @Query("UPDATE MigrationTracking m SET m.lastMigratedId = :lastId, " +
            "m.lastMigrationTime = :migrationTime, m.recordsCount = :recordsCount " +
            "WHERE m.tableName = :tableName")
@@ -36,7 +38,8 @@ public interface MigrationTrackingRepository extends JpaRepository<MigrationTrac
     /**
      * Сбросить информацию о миграции (для полной очистки)
      */
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
     @Query("UPDATE MigrationTracking m SET m.lastMigratedId = 0, " +
            "m.recordsCount = 0, m.lastMigrationTime = :resetTime " +
            "WHERE m.tableName = :tableName")

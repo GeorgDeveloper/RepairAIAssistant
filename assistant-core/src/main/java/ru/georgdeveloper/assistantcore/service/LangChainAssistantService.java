@@ -2,13 +2,10 @@ package ru.georgdeveloper.assistantcore.service;
 
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.input.Prompt;
-import dev.langchain4j.model.input.PromptTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,55 +23,11 @@ public class LangChainAssistantService {
     private final VectorStoreService vectorStoreService;
 
     // Шаблоны промптов
-    private static final PromptTemplate REPAIR_INSTRUCTION_TEMPLATE = PromptTemplate.from("""
-            Ты Kvant AI - эксперт по ремонту промышленного оборудования.
-            
-            КОНТЕКСТ ИЗ БАЗЫ ЗНАНИЙ:
-            {{context}}
-            
-            ЗАПРОС ПОЛЬЗОВАТЕЛЯ: {{query}}
-            
-            ИНСТРУКЦИИ:
-            1. Используй ТОЛЬКО информацию из контекста выше
-            2. Давай конкретные технические советы
-            3. Если в контексте нет релевантной информации, честно скажи об этом
-            4. Отвечай на русском языке
-            5. Структурируй ответ пошагово
-            
-            ОТВЕТ:
-            """);
+    // (removed legacy template in favor of SmartPromptBuilder)
 
-    private static final PromptTemplate STATISTICS_TEMPLATE = PromptTemplate.from("""
-            Ты Kvant AI - аналитик данных по ремонту оборудования.
-            
-            ДАННЫЕ ИЗ БАЗЫ:
-            {{context}}
-            
-            ЗАПРОС: {{query}}
-            
-            ЗАДАЧА:
-            1. Проанализируй предоставленные данные
-            2. Дай статистический анализ
-            3. Выдели ключевые тенденции
-            4. Предложи рекомендации
-            5. Отвечай на русском языке
-            
-            АНАЛИЗ:
-            """);
+    // (removed legacy template in favor of SmartPromptBuilder)
 
-    private static final PromptTemplate GENERAL_TEMPLATE = PromptTemplate.from("""
-            Ты Kvant AI - помощник по ремонту промышленного оборудования.
-            
-            НАЙДЕННАЯ ИНФОРМАЦИЯ:
-            {{context}}
-            
-            ВОПРОС: {{query}}
-            
-            Отвечай как эксперт по ремонту оборудования. Используй найденную информацию для ответа.
-            Если информации недостаточно, дай общие рекомендации по теме ремонта оборудования.
-            
-            ОТВЕТ:
-            """);
+    // (removed legacy template in favor of SmartPromptBuilder)
 
     /**
      * Главный метод обработки запросов пользователей
@@ -87,8 +40,9 @@ public class LangChainAssistantService {
             QueryType queryType = classifyQuery(userQuery);
             log.debug("Тип запроса: {}", queryType);
 
-            // Выполняем семантический поиск
-            List<TextSegment> relevantSegments = vectorStoreService.searchSimilar(userQuery, 10);
+            // Классификация: общий/ремонтный/статистика уже выполнена выше (эвристики)
+            // Смарт-поиск: гибрид + метаданные (пока без фильтров)
+            List<TextSegment> relevantSegments = vectorStoreService.searchSmart(userQuery, 10);
             String context = buildContext(relevantSegments);
 
             // Генерируем ответ в зависимости от типа запроса
@@ -112,7 +66,7 @@ public class LangChainAssistantService {
      */
     public String processQueryWithFilter(String userQuery, String dataType) {
         try {
-            List<TextSegment> relevantSegments = vectorStoreService.searchByType(userQuery, dataType, 10);
+            List<TextSegment> relevantSegments = vectorStoreService.searchSmart(userQuery, 10, Map.of("type", dataType));
             String context = buildContext(relevantSegments);
 
             QueryType queryType = classifyQuery(userQuery);
@@ -164,36 +118,60 @@ public class LangChainAssistantService {
      * Генерация инструкции по ремонту
      */
     private String generateRepairInstruction(String query, String context) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("query", query);
-        variables.put("context", context.isEmpty() ? "Релевантная информация не найдена в базе знаний." : context);
-
-        Prompt prompt = REPAIR_INSTRUCTION_TEMPLATE.apply(variables);
-        return chatModel.generate(prompt.text());
+        try {
+            String promptText = SmartPromptBuilder.buildRepair(
+                    context.isEmpty() ? "" : context,
+                    query
+            );
+            return chatModel.generate(promptText);
+        } catch (Exception e) {
+            log.error("Ошибка генерации инструкции по ремонту: {}", e.getMessage());
+            return generateFallbackRepairResponse(query, context);
+        }
     }
 
     /**
      * Генерация статистического анализа
      */
     private String generateStatisticsAnalysis(String query, String context) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("query", query);
-        variables.put("context", context.isEmpty() ? "Данные для анализа не найдены." : context);
-
-        Prompt prompt = STATISTICS_TEMPLATE.apply(variables);
-        return chatModel.generate(prompt.text());
+        try {
+            String promptText = SmartPromptBuilder.buildStatistics(
+                    context.isEmpty() ? "" : context,
+                    query
+            );
+            return chatModel.generate(promptText);
+        } catch (Exception e) {
+            log.error("Ошибка генерации статистического анализа: {}", e.getMessage());
+            return generateFallbackStatisticsResponse(query, context);
+        }
     }
 
     /**
      * Генерация общего ответа
      */
     private String generateGeneralResponse(String query, String context) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("query", query);
-        variables.put("context", context.isEmpty() ? "Дополнительная информация не найдена." : context);
+        try {
+            String lowerQuery = query == null ? "" : query.toLowerCase();
+            if (lowerQuery.contains("кто ты") || lowerQuery.contains("что ты") || lowerQuery.contains("who are you") || lowerQuery.matches(".*\\b(привет|здравствуй|hello|hi)\\b.*")) {
+                return "Привет! Я Kvant AI — ваш помощник по ремонту промышленного оборудования.\n\n" +
+                        "Помогаю с: \n" +
+                        "• диагностикой неисправностей\n" +
+                        "• инструкциями по ремонту\n" +
+                        "• анализом данных оборудования\n" +
+                        "• техническими рекомендациями";
+            }
 
-        Prompt prompt = GENERAL_TEMPLATE.apply(variables);
-        return chatModel.generate(prompt.text());
+            boolean isRepairIntent = lowerQuery.contains("утечка") || lowerQuery.contains("ремонт") || lowerQuery.contains("не работает") || lowerQuery.contains("поломка") || lowerQuery.contains("как починить") || lowerQuery.contains("как устранить") || lowerQuery.contains("инструкция") || lowerQuery.contains("что делать");
+            String promptText = SmartPromptBuilder.buildGeneral(
+                    context,
+                    query,
+                    isRepairIntent
+            );
+            return chatModel.generate(promptText);
+        } catch (Exception e) {
+            log.error("Ошибка генерации общего ответа: {}", e.getMessage());
+            return generateFallbackGeneralResponse(query, context);
+        }
     }
 
     /**
@@ -211,6 +189,120 @@ public class LangChainAssistantService {
                     return String.format("[%s] %s", type.toUpperCase(), content);
                 })
                 .collect(Collectors.joining("\n\n---\n\n"));
+    }
+
+    /**
+     * Fallback ответ для инструкций по ремонту
+     */
+    private String generateFallbackRepairResponse(String query, String context) {
+        StringBuilder response = new StringBuilder();
+        response.append("🔧 **Помощь с ремонтом**\n\n");
+        
+        if (!context.isEmpty()) {
+            response.append("Найдена похожая информация из базы знаний:\n\n");
+            // Показываем только первые 2-3 записи для краткости
+            String[] contextParts = context.split("---");
+            int maxParts = Math.min(2, contextParts.length);
+            for (int i = 0; i < maxParts; i++) {
+                response.append(contextParts[i].trim()).append("\n\n");
+            }
+        }
+        
+        response.append("**Рекомендации по ремонту:**\n");
+        response.append("1. Проверьте основные компоненты системы\n");
+        response.append("2. Убедитесь в правильности подключения\n");
+        response.append("3. Проверьте состояние расходных материалов\n");
+        response.append("4. При необходимости обратитесь к техническому специалисту\n\n");
+        
+        response.append("⚠️ *Для получения более точных инструкций обратитесь к эксперту по ремонту.*");
+        
+        return response.toString();
+    }
+    
+    /**
+     * Fallback ответ для статистического анализа
+     */
+    private String generateFallbackStatisticsResponse(String query, String context) {
+        StringBuilder response = new StringBuilder();
+        response.append("📊 **Статистический анализ**\n\n");
+        
+        if (!context.isEmpty()) {
+            response.append("**Доступные данные:**\n");
+            response.append(context).append("\n\n");
+        }
+        
+        response.append("**Общие рекомендации по анализу:**\n");
+        response.append("1. Изучите предоставленные данные\n");
+        response.append("2. Выделите ключевые показатели\n");
+        response.append("3. Обратите внимание на тренды и аномалии\n");
+        response.append("4. Сформулируйте выводы на основе данных\n\n");
+        
+        response.append("⚠️ *AI-модель временно недоступна. Рекомендуется ручной анализ данных.*");
+        
+        return response.toString();
+    }
+    
+    /**
+     * Fallback ответ для общих вопросов
+     */
+    private String generateFallbackGeneralResponse(String query, String context) {
+        StringBuilder response = new StringBuilder();
+        
+        // Простой ответ без технических деталей
+        if (query.toLowerCase().contains("кто ты") || query.toLowerCase().contains("что ты")) {
+            response.append("Привет! Я Kvant AI - ваш помощник по ремонту промышленного оборудования.\n\n");
+            response.append("Я могу помочь с:\n");
+            response.append("• Диагностикой неисправностей\n");
+            response.append("• Инструкциями по ремонту\n");
+            response.append("• Анализом данных оборудования\n");
+            response.append("• Техническими рекомендациями\n\n");
+            response.append("К сожалению, сейчас у меня ограниченные возможности. ");
+            response.append("Попробуйте переформулировать вопрос или обратитесь к техническому специалисту.");
+            return response.toString();
+        }
+        
+        // Для вопросов о ремонте
+        if (query.toLowerCase().contains("утечка") || query.toLowerCase().contains("ремонт") || 
+            query.toLowerCase().contains("не работает") || query.toLowerCase().contains("поломка")) {
+            response.append("🔧 **Помощь с ремонтом**\n\n");
+            
+            if (!context.isEmpty()) {
+                response.append("Найдена похожая информация из базы знаний:\n\n");
+                // Показываем только первые 2-3 записи для краткости
+                String[] contextParts = context.split("---");
+                int maxParts = Math.min(3, contextParts.length);
+                for (int i = 0; i < maxParts; i++) {
+                    response.append(contextParts[i].trim()).append("\n\n");
+                }
+            }
+            
+            response.append("**Рекомендации:**\n");
+            response.append("1. Проверьте основные компоненты системы\n");
+            response.append("2. Убедитесь в правильности подключения\n");
+            response.append("3. Проверьте состояние расходных материалов\n");
+            response.append("4. При необходимости обратитесь к техническому специалисту\n\n");
+            
+            response.append("⚠️ *Для получения более точных рекомендаций обратитесь к эксперту по ремонту.*");
+            return response.toString();
+        }
+        
+        // Общий ответ
+        response.append("🤖 **Kvant AI**\n\n");
+        response.append("Я ваш помощник по ремонту промышленного оборудования.\n\n");
+        
+        if (!context.isEmpty()) {
+            response.append("Найдена релевантная информация:\n");
+            response.append(context.substring(0, Math.min(500, context.length())));
+            if (context.length() > 500) {
+                response.append("...");
+            }
+            response.append("\n\n");
+        }
+        
+        response.append("К сожалению, сейчас у меня ограниченные возможности. ");
+        response.append("Попробуйте переформулировать вопрос или обратитесь к техническому специалисту.");
+        
+        return response.toString();
     }
 
     /**

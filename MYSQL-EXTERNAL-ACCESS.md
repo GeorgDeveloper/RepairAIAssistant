@@ -87,8 +87,8 @@
 ### 1. Проверка пользователей MySQL:
 
 ```bash
-# Подключение к MySQL
-docker exec -it repair_mysql mysql -u root -prootPass
+# Подключение к MySQL (локально)
+mysql -u root -p
 
 # Просмотр пользователей
 SELECT User, Host FROM mysql.user;
@@ -101,10 +101,10 @@ SHOW GRANTS FOR 'admin'@'%';
 
 ```bash
 # Проверка bind-address
-docker exec repair_mysql mysql -u root -prootPass -e "SHOW VARIABLES LIKE 'bind_address';"
+mysql -u root -p -e "SHOW VARIABLES LIKE 'bind_address';"
 
 # Проверка порта
-docker exec repair_mysql mysql -u root -prootPass -e "SHOW VARIABLES LIKE 'port';"
+mysql -u root -p -e "SHOW VARIABLES LIKE 'port';"
 ```
 
 ### 3. Проверка файрвола:
@@ -161,21 +161,21 @@ telnet IP_СЕРВЕРА 3306
    # Должно быть: 3306/tcp ALLOW Anywhere
    ```
 
-2. **Статус MySQL контейнера:**
+2. **Статус сервиса MySQL:**
    ```bash
-   docker ps | grep mysql
-   # Должен быть: Up
+   systemctl status mysql
+   # Должен быть: active (running)
    ```
 
 3. **Настройки bind-address:**
    ```bash
-   docker exec repair_mysql mysql -u root -prootPass -e "SHOW VARIABLES LIKE 'bind_address';"
+   mysql -u root -p -e "SHOW VARIABLES LIKE 'bind_address';"
    # Должно быть: 0.0.0.0
    ```
 
 4. **Права пользователя:**
    ```bash
-   docker exec repair_mysql mysql -u root -prootPass -e "SELECT User, Host FROM mysql.user WHERE User='admin';"
+   mysql -u root -p -e "SELECT User, Host FROM mysql.user WHERE User='admin';"
    # Должно быть: admin | %
    ```
 
@@ -211,10 +211,10 @@ FLUSH PRIVILEGES;
 
 ```bash
 # Создание дампа базы данных
-docker exec repair_mysql mysqldump -u admin -pAdminPass123! monitoring_bd > backup.sql
+mysqldump -u admin -pAdminPass123! monitoring_bd > backup.sql
 
 # Восстановление из дампа
-docker exec -i repair_mysql mysql -u admin -pAdminPass123! monitoring_bd < backup.sql
+mysql -u admin -pAdminPass123! monitoring_bd < backup.sql
 ```
 
 ### Мониторинг подключений:

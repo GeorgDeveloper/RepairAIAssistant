@@ -97,52 +97,10 @@ check_software() {
         print_error "✗ Maven не установлен"
     fi
     
-    # Docker
-    if command -v docker &> /dev/null; then
-        DOCKER_VERSION=$(docker --version | awk '{print $3}' | sed 's/,//')
-        print_success "✓ Docker $DOCKER_VERSION"
-        
-        # Проверка запуска Docker
-        if systemctl is-active --quiet docker; then
-            print_success "✓ Docker сервис запущен"
-        else
-            print_error "✗ Docker сервис не запущен"
-        fi
-    else
-        print_error "✗ Docker не установлен"
-    fi
-    
-    # Docker Compose
-    if command -v docker-compose &> /dev/null; then
-        COMPOSE_VERSION=$(docker-compose --version | awk '{print $4}' | sed 's/,//')
-        print_success "✓ Docker Compose $COMPOSE_VERSION"
-    else
-        print_error "✗ Docker Compose не установлен"
-    fi
+    # (Удалено) Проверки Docker и Docker Compose
 }
 
-# Проверка Docker контейнеров
-check_containers() {
-    print_header "Проверка Docker контейнеров"
-    
-    # Список ожидаемых контейнеров
-    EXPECTED_CONTAINERS=("repair_mysql" "repair_chromadb" "repair_ollama")
-    
-    for container in "${EXPECTED_CONTAINERS[@]}"; do
-        if docker ps --format "{{.Names}}" | grep -q "^${container}$"; then
-            STATUS=$(docker ps --format "{{.Names}}\t{{.Status}}" | grep "^${container}" | awk '{print $2}')
-            print_success "✓ $container ($STATUS)"
-        elif docker ps -a --format "{{.Names}}" | grep -q "^${container}$"; then
-            print_warning "⚠ $container (остановлен)"
-        else
-            print_error "✗ $container (не найден)"
-        fi
-    done
-    
-    # Показать все контейнеры с repair в имени
-    print_info "Все контейнеры Repair AI:"
-    docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" --filter name=repair_ || print_warning "Контейнеры не найдены"
-}
+# (Удалено) Проверка Docker контейнеров
 
 # Проверка сетевых портов
 check_ports() {
@@ -201,12 +159,7 @@ check_apis() {
             print_error "✗ MySQL недоступен или неверные учетные данные"
         fi
     else
-        # Проверка через Docker
-        if docker exec repair_mysql mysql -u dba -pdbaPass -e "SELECT 1;" &>/dev/null; then
-            print_success "✓ MySQL доступен (через Docker)"
-        else
-            print_error "✗ MySQL недоступен"
-        fi
+        print_error "✗ mysql клиент не установлен"
     fi
     
     # Core API (если запущен)
@@ -228,7 +181,7 @@ check_apis() {
 check_services() {
     print_header "Проверка systemd сервисов"
     
-    SERVICES=("repair-ai-core" "repair-ai-web" "repair-ai-telegram")
+    SERVICES=("mysql" "chromadb" "ollama" "repair-ai-core" "repair-ai-web" "repair-ai-telegram")
     
     for service in "${SERVICES[@]}"; do
         if systemctl list-unit-files | grep -q "${service}.service"; then
@@ -279,7 +232,7 @@ check_files() {
     done
     
     # Конфигурационные файлы
-    CONFIG_FILES=("application.yml" "docker-compose.yml")
+    CONFIG_FILES=("application.yml")
     for config in "${CONFIG_FILES[@]}"; do
         if [[ -f "$APP_HOME/$config" ]]; then
             print_success "✓ $config"
@@ -373,8 +326,10 @@ generate_report() {
         echo "CPU: $(nproc) ядер"
         echo "Диск: $(df -h / | awk 'NR==2 {print $4}') свободно"
         echo
-        echo "=== Docker контейнеры ==="
-        docker ps -a --format "{{.Names}}\t{{.Status}}" --filter name=repair_ 2>/dev/null || echo "Нет контейнеров"
+        echo "=== Сервисы ==="
+        systemctl is-active mysql 2>/dev/null || echo "mysql: не активен"
+        systemctl is-active chromadb 2>/dev/null || echo "chromadb: не активен"
+        systemctl is-active ollama 2>/dev/null || echo "ollama: не активен"
         echo
         echo "=== Сетевые порты ==="
         netstat -tlnp 2>/dev/null | grep -E ':(3306|8000|8080|8081|8082|11434)' || echo "Порты не открыты"
@@ -398,22 +353,18 @@ print_recommendations() {
     
     echo -e "${YELLOW}Если обнаружены проблемы:${NC}"
     echo
-    echo "1. Для запуска контейнеров:"
-    echo "   cd /opt/repair-ai-assistant"
-    echo "   docker-compose up -d"
+    echo "1. Для установки моделей Ollama:"
+    echo "   ollama pull phi3:mini"
+    echo "   ollama pull nomic-embed-text"
     echo
-    echo "2. Для установки моделей Ollama:"
-    echo "   docker exec repair_ollama ollama pull deepseek-r1:latest"
-    echo "   docker exec repair_ollama ollama pull nomic-embed-text"
-    echo
-    echo "3. Для запуска приложения:"
+    echo "2. Для запуска приложения:"
     echo "   sudo -u repairai /opt/repair-ai-assistant/start.sh"
     echo
-    echo "4. Для проверки логов:"
+    echo "3. Для проверки логов:"
     echo "   journalctl -u repair-ai-core -f"
-    echo "   docker logs repair_mysql"
+    echo "   journalctl -u mysql -f"
     echo
-    echo "5. Для переустановки:"
+    echo "4. Для переустановки:"
     echo "   sudo bash install-server.sh"
     echo
     echo -e "${BLUE}Документация: README.md${NC}"

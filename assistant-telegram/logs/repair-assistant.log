@@ -434,3 +434,155 @@ org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException: Error exe
 2025-10-02 13:58:44 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.348 seconds (process running for 2.615)
 2025-10-02 13:58:44 [main] INFO  r.g.a.AssistantTelegramApplication - ? Telegram Bot запущен на порту 8082
 2025-10-02 13:58:44 [main] INFO  r.g.a.AssistantTelegramApplication - ? Bot подключен к Telegram API
+2025-10-03 09:31:50 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 5348 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-10-03 09:31:50 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-10-03 09:31:50 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-03 09:31:51 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-10-03 09:31:51 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-03 09:31:51 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-10-03 09:31:51 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-03 09:31:51 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 867 ms
+2025-10-03 09:31:52 [main] INFO  r.g.a.config.BotConfig - Попытка 1 регистрации Telegram бота...
+2025-10-03 09:31:52 [main] INFO  r.g.a.config.BotConfig - Telegram бот успешно зарегистрирован
+2025-10-03 09:31:52 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-10-03 09:31:52 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.484 seconds (process running for 2.781)
+2025-10-03 09:31:52 [main] INFO  r.g.a.AssistantTelegramApplication - ? Telegram Bot запущен на порту 8082
+2025-10-03 09:31:52 [main] INFO  r.g.a.AssistantTelegramApplication - ? Bot подключен к Telegram API
+2025-10-03 09:41:30 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 16616 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-10-03 09:41:30 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-10-03 09:41:30 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-03 09:41:31 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-10-03 09:41:31 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-03 09:41:31 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-10-03 09:41:31 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-03 09:41:31 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 689 ms
+2025-10-03 09:41:31 [main] INFO  r.g.a.config.BotConfig - Попытка 1 регистрации Telegram бота...
+2025-10-03 09:41:32 [main] INFO  r.g.a.config.BotConfig - Telegram бот успешно зарегистрирован
+2025-10-03 09:41:32 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-10-03 09:41:32 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.256 seconds (process running for 2.476)
+2025-10-03 09:41:32 [main] INFO  r.g.a.AssistantTelegramApplication - ? Telegram Bot запущен на порту 8082
+2025-10-03 09:41:32 [main] INFO  r.g.a.AssistantTelegramApplication - ? Bot подключен к Telegram API
+2025-10-03 09:43:12 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 7032 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-10-03 09:43:12 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-10-03 09:43:12 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-03 09:43:13 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-10-03 09:43:13 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-03 09:43:13 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-10-03 09:43:13 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-03 09:43:13 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 658 ms
+2025-10-03 09:43:13 [main] INFO  r.g.a.config.BotConfig - Попытка 1 регистрации Telegram бота...
+2025-10-03 09:43:14 [main] INFO  r.g.a.config.BotConfig - Telegram бот успешно зарегистрирован
+2025-10-03 09:43:14 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-10-03 09:43:14 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 1.913 seconds (process running for 2.131)
+2025-10-03 09:43:14 [main] INFO  r.g.a.AssistantTelegramApplication - ? Telegram Bot запущен на порту 8082
+2025-10-03 09:43:14 [main] INFO  r.g.a.AssistantTelegramApplication - ? Bot подключен к Telegram API
+2025-10-03 11:28:00 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 11676 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-10-03 11:28:00 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-10-03 11:28:00 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-03 11:28:01 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-10-03 11:28:01 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-03 11:28:01 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-10-03 11:28:01 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-03 11:28:01 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 592 ms
+2025-10-03 11:28:01 [main] INFO  r.g.a.config.BotConfig - Попытка 1 регистрации Telegram бота...
+2025-10-03 11:28:01 [main] INFO  r.g.a.config.BotConfig - Telegram бот успешно зарегистрирован
+2025-10-03 11:28:01 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-10-03 11:28:02 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 1.772 seconds (process running for 1.973)
+2025-10-03 11:28:02 [main] INFO  r.g.a.AssistantTelegramApplication - ? Telegram Bot запущен на порту 8082
+2025-10-03 11:28:02 [main] INFO  r.g.a.AssistantTelegramApplication - ? Bot подключен к Telegram API
+2025-10-03 11:31:51 [js_mai_bot Telegram Executor] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:31:51 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:31:56 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:32:00 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:33:29 [js_mai_bot Telegram Executor] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:33:29 [pool-4-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:33:34 [pool-4-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:35:05 [js_mai_bot Telegram Executor] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:35:05 [pool-5-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:35:10 [pool-5-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:36:15 [js_mai_bot Telegram Executor] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:36:15 [pool-6-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:36:19 [pool-6-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:45:10 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 15716 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-10-03 11:45:10 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-10-03 11:45:10 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-03 11:45:11 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-10-03 11:45:11 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-03 11:45:11 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-10-03 11:45:11 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-03 11:45:11 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 570 ms
+2025-10-03 11:45:11 [main] INFO  r.g.a.config.BotConfig - Попытка 1 регистрации Telegram бота...
+2025-10-03 11:45:12 [main] INFO  r.g.a.config.BotConfig - Telegram бот успешно зарегистрирован
+2025-10-03 11:45:12 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-10-03 11:45:12 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 1.805 seconds (process running for 2.009)
+2025-10-03 11:45:12 [main] INFO  r.g.a.AssistantTelegramApplication - ? Telegram Bot запущен на порту 8082
+2025-10-03 11:45:12 [main] INFO  r.g.a.AssistantTelegramApplication - ? Bot подключен к Telegram API
+2025-10-03 11:45:44 [js_mai_bot Telegram Executor] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:45:44 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:45:49 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 11:48:25 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 14116 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-10-03 11:48:25 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-10-03 11:48:25 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-03 11:48:26 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-10-03 11:48:26 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-03 11:48:26 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-10-03 11:48:26 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-03 11:48:26 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 589 ms
+2025-10-03 11:48:26 [main] INFO  r.g.a.config.BotConfig - Попытка 1 регистрации Telegram бота...
+2025-10-03 11:48:27 [main] INFO  r.g.a.config.BotConfig - Telegram бот успешно зарегистрирован
+2025-10-03 11:48:27 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-10-03 11:48:27 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 1.866 seconds (process running for 2.071)
+2025-10-03 11:48:27 [main] INFO  r.g.a.AssistantTelegramApplication - ? Telegram Bot запущен на порту 8082
+2025-10-03 11:48:27 [main] INFO  r.g.a.AssistantTelegramApplication - ? Bot подключен к Telegram API
+2025-10-03 11:59:13 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 15968 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-10-03 11:59:13 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-10-03 11:59:13 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-03 11:59:14 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-10-03 11:59:14 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-03 11:59:14 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-10-03 11:59:14 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-03 11:59:14 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 593 ms
+2025-10-03 11:59:14 [main] INFO  r.g.a.config.BotConfig - Попытка 1 регистрации Telegram бота...
+2025-10-03 11:59:14 [main] INFO  r.g.a.config.BotConfig - Telegram бот успешно зарегистрирован
+2025-10-03 11:59:15 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-10-03 11:59:15 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 1.91 seconds (process running for 2.127)
+2025-10-03 11:59:15 [main] INFO  r.g.a.AssistantTelegramApplication - ? Telegram Bot запущен на порту 8082
+2025-10-03 11:59:15 [main] INFO  r.g.a.AssistantTelegramApplication - ? Bot подключен к Telegram API
+2025-10-03 12:03:00 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 17536 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-10-03 12:03:00 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-10-03 12:03:00 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-03 12:03:01 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-10-03 12:03:01 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-03 12:03:01 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-10-03 12:03:01 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-03 12:03:01 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 639 ms
+2025-10-03 12:03:01 [main] INFO  r.g.a.config.BotConfig - Попытка 1 регистрации Telegram бота...
+2025-10-03 12:03:02 [main] INFO  r.g.a.config.BotConfig - Telegram бот успешно зарегистрирован
+2025-10-03 12:03:02 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-10-03 12:03:02 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.097 seconds (process running for 2.312)
+2025-10-03 12:03:02 [main] INFO  r.g.a.AssistantTelegramApplication - ? Telegram Bot запущен на порту 8082
+2025-10-03 12:03:02 [main] INFO  r.g.a.AssistantTelegramApplication - ? Bot подключен к Telegram API
+2025-10-03 12:04:15 [js_mai_bot Telegram Executor] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 12:04:15 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 12:04:19 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 12:04:23 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 12:16:49 [main] INFO  r.g.a.AssistantTelegramApplication - Starting AssistantTelegramApplication using Java 17.0.12 with PID 8116 (C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram\target\classes started by user in C:\Users\user\IdeaProjects\RepairAIAssistant\assistant-telegram)
+2025-10-03 12:16:49 [main] DEBUG r.g.a.AssistantTelegramApplication - Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-10-03 12:16:49 [main] INFO  r.g.a.AssistantTelegramApplication - No active profile set, falling back to 1 default profile: "default"
+2025-10-03 12:16:50 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2025-10-03 12:16:50 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-10-03 12:16:50 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-10-03 12:16:50 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2025-10-03 12:16:50 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 600 ms
+2025-10-03 12:16:50 [main] INFO  r.g.a.config.BotConfig - Попытка 1 регистрации Telegram бота...
+2025-10-03 12:16:51 [main] INFO  r.g.a.config.BotConfig - Telegram бот успешно зарегистрирован
+2025-10-03 12:16:51 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2025-10-03 12:16:51 [main] INFO  r.g.a.AssistantTelegramApplication - Started AssistantTelegramApplication in 2.342 seconds (process running for 2.537)
+2025-10-03 12:16:51 [main] INFO  r.g.a.AssistantTelegramApplication - ? Telegram Bot запущен на порту 8082
+2025-10-03 12:16:51 [main] INFO  r.g.a.AssistantTelegramApplication - ? Bot подключен к Telegram API
+2025-10-03 12:17:53 [js_mai_bot Telegram Executor] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 12:17:53 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 12:17:57 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 12:18:02 [pool-3-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 12:18:14 [js_mai_bot Telegram Executor] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900
+2025-10-03 12:18:14 [pool-4-thread-1] DEBUG r.g.a.bot.RepairAssistantBot - Индикатор 'печатает' отправлен в чат 1974005900

@@ -5,8 +5,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class CoreServiceClient {
@@ -36,7 +42,15 @@ public class CoreServiceClient {
                 int end = response.lastIndexOf("\",\"query\"");
                 if (end == -1) end = response.lastIndexOf("\"}");
                 if (start > 11 && end > start) {
-                    return response.substring(start, end).replace("\\\"", "\"");
+                    String extracted = response.substring(start, end)
+                            .replace("\\\"", "\"")
+                            .replace("\\n", "\n")
+                            .replace("\\r", "\r")
+                            .replace("\\t", "\t");
+                    if (extracted.startsWith("\"") && extracted.endsWith("\"") && extracted.length() >= 2) {
+                        extracted = extracted.substring(1, extracted.length() - 1);
+                    }
+                    return extracted;
                 }
             }
             return response;
@@ -62,22 +76,40 @@ public class CoreServiceClient {
         }
     }
     /**
-     * Отправляет пару запрос-ответ на сохранение для дообучения модели
-     * В новой архитектуре v2 обратная связь обрабатывается автоматически через векторную БД
+     * Отправляет пару запрос-ответ на сохранение в векторную базу данных
+     * В новой архитектуре v2 обратная связь сохраняется в ChromaDB для семантического поиска
      */
     public void saveFeedback(String request, String response) {
         try {
-            FeedbackDto dto = new FeedbackDto(request, response);
+            // Создаем JSON объект для нового API v2
+            Map<String, String> feedbackData = new HashMap<>();
+            feedbackData.put("request", request);
+            feedbackData.put("response", response);
+            
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<FeedbackDto> entity = new HttpEntity<>(dto, headers);
+            HttpEntity<Map<String, String>> entity = new HttpEntity<>(feedbackData, headers);
             
-            // Пробуем отправить в старый эндпоинт для совместимости
-            restTemplate.postForObject(CORE_SERVICE_URL + "/feedback", entity, String.class);
+            // Пробуем сначала новый эндпоинт v2
+            try {
+                ResponseEntity<String> result = restTemplate.postForEntity(
+                    CORE_SERVICE_URL + "/api/v2/feedback", entity, String.class);
+                System.out.println("Обратная связь успешно сохранена в векторную БД: " + result.getStatusCode());
+            } catch (HttpClientErrorException e) {
+                if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                    // Fallback на старый эндпоинт для совместимости
+                    FeedbackDto dto = new FeedbackDto(request, response);
+                    HttpEntity<FeedbackDto> oldEntity = new HttpEntity<>(dto, headers);
+                    restTemplate.postForObject(CORE_SERVICE_URL + "/feedback", oldEntity, String.class);
+                    System.out.println("Обратная связь сохранена через старый API");
+                } else {
+                    throw e;
+                }
+            }
         } catch (Exception e) {
-            // В новой системе обратная связь может не требоваться
-            // так как система использует семантический поиск
-            System.out.println("Feedback endpoint not available in v2 architecture: " + e.getMessage());
+            // В новой системе обратная связь критически важна для обучения
+            System.err.println("Ошибка сохранения обратной связи: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
