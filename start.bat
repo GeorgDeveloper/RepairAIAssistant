@@ -89,6 +89,12 @@ if %errorlevel% neq 0 goto wait_web
 echo Web service started.
 echo Proceeding to start assistant-telegram...
 
+REM ========== ЗАПУСК AI-СЕРВИСА (ASSISTANT-AI) ==========
+REM Запуск модуля AI на порту 8085
+echo Starting assistant-ai...
+start "Assistant AI" cmd /k "cd assistant-ai && mvn spring-boot:run"
+echo Proceeding to start assistant-telegram...
+
 REM ========== ЗАПУСК TELEGRAM-БОТА (ASSISTANT-TELEGRAM) ==========
 REM Запуск Telegram-бота на порту 8082 - интеграция с мессенджером
 REM Start assistant-telegram

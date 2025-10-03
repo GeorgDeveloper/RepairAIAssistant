@@ -14,7 +14,7 @@ public class CoreServiceClient {
     @Autowired
     private RestTemplate restTemplate;
     
-    private static final String CORE_SERVICE_URL = "http://localhost:8080/api";
+    private static final String CORE_SERVICE_URL = "http://localhost:8085/api";
     
     public String analyzeRepairRequest(String request) {
         HttpHeaders headers = new HttpHeaders();

@@ -50,6 +50,7 @@ copy assistant-core\target\*.war target\jars\ >nul 2>&1
 copy assistant-web\target\*.war target\jars\ >nul 2>&1
 copy assistant-telegram\target\*.war target\jars\ >nul 2>&1
 copy assistant-base_update\target\*.war target\jars\ >nul 2>&1
+copy assistant-ai\target\*.war target\jars\ >nul 2>&1
 echo [OK] Application files copied
 
 echo.
@@ -58,13 +59,14 @@ copy assistant-core\src\main\resources\application.yml target\config\core-applic
 copy assistant-web\src\main\resources\application.yml target\config\web-application.yml >nul 2>&1
 copy assistant-telegram\src\main\resources\application.yml target\config\telegram-application.yml >nul 2>&1
 copy assistant-base_update\src\main\resources\application.yml target\config\base-update-application.yml >nul 2>&1
+copy assistant-ai\src\main\resources\application.yml target\config\ai-application.yml >nul 2>&1
 echo [OK] Configuration files copied
 
 echo.
 echo [8/9] Training configuration files...
 mkdir target\training
-copy assistant-core\src\main\resources\training\query_training_data.jsonl target\training\query_training_data.jsonl >nul 2>&1
-copy assistant-core\src\main\resources\training\repair_instructions.json target\training\repair_instructions.json >nul 2>&1
+copy assistant-ai\src\main\resources\training\query_training_data.jsonl target\training\query_training_data.jsonl >nul 2>&1
+copy assistant-ai\src\main\resources\training\repair_instructions.json target\training\repair_instructions.json >nul 2>&1
 echo [OK] Training files copied
 
 echo.
@@ -77,6 +79,8 @@ echo start "Web" java -jar jars\assistant-web-0.0.1-SNAPSHOT.war >> target\start
 echo timeout /t 5 /nobreak ^>nul >> target\start.bat
 echo start "Telegram" java -jar jars\assistant-telegram-0.0.1-SNAPSHOT.war >> target\start.bat
 echo timeout /t 5 /nobreak ^>nul >> target\start.bat
+echo start "AI" java -jar jars\assistant-ai-0.0.1-SNAPSHOT.war >> target\start.bat
+echo timeout /t 5 /nobreak ^>nul >> target\start.bat
 echo start "Base Update" java -jar jars\assistant-base-update-0.0.1-SNAPSHOT.war >> target\start.bat
 echo echo All services started! >> target\start.bat
 echo pause >> target\start.bat
@@ -86,6 +90,7 @@ echo echo Stopping services... >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Core*" ^>nul 2^>^&1 >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Web*" ^>nul 2^>^&1 >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Telegram*" ^>nul 2^>^&1 >> target\stop.bat
+echo taskkill /f /im java.exe /fi "WINDOWTITLE eq AI*" ^>nul 2^>^&1 >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Base Update*" ^>nul 2^>^&1 >> target\stop.bat
 echo echo Services stopped. >> target\stop.bat
 echo pause >> target\stop.bat

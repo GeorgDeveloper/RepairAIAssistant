@@ -63,37 +63,7 @@ public class ApiController {
      * @param request Текстовый запрос пользователя (например: "Посчитай ремонты со статусом временно закрыто")
      * @return Ответ AI на основе реальных данных из БД
      */
-    @PostMapping(value = "/analyze", produces = "application/json;charset=UTF-8")
-    public String analyzeRepairRequest(@RequestBody String request) {
-        // Логирование для мониторинга и отладки
-        logger.info("Получен запрос: {}", request);
-        
-        // Основная обработка через сервисный слой
-        String response = repairAssistantService.processRepairRequest(request);
-        
-        // Логирование ответа для контроля качества
-        logger.info("Отправляем ответ: {}", response);
-        
-        return response;
-    }
-    /**
-     * Эндпоинт для обратной связи: сохраняет пару запрос-ответ для дообучения
-     */
-    @PostMapping("/feedback")
-    public String saveFeedback(@RequestBody FeedbackDto feedback) {
-        try {
-            // Всегда сохраняем пару в query_training_data.jsonl
-            saveToQueryTrainingData(feedback);
-            // Если ответ похож на инструкцию — дополнительно сохраняем в repair_instructions.json
-            if (feedback.response != null && (feedback.response.contains("SIMPLE_ANSWER") || feedback.response.toLowerCase().contains("инструкция"))) {
-                saveToRepairInstructions(feedback);
-            }
-            return "OK";
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "ERROR: " + e.getMessage();
-        }
-    }
+    // AI endpoints перенесены в модуль assistant-ai
 
     private void saveToRepairInstructions(FeedbackDto feedback) throws IOException {
         // Сохраняем полный текст запроса и ответа

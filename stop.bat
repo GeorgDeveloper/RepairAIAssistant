@@ -15,7 +15,7 @@ for /f "tokens=2" %%i in ('tasklist /fi "imagename eq java.exe" /fo csv ^| finds
 
 REM ========================================
 REM Завершение процессов по портам
-REM Останавливаем процессы, использующие порты 8080, 8081, 8082, 8084
+REM Останавливаем процессы, использующие порты 8080, 8081, 8082, 8084, 8085
 REM ========================================
 REM Остановка процесса на порту 8080 (основной сервис)
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8080"') do taskkill /f /pid %%a >nul 2>&1
@@ -26,6 +26,9 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8082"') do taskkill /f /pid
 
 REM Остановка процесса на порту 8084 (assistant-base_update)
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8084"') do taskkill /f /pid %%a >nul 2>&1
+
+REM Остановка процесса на порту 8085 (assistant-ai)
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8085"') do taskkill /f /pid %%a >nul 2>&1
 
 echo Все сервисы остановлены.
 pause

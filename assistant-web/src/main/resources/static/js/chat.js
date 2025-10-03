@@ -12,7 +12,7 @@ function sendMessage() {
     addMessage('user', message);
     input.value = '';
     
-    fetch('http://localhost:8080/api/analyze', {
+    fetch('/api/chat', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -71,7 +71,7 @@ function sendFeedback(type) {
     const request = feedbackDiv.dataset.request;
     const response = feedbackDiv.dataset.response;
     if (type === 'correct') {
-        fetch('http://localhost:8080/api/feedback', {
+        fetch('/api/chat/feedback', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ request, response })

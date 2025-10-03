@@ -1,0 +1,7 @@
+# Конфигурация для assistant-ai
+server:
+  port: ${server.ai.port:8085}
+
+spring:
+  config:
+    import: file:../application.yml
