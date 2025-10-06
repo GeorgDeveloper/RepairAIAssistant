@@ -3,7 +3,7 @@ function searchManuals() {
     
     if (!query) return;
     
-    fetch(`http://localhost:8080/manuals/search?query=${encodeURIComponent(query)}`)
+    fetch(`/manuals/search?query=${encodeURIComponent(query)}`)
     .then(response => response.text())
     .then(data => {
         document.getElementById('searchResults').innerHTML = `<p>${data}</p>`;
