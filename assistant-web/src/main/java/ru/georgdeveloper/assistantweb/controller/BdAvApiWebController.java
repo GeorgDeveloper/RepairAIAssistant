@@ -11,40 +11,35 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/dynamics")
-public class DynamicsWebController {
+@RequestMapping("/bdav")
+public class BdAvApiWebController {
 
     @Value("${core.service.url:http://localhost:8080}")
     private String coreServiceUrl;
 
     private final RestTemplate restTemplate;
 
-    public DynamicsWebController(RestTemplate restTemplate) {
+    public BdAvApiWebController(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
     @SuppressWarnings("unchecked")
     @GetMapping("/years")
     public List<Map<String, Object>> years() {
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/years", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/years", List.class);
     }
 
     @SuppressWarnings("unchecked")
     @GetMapping("/months")
     public List<Map<String, Object>> months(@RequestParam String year) {
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/months?year=" + year, List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/months?year=" + year, List.class);
     }
 
     @SuppressWarnings("unchecked")
     @GetMapping("/weeks")
     public List<Map<String, Object>> weeks(@RequestParam String year, @RequestParam String month) {
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/weeks?year=" + year + "&month=" + month, List.class);
-    }
-
-    @SuppressWarnings("unchecked")
-    @GetMapping("/failure-types")
-    public List<Map<String, Object>> failureTypes() {
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/failure-types", List.class);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + 
+                "/bdav/weeks?year=" + year + "&month=" + month, List.class);
     }
 
     @SuppressWarnings("unchecked")
@@ -52,16 +47,14 @@ public class DynamicsWebController {
     public List<Map<String, Object>> data(@RequestParam(required = false) String year,
                                           @RequestParam(required = false) String month,
                                           @RequestParam(required = false) String week,
-                                          @RequestParam(required = false) String area,
-                                          @RequestParam(required = false) String equipment,
-                                          @RequestParam(required = false, name = "failureType") String failureType) {
-        StringBuilder url = new StringBuilder(coreServiceUrl + "/dynamics/data?");
+                                          @RequestParam String area,
+                                          @RequestParam String metric) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/bdav/data?");
         if (year != null) url.append("year=").append(year).append('&');
         if (month != null) url.append("month=").append(month).append('&');
         if (week != null) url.append("week=").append(week).append('&');
-        if (area != null) url.append("area=").append(area).append('&');
-        if (equipment != null) url.append("equipment=").append(equipment).append('&');
-        if (failureType != null) url.append("failureType=").append(failureType).append('&');
+        url.append("area=").append(area).append('&');
+        url.append("metric=").append(metric).append('&');
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 }
