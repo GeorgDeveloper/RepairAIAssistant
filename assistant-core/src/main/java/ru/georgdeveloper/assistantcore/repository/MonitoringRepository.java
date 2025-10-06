@@ -101,16 +101,16 @@ public class MonitoringRepository {
     private JdbcTemplate jdbcTemplate;
 
     public List<Map<String, Object>> getRegions() {
-        return jdbcTemplate.queryForList("SELECT id, name_region FROM monitoring_bd.region");
+        return jdbcTemplate.queryForList("SELECT id, name_region FROM region");
     }
 
     public List<Map<String, Object>> getEquipment(int regionId) {
-        return jdbcTemplate.queryForList("SELECT id, name_equipment FROM monitoring_bd.equipment WHERE region_id = ?",
+        return jdbcTemplate.queryForList("SELECT id, name_equipment FROM equipment WHERE region_id = ?",
                 regionId);
     }
 
     public List<Map<String, Object>> getNodes(int equipmentId) {
-        return jdbcTemplate.queryForList("SELECT id, name_node FROM monitoring_bd.node WHERE equipment_id = ?",
+        return jdbcTemplate.queryForList("SELECT id, name_node FROM node WHERE equipment_id = ?",
                 equipmentId);
     }
 
