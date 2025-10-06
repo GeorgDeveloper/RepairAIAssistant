@@ -512,6 +512,40 @@ public class TagTransferService {
     }
 
     /**
+     * Ручной запуск переноса Tag данных с указанными параметрами времени
+     */
+    @Transactional
+    public void runTagTransfer(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        try {
+            logger.info("=== Начало ручного переноса Tag данных... Start: {}, End: {}", startDateTime, endDateTime);
+            
+            logger.info("Фильтрация Tag данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
+            logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
+            logger.info("SQL params (Tag): startDateTime={}, endDateTime={}", startDateTime, endDateTime);
+            
+            // Выполняем перенос данных
+            int transferredCount = transferTagDataFromSqlServer(startDateTime, endDateTime);
+            
+            if (transferredCount > 0) {
+                // Обрабатываем дополнительные поля
+                processTagAdditionalFields();
+                
+                // Удаляем отфильтрованные записи
+                int deletedCount = cleanupTagFilteredRecords();
+                
+                logger.info("Итог Tag: перенесено {} записей, удалено {} отфильтрованных записей", 
+                    transferredCount, deletedCount);
+            } else {
+                logger.warn("Нет Tag данных для обработки");
+            }
+            
+        } catch (Exception e) {
+            logger.error("Критическая ошибка при ручном переносе Tag данных: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
      * Получение строкового значения с проверкой на null
      */
     private String getStringValue(Object value) {

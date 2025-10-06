@@ -166,26 +166,6 @@ public class ModelTrainingService {
 
     // DB-derived example generation removed
 
-    private String extractLeakType(String description, String cause, String comments) {
-        String text = (description + " " + cause + " " + comments).toLowerCase(Locale.ROOT);
-        if (text.contains("воздух")) return "воздуха";
-        if (text.contains("масл")) return "масла";
-        if (text.contains("пар")) return "пара";
-        if (text.contains("вод")) return "воды";
-        if (text.contains("азот")) return "азота";
-        return "жидкости";
-    }
-
-    private String extractSolution(String comments) {
-        if (comments == null) return "обратитесь к специалисту";
-        String text = comments.toLowerCase(Locale.ROOT);
-        if (text.contains("замен")) return "замените поврежденные детали";
-        if (text.contains("подтян")) return "подтяните соединения";
-        if (text.contains("очист")) return "очистите поверхности";
-        if (text.contains("регулир")) return "отрегулируйте параметры";
-        return "проверьте состояние узлов";
-    }
-
     @Scheduled(cron = "0 0 3 * * ?")
     public void retrainModel() {
         logger.info("Начинаем переобучение модели...");

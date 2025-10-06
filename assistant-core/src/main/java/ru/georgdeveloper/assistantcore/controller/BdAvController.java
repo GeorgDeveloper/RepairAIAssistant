@@ -36,22 +36,31 @@ public class BdAvController {
 
     @GetMapping("/years")
     public List<Map<String, Object>> years() {
+        logger.debug("Fetching available years from report_plant table");
         String sql = "SELECT DISTINCT YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) AS year FROM report_plant ORDER BY year DESC";
-        return jdbcTemplate.queryForList(sql);
+        List<Map<String, Object>> result = jdbcTemplate.queryForList(sql);
+        logger.debug("Retrieved {} years", result.size());
+        return result;
     }
 
     @GetMapping("/months")
     public List<Map<String, Object>> months(@RequestParam int year) {
+        logger.debug("Fetching available months for year: {}", year);
         String sql = "SELECT DISTINCT MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) AS month FROM report_plant " +
                 "WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? ORDER BY month";
-        return jdbcTemplate.queryForList(sql, year);
+        List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, year);
+        logger.debug("Retrieved {} months for year {}", result.size(), year);
+        return result;
     }
 
     @GetMapping("/weeks")
     public List<Map<String, Object>> weeks(@RequestParam int year, @RequestParam int month) {
+        logger.debug("Fetching available weeks for year: {} and month: {}", year, month);
         String sql = "SELECT DISTINCT WEEK(STR_TO_DATE(production_day, '%d.%m.%Y'), 3) AS week " +
                 "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? ORDER BY week";
-        return jdbcTemplate.queryForList(sql, year, month);
+        List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, year, month);
+        logger.debug("Retrieved {} weeks for year {} and month {}", result.size(), year, month);
+        return result;
     }
 
     @GetMapping("/data")
@@ -60,6 +69,8 @@ public class BdAvController {
                                           @RequestParam(required = false) Integer week,
                                           @RequestParam(defaultValue = "Plant") String area,
                                           @RequestParam(defaultValue = "bd") String metric) {
+        logger.debug("Fetching BD/AV data with parameters: year={}, month={}, week={}, area={}, metric={}", 
+                    year, month, week, area, metric);
         String valueColumn = "bd".equalsIgnoreCase(metric) ? "downtime_percentage" : "availability";
 
         String periodSelect;
@@ -97,6 +108,7 @@ public class BdAvController {
         List<Map<String, Object>> result = new ArrayList<>();
 
         if ("all".equalsIgnoreCase(area)) {
+            logger.debug("Querying data for all areas");
             for (Map.Entry<String, String> entry : AREA_TABLE.entrySet()) {
                 String areaKey = entry.getKey();
                 String table = entry.getValue();
@@ -105,10 +117,12 @@ public class BdAvController {
             }
         } else {
             String table = AREA_TABLE.getOrDefault(area, "report_plant");
+            logger.debug("Querying data for area: {} using table: {}", area, table);
             String sql = "SELECT " + periodSelect + " AS period_label, AVG(" + valueColumn + ") AS value, '" + area + "' AS area FROM " + table + " " + filter + " GROUP BY " + groupBy + " ORDER BY 1";
             result.addAll(jdbcTemplate.queryForList(sql, args.toArray()));
         }
 
+        logger.debug("Retrieved {} data points", result.size());
         return result;
     }
 }
