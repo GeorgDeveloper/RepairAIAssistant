@@ -207,7 +207,7 @@
                     // Инициализация таблицы
                     var table = $('#solutionsTable').DataTable({
                         ajax: {
-                            url: 'http://localhost:8080/api/summary-of-solutions',
+                            url: '/api/summary-of-solutions',
                             dataSrc: ''
                         },
                         columns: [
@@ -314,7 +314,7 @@
                         };
 
                         $.ajax({
-                            url: 'http://localhost:8080/api/summary-of-solutions',
+                            url: '/api/summary-of-solutions',
                             method: 'POST',
                             contentType: 'application/json',
                             data: JSON.stringify(data),
@@ -330,7 +330,7 @@
                     });
 
                     // Загрузка данных для списка регионов
-                    fetch('http://localhost:8080/api/regions')
+                    fetch('/api/regions')
                         .then(response => response.json())
                         .then(data => {
                             const regionSelect = $('#region');
@@ -346,7 +346,7 @@
                         equipmentSelect.empty().append(new Option('Выберите оборудование', ''));
 
                         if (regionId) {
-                            fetch(`http://localhost:8080/api/equipment?regionId=${regionId}`)
+                            fetch(`/api/equipment?regionId=${regionId}`)
                                 .then(response => response.json())
                                 .then(data => {
                                     data.forEach(equipment => {
@@ -363,7 +363,7 @@
                         nodeSelect.empty().append(new Option('Выберите узел', ''));
 
                         if (equipmentId) {
-                            fetch(`http://localhost:8080/api/nodes?equipmentId=${equipmentId}`)
+                            fetch(`/api/nodes?equipmentId=${equipmentId}`)
                                 .then(response => response.json())
                                 .then(data => {
                                     data.forEach(node => {
@@ -378,7 +378,7 @@
                         const id = $(this).data('id');
                         if (confirm('Вы уверены, что хотите удалить эту запись?')) {
                             // Добавлены заголовки в запрос DELETE для summary-of-solutions
-                            fetch(`http://localhost:8080/api/summary-of-solutions/${id}`, {
+                            fetch(`/api/summary-of-solutions/${id}`, {
                                 method: 'DELETE',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -394,7 +394,7 @@
                         const id = $(this).data('id');
 
                         // Получение текущих данных записи с сервера
-                        fetch(`http://localhost:8080/api/summary-of-solutions/${id}`)
+                        fetch(`/api/summary-of-solutions/${id}`)
                             .then(response => response.json())
                             .then(data => {
                                 // Заполнение модального окна текущими данными
@@ -430,7 +430,7 @@
                                     };
 
                                     // Отправка PUT-запроса на сервер
-                                    fetch(`http://localhost:8080/api/summary-of-solutions/${id}`, {
+                                    fetch(`/api/summary-of-solutions/${id}`, {
                                         method: 'PUT',
                                         headers: {
                                             'Content-Type': 'application/json'

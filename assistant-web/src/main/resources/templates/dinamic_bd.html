@@ -312,7 +312,7 @@
         
         async function loadEquipment(area) {
             try {
-                const response = await fetch(`http://localhost:8080/gantt/equipment?area=${area}`);
+                const response = await fetch(`/gantt/equipment?area=${area}`);
                 const equipment = await response.json();
                 
                 const equipmentSelect = document.getElementById('equipment');
@@ -347,7 +347,7 @@
         
         async function loadYears() {
             try {
-                const response = await fetch('http://localhost:8080/dynamics/years');
+                const response = await fetch('/dynamics/years');
                 const years = await response.json();
                 
                 const yearSelect = document.getElementById('year');
@@ -372,7 +372,7 @@
             if (year === 'all') return;
             
             try {
-                const response = await fetch(`http://localhost:8080/dynamics/months?year=${year}`);
+                const response = await fetch(`/dynamics/months?year=${year}`);
                 const months = await response.json();
                 
                 const monthSelect = document.getElementById('month');
@@ -408,7 +408,7 @@
             }
             
             try {
-                const response = await fetch(`http://localhost:8080/dynamics/weeks?year=${year}&month=${month}`);
+                const response = await fetch(`/dynamics/weeks?year=${year}&month=${month}`);
                 const weeks = await response.json();
                 
                 const weekSelect = document.getElementById('week');
@@ -427,7 +427,7 @@
         
         async function loadAreas() {
             try {
-                const response = await fetch('http://localhost:8080/gantt/areas');
+                const response = await fetch('/gantt/areas');
                 const areas = await response.json();
                 
                 const areaSelect = document.getElementById('area');
@@ -446,7 +446,7 @@
         
         async function loadFailureTypes() {
             try {
-                const response = await fetch('http://localhost:8080/dynamics/failure-types');
+                const response = await fetch('/dynamics/failure-types');
                 const types = await response.json();
                 
                 const typeSelect = document.getElementById('failure-type');
@@ -485,7 +485,7 @@
         }
         
         async function fetchDynamicsData(params) {
-            const url = new URL('http://localhost:8080/dynamics/data');
+            const url = new URL('/dynamics/data', window.location.origin);
             Object.keys(params).forEach(key => {
                 if (params[key] && params[key] !== 'all') {
                     url.searchParams.append(key, params[key]);

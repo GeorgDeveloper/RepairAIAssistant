@@ -184,7 +184,7 @@
         // Функция для получения текущих показателей
         async function fetchCurrentMetrics() {
             try {
-                const response = await fetch('http://localhost:8080/dashboard/current-metrics');
+                const response = await fetch('/dashboard/current-metrics');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -273,8 +273,8 @@
         // Загрузка графиков BD и доступности
         async function loadOnlineCharts() {
             try {
-                const bdData = await fetchData('http://localhost:8081/dashboard/online/bd');
-                const availabilityData = await fetchData('http://localhost:8081/dashboard/online/availability');
+                const bdData = await fetchData('/dashboard/online/bd');
+                const availabilityData = await fetchData('/dashboard/online/availability');
 
                 if (bdData) {
                     const bdChartData = processChartData(bdData);
@@ -390,13 +390,13 @@
 
         // Загрузка и отображение топ поломок
         async function loadTopBreakdownsTables() {
-            const topBreakdowns = await fetchData('http://localhost:8080/dashboard/top-breakdowns');
+            const topBreakdowns = await fetchData('/dashboard/top-breakdowns');
             createTopBreakdownsTable(topBreakdowns, 'topBreakdownsTable');
-            const topBreakdownsKeyLines = await fetchData('http://localhost:8080/dashboard/top-breakdowns-key-lines');
+            const topBreakdownsKeyLines = await fetchData('/dashboard/top-breakdowns-key-lines');
     createTopBreakdownsTable(topBreakdownsKeyLines, 'topBreakdownsKeyLinesTable', true);
 
     // Текущий ТОП (онлайн)
-    const topCurrent = await fetchData('http://localhost:8080/dashboard/top-breakdowns-current');
+    const topCurrent = await fetchData('/dashboard/top-breakdowns-current');
     if (topCurrent && Array.isArray(topCurrent)) {
         let tableHTML = `<table class="metrics-table">
             <thead>

@@ -479,7 +479,7 @@
         
         async function loadEquipment(area) {
             try {
-                const response = await fetch(`http://localhost:8080/gantt/equipment?area=${area}`);
+                const response = await fetch(`/gantt/equipment?area=${area}`);
                 const equipment = await response.json();
                 
                 const equipmentSelect = $('#equipment');
@@ -517,7 +517,7 @@
         
         async function loadFailureTypes() {
             try {
-                const response = await fetch('http://localhost:8080/gantt/failure-types');
+                const response = await fetch('/gantt/failure-types');
                 const types = await response.json();
                 
                 const select = $('#failure-type');
@@ -534,7 +534,7 @@
         
         async function loadStatuses() {
             try {
-                const response = await fetch('http://localhost:8080/gantt/statuses');
+                const response = await fetch('/gantt/statuses');
                 const statuses = await response.json();
                 
                 const select = $('#status');
@@ -550,7 +550,7 @@
         }
         
         async function fetchDataFromDatabase(params = {}) {
-            const url = new URL('http://localhost:8080/gantt/data');
+            const url = new URL('/gantt/data', window.location.origin);
             Object.keys(params).forEach(key => {
                 if (params[key] && params[key] !== 'all') {
                     url.searchParams.append(key, params[key]);

@@ -211,7 +211,7 @@
         $(document).ready(function () {
            var table = $('#manualsTable').DataTable({
                 ajax: {
-                    url: 'http://localhost:8080/manuals/all',
+                    url: '/manuals/all',
                     dataSrc: ''
                 },
                 columns: [
@@ -330,7 +330,7 @@
                 formData.append('content', content.value);
 
 
-                fetch('http://localhost:8080/manuals/upload', {
+                fetch('/manuals/upload', {
                     method: 'POST',
                     body: formData
                 })
@@ -347,7 +347,7 @@
             });
 
             // Загрузка данных для списка регионов
-            fetch('http://localhost:8080/api/regions')
+            fetch('/api/regions')
                 .then(response => response.json())
                 .then(data => {
                     const regionSelect = $('#region');
@@ -363,7 +363,7 @@
                 equipmentSelect.empty().append(new Option('Выберите оборудование', ''));
 
                 if (regionId) {
-                    fetch(`http://localhost:8080/api/equipment?regionId=${regionId}`)
+                    fetch(`/api/equipment?regionId=${regionId}`)
                         .then(response => response.json())
                         .then(data => {
                             data.forEach(equipment => {
@@ -380,7 +380,7 @@
                 nodeSelect.empty().append(new Option('Выберите узел', ''));
 
                 if (equipmentId) {
-                    fetch(`http://localhost:8080/api/nodes?equipmentId=${equipmentId}`)
+                    fetch(`/api/nodes?equipmentId=${equipmentId}`)
                         .then(response => response.json())
                         .then(data => {
                             data.forEach(node => {
@@ -395,7 +395,7 @@
                 const id = $(this).data('id');
                 if (confirm('Вы уверены, что хотите удалить эту запись?')) {
                     // Добавлены заголовки в запрос DELETE для manuals
-                    fetch(`http://localhost:8080/manuals/delete/${id}`, {
+                    fetch(`/manuals/delete/${id}`, {
                         method: 'DELETE',
                         headers: {
                             'Content-Type': 'application/json',
@@ -415,7 +415,7 @@
                 $('#editManualId').val(rowData.id);
 
                 // 1. Загрузить регионы
-                fetch('http://localhost:8080/api/regions')
+            fetch('/api/regions')
                     .then(response => response.json())
                     .then(regions => {
                         const regionSelect = $('#editRegion');
@@ -428,7 +428,7 @@
 
                         // 2. Загрузить оборудование для выбранного региона
                         if (rowData.region) {
-                            fetch(`http://localhost:8080/api/equipment?regionId=${rowData.region}`)
+                            fetch(`/api/equipment?regionId=${rowData.region}`)
                                 .then(response => response.json())
                                 .then(equipments => {
                                     const equipmentSelect = $('#editEquipment');
@@ -440,7 +440,7 @@
 
                                     // 3. Загрузить узлы для выбранного оборудования
                                     if (rowData.equipment) {
-                                        fetch(`http://localhost:8080/api/nodes?equipmentId=${rowData.equipment}`)
+                                        fetch(`/api/nodes?equipmentId=${rowData.equipment}`)
                                             .then(response => response.json())
                                             .then(nodes => {
                                                 const nodeSelect = $('#editNode');
@@ -474,7 +474,7 @@
                 equipmentSelect.empty().append(new Option('Выберите оборудование', ''));
                 $('#editNode').empty().append(new Option('Выберите узел', ''));
                 if (regionId) {
-                    fetch(`http://localhost:8080/api/equipment?regionId=${regionId}`)
+                    fetch(`/api/equipment?regionId=${regionId}`)
                         .then(response => response.json())
                         .then(data => {
                             data.forEach(equipment => {
@@ -488,7 +488,7 @@
                 const nodeSelect = $('#editNode');
                 nodeSelect.empty().append(new Option('Выберите узел', ''));
                 if (equipmentId) {
-                    fetch(`http://localhost:8080/api/nodes?equipmentId=${equipmentId}`)
+                    fetch(`/api/nodes?equipmentId=${equipmentId}`)
                         .then(response => response.json())
                         .then(data => {
                             data.forEach(node => {
@@ -514,7 +514,7 @@
                     deviceType: $('#editDeviceType').val(),
                     content: $('#editContent').val()
                 };
-                fetch(`http://localhost:8080/manuals/manuals/${id}`, {
+                fetch(`/manuals/manuals/${id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -533,7 +533,7 @@
 
         // Функция для скачивания файла
         function downloadFile(fileId, fileName) {
-            fetch(`http://localhost:8080/manuals/download/${fileId}`)
+            fetch(`/manuals/download/${fileId}`)
                 .then(response => {
                     if (!response.ok) {
                         return response.text().then(errorText => {

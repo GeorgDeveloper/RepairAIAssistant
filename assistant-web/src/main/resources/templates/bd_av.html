@@ -221,7 +221,7 @@
             const year = document.getElementById('year').value;
             const sel = document.getElementById('month');
             if (year === 'all') { sel.innerHTML = '<option value="all">Все</option>'; return; }
-            const res = await fetch(`http://localhost:8080/bdav/months?year=${year}`);
+            const res = await fetch(`/bdav/months?year=${year}`);
             const data = await res.json();
             const names = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
             sel.innerHTML = '<option value="all">Все</option>' + data.map(x => `<option value="${x.month}">${names[x.month-1]}</option>`).join('');
@@ -233,7 +233,7 @@
             const month = document.getElementById('month').value;
             const sel = document.getElementById('week');
             if (year === 'all' || month === 'all') { sel.innerHTML = '<option value="all">Все</option>'; return; }
-            const res = await fetch(`http://localhost:8080/bdav/weeks?year=${year}&month=${month}`);
+            const res = await fetch(`/bdav/weeks?year=${year}&month=${month}`);
             const data = await res.json();
             sel.innerHTML = '<option value="all">Все</option>' + data.map(x => `<option value="${x.week}">${x.week}</option>`).join('');
         }
@@ -250,7 +250,7 @@
             if (week !== 'all') params.append('week', week);
             params.append('area', area);
             params.append('metric', metric);
-            const res = await fetch(`http://localhost:8080/bdav/data?${params.toString()}`);
+            const res = await fetch(`/bdav/data?${params.toString()}`);
             const data = await res.json();
             renderChart(data, metric, area);
         }
