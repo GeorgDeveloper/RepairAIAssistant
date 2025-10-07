@@ -31,14 +31,23 @@ public class DynamicsWebController {
 
     @SuppressWarnings("unchecked")
     @GetMapping("/months")
-    public List<Map<String, Object>> months(@RequestParam String year) {
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/months?year=" + year, List.class);
+    public List<Map<String, Object>> months(@RequestParam(required = false) List<String> year) {
+        if (year == null || year.isEmpty()) {
+            return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/months", List.class);
+        }
+        String yearParam = String.join(",", year);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/months?year=" + yearParam, List.class);
     }
 
     @SuppressWarnings("unchecked")
     @GetMapping("/weeks")
-    public List<Map<String, Object>> weeks(@RequestParam String year, @RequestParam String month) {
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/weeks?year=" + year + "&month=" + month, List.class);
+    public List<Map<String, Object>> weeks(@RequestParam(required = false) List<String> year, @RequestParam(required = false) List<String> month) {
+        if (year == null || year.isEmpty() || month == null || month.isEmpty()) {
+            return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/weeks", List.class);
+        }
+        String yearParam = String.join(",", year);
+        String monthParam = String.join(",", month);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/weeks?year=" + yearParam + "&month=" + monthParam, List.class);
     }
 
     @SuppressWarnings("unchecked")
@@ -49,19 +58,19 @@ public class DynamicsWebController {
 
     @SuppressWarnings("unchecked")
     @GetMapping("/data")
-    public List<Map<String, Object>> data(@RequestParam(required = false) String year,
-                                          @RequestParam(required = false) String month,
-                                          @RequestParam(required = false) String week,
-                                          @RequestParam(required = false) String area,
-                                          @RequestParam(required = false) String equipment,
-                                          @RequestParam(required = false, name = "failureType") String failureType) {
+    public List<Map<String, Object>> data(@RequestParam(required = false) List<String> year,
+                                          @RequestParam(required = false) List<String> month,
+                                          @RequestParam(required = false) List<String> week,
+                                          @RequestParam(required = false) List<String> area,
+                                          @RequestParam(required = false) List<String> equipment,
+                                          @RequestParam(required = false, name = "failureType") List<String> failureType) {
         StringBuilder url = new StringBuilder(coreServiceUrl + "/dynamics/data?");
-        if (year != null) url.append("year=").append(year).append('&');
-        if (month != null) url.append("month=").append(month).append('&');
-        if (week != null) url.append("week=").append(week).append('&');
-        if (area != null) url.append("area=").append(area).append('&');
-        if (equipment != null) url.append("equipment=").append(equipment).append('&');
-        if (failureType != null) url.append("failureType=").append(failureType).append('&');
+        if (year != null && !year.isEmpty()) url.append("year=").append(String.join(",", year)).append('&');
+        if (month != null && !month.isEmpty()) url.append("month=").append(String.join(",", month)).append('&');
+        if (week != null && !week.isEmpty()) url.append("week=").append(String.join(",", week)).append('&');
+        if (area != null && !area.isEmpty()) url.append("area=").append(String.join(",", area)).append('&');
+        if (equipment != null && !equipment.isEmpty()) url.append("equipment=").append(String.join(",", equipment)).append('&');
+        if (failureType != null && !failureType.isEmpty()) url.append("failureType=").append(String.join(",", failureType)).append('&');
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 }

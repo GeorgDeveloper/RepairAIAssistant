@@ -17,12 +17,12 @@ public class DynamicsController {
     @GetMapping("/data")
     @ResponseBody
     public List<Map<String, Object>> getDynamicsData(
-            @RequestParam(required = false) String year,
-            @RequestParam(required = false) String month,
-            @RequestParam(required = false) String week,
-            @RequestParam(required = false) String area,
-            @RequestParam(required = false) String equipment,
-            @RequestParam(required = false) String failureType) {
+            @RequestParam(required = false) List<String> year,
+            @RequestParam(required = false) List<String> month,
+            @RequestParam(required = false) List<String> week,
+            @RequestParam(required = false) List<String> area,
+            @RequestParam(required = false) List<String> equipment,
+            @RequestParam(required = false) List<String> failureType) {
         
         return dynamicsRepository.getDynamicsData(year, month, week, area, equipment, failureType);
     }
@@ -35,13 +35,13 @@ public class DynamicsController {
 
     @GetMapping("/months")
     @ResponseBody
-    public List<Map<String, Object>> getMonths(@RequestParam String year) {
+    public List<Map<String, Object>> getMonths(@RequestParam(required = false) List<String> year) {
         return dynamicsRepository.getMonths(year);
     }
 
     @GetMapping("/weeks")
     @ResponseBody
-    public List<Map<String, Object>> getWeeks(@RequestParam String year, @RequestParam String month) {
+    public List<Map<String, Object>> getWeeks(@RequestParam(required = false) List<String> year, @RequestParam(required = false) List<String> month) {
         return dynamicsRepository.getWeeks(year, month);
     }
 

@@ -36,6 +36,86 @@
             font-size: 14px;
         }
         
+        .multi-select {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .multi-select-button {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            text-align: left;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .multi-select-button:hover {
+            border-color: #e74c3c;
+        }
+        
+        .multi-select-button::after {
+            content: '▼';
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+        
+        .multi-select-button.open::after {
+            transform: rotate(180deg);
+        }
+        
+        .multi-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .multi-select-dropdown.open {
+            display: block;
+        }
+        
+        .multi-select-option {
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .multi-select-option:last-child {
+            border-bottom: none;
+        }
+        
+        .multi-select-option:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .multi-select-option input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        .multi-select-option label {
+            cursor: pointer;
+            margin: 0;
+            flex: 1;
+        }
+        
         .btn-apply {
             background-color: #e74c3c;
             color: white;
@@ -192,56 +272,92 @@
                 <div class="filters">
                     <div class="filter-group">
                         <label for="year">Год:</label>
-                        <select id="year" class="filter-control">
-                            <option value="all">Все</option>
-                        </select>
+                        <div class="multi-select" id="year-multiselect">
+                            <button type="button" class="multi-select-button" id="year-button">
+                                <span id="year-text">Все</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="year-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="year-all" value="all" checked>
+                                    <label for="year-all">Все</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="filter-group">
                         <label for="month">Месяц:</label>
-                        <select id="month" class="filter-control">
-                            <option value="all">Все</option>
-                            <option value="1">Январь</option>
-                            <option value="2">Февраль</option>
-                            <option value="3">Март</option>
-                            <option value="4">Апрель</option>
-                            <option value="5">Май</option>
-                            <option value="6">Июнь</option>
-                            <option value="7">Июль</option>
-                            <option value="8">Август</option>
-                            <option value="9">Сентябрь</option>
-                            <option value="10">Октябрь</option>
-                            <option value="11">Ноябрь</option>
-                            <option value="12">Декабрь</option>
-                        </select>
+                        <div class="multi-select" id="month-multiselect">
+                            <button type="button" class="multi-select-button" id="month-button">
+                                <span id="month-text">Все</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="month-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="month-all" value="all" checked>
+                                    <label for="month-all">Все</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="filter-group">
                         <label for="week">Неделя:</label>
-                        <select id="week" class="filter-control">
-                            <option value="all">Все</option>
-                        </select>
+                        <div class="multi-select" id="week-multiselect">
+                            <button type="button" class="multi-select-button" id="week-button">
+                                <span id="week-text">Все</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="week-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="week-all" value="all" checked>
+                                    <label for="week-all">Все</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="filter-group">
                         <label for="area">Участок:</label>
-                        <select id="area" class="filter-control">
-                            <option value="all">Все участки</option>
-                        </select>
+                        <div class="multi-select" id="area-multiselect">
+                            <button type="button" class="multi-select-button" id="area-button">
+                                <span id="area-text">Все участки</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="area-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="area-all" value="all" checked>
+                                    <label for="area-all">Все участки</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="filter-group">
                         <label for="equipment">Оборудование:</label>
-                        <select id="equipment" class="filter-control">
-                            <option value="all">Всё оборудование</option>
-                        </select>
+                        <div class="multi-select" id="equipment-multiselect">
+                            <button type="button" class="multi-select-button" id="equipment-button">
+                                <span id="equipment-text">Всё оборудование</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="equipment-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="equipment-all" value="all" checked>
+                                    <label for="equipment-all">Всё оборудование</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="filter-group">
                         <label for="failure-type">Тип поломки:</label>
-                        <select id="failure-type" class="filter-control">
-                            <option value="all">Все</option>
-                        </select>
+                        <div class="multi-select" id="failure-type-multiselect">
+                            <button type="button" class="multi-select-button" id="failure-type-button">
+                                <span id="failure-type-text">Все</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="failure-type-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="failure-type-all" value="all" checked>
+                                    <label for="failure-type-all">Все</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <button id="apply-filters" class="btn-apply">Применить фильтры</button>
@@ -285,17 +401,29 @@
         });
         
         function setupEventListeners() {
-            document.getElementById('year').addEventListener('change', function() {
+            // Настройка множественного выбора для года
+            setupMultiSelect('year', function() {
                 loadMonths();
             });
             
-            document.getElementById('month').addEventListener('change', function() {
+            // Настройка множественного выбора для месяца
+            setupMultiSelect('month', function() {
                 loadWeeks();
             });
             
-            document.getElementById('area').addEventListener('change', function() {
-                loadEquipment(this.value);
+            // Настройка множественного выбора для недели
+            setupMultiSelect('week');
+            
+            // Настройка множественного выбора для участка
+            setupMultiSelect('area', function() {
+                loadEquipment(getSelectedValues('area'));
             });
+            
+            // Настройка множественного выбора для оборудования
+            setupMultiSelect('equipment');
+            
+            // Настройка множественного выбора для типа поломки
+            setupMultiSelect('failure-type');
             
             document.getElementById('apply-filters').addEventListener('click', function() {
                 applyFilters();
@@ -310,23 +438,145 @@
             });
         }
         
-        async function loadEquipment(area) {
-            try {
-                const response = await fetch(`/gantt/equipment?area=${area}`);
-                const equipment = await response.json();
-                
-                const equipmentSelect = document.getElementById('equipment');
-                equipmentSelect.innerHTML = '<option value="all">Всё оборудование</option>';
-                
-                equipment.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.machine_name;
-                    option.textContent = item.machine_name;
-                    equipmentSelect.appendChild(option);
+        function setupMultiSelect(prefix, onChangeCallback) {
+            const button = document.getElementById(prefix + '-button');
+            const dropdown = document.getElementById(prefix + '-dropdown');
+            const text = document.getElementById(prefix + '-text');
+            const allCheckbox = document.getElementById(prefix + '-all');
+            
+            // Обработчик клика по кнопке
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleDropdown(prefix);
+            });
+            
+            // Обработчик клика по чекбоксу "Все"
+            allCheckbox.addEventListener('change', function() {
+                const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]:not(#' + prefix + '-all)');
+                checkboxes.forEach(cb => {
+                    cb.checked = this.checked;
                 });
+                updateButtonText(prefix);
+                if (onChangeCallback) onChangeCallback();
+            });
+            
+            // Обработчики для остальных чекбоксов
+            dropdown.addEventListener('change', function(e) {
+                if (e.target.type === 'checkbox' && e.target.id !== prefix + '-all') {
+                    const checkedBoxes = dropdown.querySelectorAll('input[type="checkbox"]:checked:not(#' + prefix + '-all)');
+                    allCheckbox.checked = checkedBoxes.length === 0;
+                    updateButtonText(prefix);
+                    if (onChangeCallback) onChangeCallback();
+                }
+            });
+            
+            // Закрытие при клике вне элемента
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#' + prefix + '-multiselect')) {
+                    closeDropdown(prefix);
+                }
+            });
+        }
+        
+        function toggleDropdown(prefix) {
+            const button = document.getElementById(prefix + '-button');
+            const dropdown = document.getElementById(prefix + '-dropdown');
+            
+            // Закрыть все остальные выпадающие списки
+            document.querySelectorAll('.multi-select-dropdown.open').forEach(dd => {
+                if (dd.id !== prefix + '-dropdown') {
+                    dd.classList.remove('open');
+                    dd.previousElementSibling.classList.remove('open');
+                }
+            });
+            
+            dropdown.classList.toggle('open');
+            button.classList.toggle('open');
+        }
+        
+        function closeDropdown(prefix) {
+            const button = document.getElementById(prefix + '-button');
+            const dropdown = document.getElementById(prefix + '-dropdown');
+            dropdown.classList.remove('open');
+            button.classList.remove('open');
+        }
+        
+        function updateButtonText(prefix) {
+            const text = document.getElementById(prefix + '-text');
+            const dropdown = document.getElementById(prefix + '-dropdown');
+            const checkedBoxes = dropdown.querySelectorAll('input[type="checkbox"]:checked:not(#' + prefix + '-all)');
+            
+            if (checkedBoxes.length === 0) {
+                const allCheckbox = document.getElementById(prefix + '-all');
+                text.textContent = allCheckbox.checked ? 'Все' : 'Ничего не выбрано';
+            } else if (checkedBoxes.length === 1) {
+                text.textContent = checkedBoxes[0].nextElementSibling.textContent;
+            } else {
+                text.textContent = `Выбрано: ${checkedBoxes.length}`;
+            }
+        }
+        
+        function getSelectedValues(prefix) {
+            const dropdown = document.getElementById(prefix + '-dropdown');
+            const allCheckbox = document.getElementById(prefix + '-all');
+            
+            if (allCheckbox.checked) {
+                return ['all'];
+            }
+            
+            const checkedBoxes = dropdown.querySelectorAll('input[type="checkbox"]:checked:not(#' + prefix + '-all)');
+            return Array.from(checkedBoxes).map(cb => cb.value);
+        }
+        
+        async function loadEquipment(areas) {
+            try {
+                if (!areas || areas.includes('all')) {
+                    // Загружаем все оборудование
+                    const response = await fetch('/gantt/equipment');
+                    const equipment = await response.json();
+                    populateMultiSelect('equipment', equipment, 'machine_name', 'Всё оборудование');
+                } else {
+                    // Загружаем оборудование для выбранных участков
+                    const equipmentPromises = areas.map(area => 
+                        fetch(`/gantt/equipment?area=${encodeURIComponent(area)}`).then(r => r.json())
+                    );
+                    const equipmentArrays = await Promise.all(equipmentPromises);
+                    const allEquipment = equipmentArrays.flat();
+                    const uniqueEquipment = allEquipment.filter((item, index, self) => 
+                        index === self.findIndex(t => t.machine_name === item.machine_name)
+                    );
+                    populateMultiSelect('equipment', uniqueEquipment, 'machine_name', 'Всё оборудование');
+                }
             } catch (error) {
                 console.error('Ошибка загрузки оборудования:', error);
             }
+        }
+        
+        function populateMultiSelect(prefix, data, valueField, allText) {
+            const dropdown = document.getElementById(prefix + '-dropdown');
+            const allCheckbox = document.getElementById(prefix + '-all');
+            
+            // Очищаем все опции кроме "Все"
+            const existingOptions = dropdown.querySelectorAll('.multi-select-option:not(:first-child)');
+            existingOptions.forEach(option => option.remove());
+            
+            // Добавляем новые опции
+            data.forEach(item => {
+                const option = document.createElement('div');
+                option.className = 'multi-select-option';
+                const value = item[valueField];
+                const displayText = item[valueField];
+                const safeId = `${prefix}-${value}`.replace(/[^a-zA-Z0-9-_]/g, '_');
+                
+                option.innerHTML = `
+                    <input type="checkbox" id="${safeId}" value="${value}">
+                    <label for="${safeId}">${displayText}</label>
+                `;
+                dropdown.appendChild(option);
+            });
+            
+            // Обновляем текст кнопки
+            updateButtonText(prefix);
         }
         
         async function loadInitialData() {
@@ -350,48 +600,38 @@
                 const response = await fetch('/dynamics/years');
                 const years = await response.json();
                 
-                const yearSelect = document.getElementById('year');
-                yearSelect.innerHTML = '<option value="all">Все</option>';
+                populateMultiSelect('year', years, 'year', 'Все');
                 
-                years.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.year;
-                    option.textContent = item.year;
-                    if (item.year == new Date().getFullYear()) {
-                        option.selected = true;
-                    }
-                    yearSelect.appendChild(option);
-                });
+                // Устанавливаем текущий год по умолчанию
+                const currentYear = new Date().getFullYear().toString();
+                const safeId = `year-${currentYear}`.replace(/[^a-zA-Z0-9-_]/g, '_');
+                const currentYearCheckbox = document.getElementById(safeId);
+                if (currentYearCheckbox) {
+                    currentYearCheckbox.checked = true;
+                    document.getElementById('year-all').checked = false;
+                    updateButtonText('year');
+                }
             } catch (error) {
                 console.error('Ошибка загрузки годов:', error);
             }
         }
         
         async function loadMonths() {
-            const year = document.getElementById('year').value;
-            if (year === 'all') return;
+            const years = getSelectedValues('year');
+            if (years.includes('all')) return;
             
             try {
-                const response = await fetch(`/dynamics/months?year=${year}`);
+                const response = await fetch(`/dynamics/months?year=${years.join(',')}`);
                 const months = await response.json();
-                
-                const monthSelect = document.getElementById('month');
-                const currentValue = monthSelect.value;
-                monthSelect.innerHTML = '<option value="all">Все</option>';
                 
                 const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
                 
-                months.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.month;
-                    option.textContent = monthNames[item.month - 1];
-                    monthSelect.appendChild(option);
-                });
+                const monthsWithNames = months.map(item => ({
+                    month: item.month,
+                    monthName: monthNames[item.month - 1]
+                }));
                 
-                if (currentValue !== 'all') {
-                    monthSelect.value = currentValue;
-                }
-                
+                populateMultiSelect('month', monthsWithNames, 'monthName', 'Все');
                 loadWeeks();
             } catch (error) {
                 console.error('Ошибка загрузки месяцев:', error);
@@ -399,27 +639,29 @@
         }
         
         async function loadWeeks() {
-            const year = document.getElementById('year').value;
-            const month = document.getElementById('month').value;
+            const years = getSelectedValues('year');
+            const months = getSelectedValues('month');
             
-            if (year === 'all' || month === 'all') {
-                document.getElementById('week').innerHTML = '<option value="all">Все</option>';
+            if (years.includes('all') || months.includes('all')) {
+                const dropdown = document.getElementById('week-dropdown');
+                const existingOptions = dropdown.querySelectorAll('.multi-select-option:not(:first-child)');
+                existingOptions.forEach(option => option.remove());
+                updateButtonText('week');
                 return;
             }
             
             try {
-                const response = await fetch(`/dynamics/weeks?year=${year}&month=${month}`);
+                // Преобразуем названия месяцев обратно в номера
+                const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+                const monthNumbers = months.map(monthName => {
+                    const index = monthNames.indexOf(monthName);
+                    return index + 1;
+                });
+                
+                const response = await fetch(`/dynamics/weeks?year=${years.join(',')}&month=${monthNumbers.join(',')}`);
                 const weeks = await response.json();
                 
-                const weekSelect = document.getElementById('week');
-                weekSelect.innerHTML = '<option value="all">Все</option>';
-                
-                weeks.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.week;
-                    option.textContent = item.week;
-                    weekSelect.appendChild(option);
-                });
+                populateMultiSelect('week', weeks, 'week', 'Все');
             } catch (error) {
                 console.error('Ошибка загрузки недель:', error);
             }
@@ -430,15 +672,7 @@
                 const response = await fetch('/gantt/areas');
                 const areas = await response.json();
                 
-                const areaSelect = document.getElementById('area');
-                areaSelect.innerHTML = '<option value="all">Все участки</option>';
-                
-                areas.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.area;
-                    option.textContent = item.area;
-                    areaSelect.appendChild(option);
-                });
+                populateMultiSelect('area', areas, 'area', 'Все участки');
             } catch (error) {
                 console.error('Ошибка загрузки участков:', error);
             }
@@ -449,15 +683,7 @@
                 const response = await fetch('/dynamics/failure-types');
                 const types = await response.json();
                 
-                const typeSelect = document.getElementById('failure-type');
-                typeSelect.innerHTML = '<option value="all">Все</option>';
-                
-                types.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.cause;
-                    option.textContent = item.cause;
-                    typeSelect.appendChild(option);
-                });
+                populateMultiSelect('failure-type', types, 'cause', 'Все');
             } catch (error) {
                 console.error('Ошибка загрузки типов поломок:', error);
             }
@@ -466,18 +692,34 @@
         async function applyFilters() {
             showLoading(true);
             try {
+                const months = getSelectedValues('month');
+                const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+                
+                let monthNumbers = months;
+                if (!months.includes('all')) {
+                    monthNumbers = months.map(monthName => {
+                        const index = monthNames.indexOf(monthName);
+                        return index + 1;
+                    });
+                }
+                
                 const params = {
-                    year: document.getElementById('year').value,
-                    month: document.getElementById('month').value,
-                    week: document.getElementById('week').value,
-                    area: document.getElementById('area').value,
-                    equipment: document.getElementById('equipment').value,
-                    failureType: document.getElementById('failure-type').value
+                    year: getSelectedValues('year'),
+                    month: monthNumbers,
+                    week: getSelectedValues('week'),
+                    area: getSelectedValues('area'),
+                    equipment: getSelectedValues('equipment'),
+                    failureType: getSelectedValues('failure-type')
                 };
                 
+                console.log('Параметры фильтрации:', params); // Добавим логирование для отладки
+                
                 const data = await fetchDynamicsData(params);
+                console.log('Полученные данные:', data); // Добавим логирование для отладки
+                
                 generateChart(data, params);
             } catch (error) {
+                console.error('Ошибка применения фильтров:', error); // Добавим детальное логирование
                 showError('Ошибка применения фильтров: ' + error.message);
             } finally {
                 showLoading(false);
@@ -487,8 +729,10 @@
         async function fetchDynamicsData(params) {
             const url = new URL('/dynamics/data', window.location.origin);
             Object.keys(params).forEach(key => {
-                if (params[key] && params[key] !== 'all') {
-                    url.searchParams.append(key, params[key]);
+                if (params[key] && params[key].length > 0 && !params[key].includes('all')) {
+                    params[key].forEach(value => {
+                        url.searchParams.append(key, value.toString());
+                    });
                 }
             });
             
@@ -677,11 +921,11 @@
         }
         
         function getXAxisTitle(params) {
-            if (params.week !== 'all') {
+            if (params.week && params.week.length > 0 && !params.week.includes('all')) {
                 return 'Дни месяца';
-            } else if (params.month !== 'all') {
+            } else if (params.month && params.month.length > 0 && !params.month.includes('all')) {
                 return 'Номера недель';
-            } else if (params.year !== 'all') {
+            } else if (params.year && params.year.length > 0 && !params.year.includes('all')) {
                 return 'Месяцы';
             } else {
                 return 'Годы';
