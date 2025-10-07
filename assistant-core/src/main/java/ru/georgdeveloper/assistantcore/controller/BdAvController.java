@@ -44,30 +44,48 @@ public class BdAvController {
     }
 
     @GetMapping("/months")
-    public List<Map<String, Object>> months(@RequestParam int year) {
-        logger.debug("Fetching available months for year: {}", year);
+    public List<Map<String, Object>> months(@RequestParam List<String> year) {
+        logger.debug("Fetching available months for years: {}", year);
+        if (year == null || year.isEmpty() || year.contains("all")) {
+            String sql = "SELECT DISTINCT MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) AS month FROM report_plant ORDER BY month";
+            List<Map<String, Object>> result = jdbcTemplate.queryForList(sql);
+            logger.debug("Retrieved {} months for all years", result.size());
+            return result;
+        }
         String sql = "SELECT DISTINCT MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) AS month FROM report_plant " +
-                "WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? ORDER BY month";
-        List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, year);
-        logger.debug("Retrieved {} months for year {}", result.size(), year);
+                "WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) IN (" + buildInClause(year.size()) + ") ORDER BY month";
+        Object[] params = year.stream().map(Integer::parseInt).toArray();
+        List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, params);
+        logger.debug("Retrieved {} months for years {}", result.size(), year);
         return result;
     }
 
     @GetMapping("/weeks")
-    public List<Map<String, Object>> weeks(@RequestParam int year, @RequestParam int month) {
-        logger.debug("Fetching available weeks for year: {} and month: {}", year, month);
+    public List<Map<String, Object>> weeks(@RequestParam List<String> year, @RequestParam List<String> month) {
+        logger.debug("Fetching available weeks for years: {} and months: {}", year, month);
+        if (year == null || year.isEmpty() || year.contains("all") || 
+            month == null || month.isEmpty() || month.contains("all")) {
+            String sql = "SELECT DISTINCT WEEK(STR_TO_DATE(production_day, '%d.%m.%Y'), 3) AS week FROM report_plant ORDER BY week";
+            List<Map<String, Object>> result = jdbcTemplate.queryForList(sql);
+            logger.debug("Retrieved {} weeks for all years and months", result.size());
+            return result;
+        }
         String sql = "SELECT DISTINCT WEEK(STR_TO_DATE(production_day, '%d.%m.%Y'), 3) AS week " +
-                "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? ORDER BY week";
-        List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, year, month);
-        logger.debug("Retrieved {} weeks for year {} and month {}", result.size(), year, month);
+                "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) IN (" + buildInClause(year.size()) + ") " +
+                "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) IN (" + buildInClause(month.size()) + ") ORDER BY week";
+        List<Object> params = new ArrayList<>();
+        for (String y : year) params.add(Integer.parseInt(y));
+        for (String m : month) params.add(Integer.parseInt(m));
+        List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, params.toArray());
+        logger.debug("Retrieved {} weeks for years {} and months {}", result.size(), year, month);
         return result;
     }
 
     @GetMapping("/data")
-    public List<Map<String, Object>> data(@RequestParam(required = false) Integer year,
-                                          @RequestParam(required = false) Integer month,
-                                          @RequestParam(required = false) Integer week,
-                                          @RequestParam(defaultValue = "Plant") String area,
+    public List<Map<String, Object>> data(@RequestParam(required = false) List<String> year,
+                                          @RequestParam(required = false) List<String> month,
+                                          @RequestParam(required = false) List<String> week,
+                                          @RequestParam(required = false) List<String> area,
                                           @RequestParam(defaultValue = "bd") String metric) {
         logger.debug("Fetching BD/AV data with parameters: year={}, month={}, week={}, area={}, metric={}", 
                     year, month, week, area, metric);
@@ -77,37 +95,50 @@ public class BdAvController {
         String groupBy;
         List<Object> args = new ArrayList<>();
 
-        if (week != null && month != null && year != null) {
+        // Определяем уровень детализации
+        if (week != null && !week.isEmpty() && !week.contains("all") &&
+            month != null && !month.isEmpty() && !month.contains("all") &&
+            year != null && !year.isEmpty() && !year.contains("all")) {
             periodSelect = "DATE_FORMAT(STR_TO_DATE(production_day, '%d.%m.%Y'), '%d')";
             groupBy = periodSelect;
-            args.add(year); args.add(month); args.add(week);
-        } else if (month != null && year != null) {
+            for (String y : year) args.add(Integer.parseInt(y));
+            for (String m : month) args.add(Integer.parseInt(m));
+            for (String w : week) args.add(Integer.parseInt(w));
+        } else if (month != null && !month.isEmpty() && !month.contains("all") &&
+                   year != null && !year.isEmpty() && !year.contains("all")) {
             periodSelect = "WEEK(STR_TO_DATE(production_day, '%d.%m.%Y'), 3)";
             groupBy = periodSelect;
-            args.add(year); args.add(month);
-        } else if (year != null) {
+            for (String y : year) args.add(Integer.parseInt(y));
+            for (String m : month) args.add(Integer.parseInt(m));
+        } else if (year != null && !year.isEmpty() && !year.contains("all")) {
             periodSelect = "MONTH(STR_TO_DATE(production_day, '%d.%m.%Y'))";
             groupBy = periodSelect;
-            args.add(year);
+            for (String y : year) args.add(Integer.parseInt(y));
         } else {
             periodSelect = "YEAR(STR_TO_DATE(production_day, '%d.%m.%Y'))";
             groupBy = periodSelect;
         }
 
         String filter;
-        if (week != null && month != null && year != null) {
-            filter = "WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? AND WEEK(STR_TO_DATE(production_day, '%d.%m.%Y'), 3) = ?";
-        } else if (month != null && year != null) {
-            filter = "WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ?";
-        } else if (year != null) {
-            filter = "WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ?";
+        if (week != null && !week.isEmpty() && !week.contains("all") &&
+            month != null && !month.isEmpty() && !month.contains("all") &&
+            year != null && !year.isEmpty() && !year.contains("all")) {
+            filter = "WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) IN (" + buildInClause(year.size()) + ") " +
+                    "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) IN (" + buildInClause(month.size()) + ") " +
+                    "AND WEEK(STR_TO_DATE(production_day, '%d.%m.%Y'), 3) IN (" + buildInClause(week.size()) + ")";
+        } else if (month != null && !month.isEmpty() && !month.contains("all") &&
+                   year != null && !year.isEmpty() && !year.contains("all")) {
+            filter = "WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) IN (" + buildInClause(year.size()) + ") " +
+                    "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) IN (" + buildInClause(month.size()) + ")";
+        } else if (year != null && !year.isEmpty() && !year.contains("all")) {
+            filter = "WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) IN (" + buildInClause(year.size()) + ")";
         } else {
             filter = "";
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
 
-        if ("all".equalsIgnoreCase(area)) {
+        if (area == null || area.isEmpty() || area.contains("all")) {
             logger.debug("Querying data for all areas");
             for (Map.Entry<String, String> entry : AREA_TABLE.entrySet()) {
                 String areaKey = entry.getKey();
@@ -116,14 +147,25 @@ public class BdAvController {
                 result.addAll(jdbcTemplate.queryForList(sql, args.toArray()));
             }
         } else {
-            String table = AREA_TABLE.getOrDefault(area, "report_plant");
-            logger.debug("Querying data for area: {} using table: {}", area, table);
-            String sql = "SELECT " + periodSelect + " AS period_label, AVG(" + valueColumn + ") AS value, '" + area + "' AS area FROM " + table + " " + filter + " GROUP BY " + groupBy + " ORDER BY 1";
-            result.addAll(jdbcTemplate.queryForList(sql, args.toArray()));
+            for (String areaName : area) {
+                String table = AREA_TABLE.getOrDefault(areaName, "report_plant");
+                logger.debug("Querying data for area: {} using table: {}", areaName, table);
+                String sql = "SELECT " + periodSelect + " AS period_label, AVG(" + valueColumn + ") AS value, '" + areaName + "' AS area FROM " + table + " " + filter + " GROUP BY " + groupBy + " ORDER BY 1";
+                result.addAll(jdbcTemplate.queryForList(sql, args.toArray()));
+            }
         }
 
         logger.debug("Retrieved {} data points", result.size());
         return result;
+    }
+    
+    private String buildInClause(int size) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < size; i++) {
+            if (i > 0) sb.append(",");
+            sb.append("?");
+        }
+        return sb.toString();
     }
 }
 

@@ -31,29 +31,49 @@ public class BdAvApiWebController {
 
     @SuppressWarnings("unchecked")
     @GetMapping("/months")
-    public List<Map<String, Object>> months(@RequestParam String year) {
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/months?year=" + year, List.class);
+    public List<Map<String, Object>> months(@RequestParam(required = false) List<String> year) {
+        if (year == null || year.isEmpty()) {
+            return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/months", List.class);
+        }
+        String yearParam = String.join(",", year);
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/months?year=" + yearParam, List.class);
     }
 
     @SuppressWarnings("unchecked")
     @GetMapping("/weeks")
-    public List<Map<String, Object>> weeks(@RequestParam String year, @RequestParam String month) {
+    public List<Map<String, Object>> weeks(@RequestParam(required = false) List<String> year, @RequestParam(required = false) List<String> month) {
+        if (year == null || year.isEmpty() || month == null || month.isEmpty()) {
+            return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/weeks", List.class);
+        }
+        String yearParam = String.join(",", year);
+        String monthParam = String.join(",", month);
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + 
-                "/bdav/weeks?year=" + year + "&month=" + month, List.class);
+                "/bdav/weeks?year=" + yearParam + "&month=" + monthParam, List.class);
     }
 
     @SuppressWarnings("unchecked")
     @GetMapping("/data")
-    public List<Map<String, Object>> data(@RequestParam(required = false) String year,
-                                          @RequestParam(required = false) String month,
-                                          @RequestParam(required = false) String week,
-                                          @RequestParam String area,
+    public List<Map<String, Object>> data(@RequestParam(required = false) List<String> year,
+                                          @RequestParam(required = false) List<String> month,
+                                          @RequestParam(required = false) List<String> week,
+                                          @RequestParam(required = false) List<String> area,
                                           @RequestParam String metric) {
         StringBuilder url = new StringBuilder(coreServiceUrl + "/bdav/data?");
-        if (year != null) url.append("year=").append(year).append('&');
-        if (month != null) url.append("month=").append(month).append('&');
-        if (week != null) url.append("week=").append(week).append('&');
-        url.append("area=").append(area).append('&');
+        if (year != null && !year.isEmpty()) {
+            year.forEach(y -> url.append("year=").append(y).append('&'));
+        }
+        if (month != null && !month.isEmpty()) {
+            month.forEach(m -> url.append("month=").append(m).append('&'));
+        }
+        if (week != null && !week.isEmpty()) {
+            week.forEach(w -> url.append("week=").append(w).append('&'));
+        }
+        if (area != null && !area.isEmpty()) {
+            area.forEach(a -> url.append("area=").append(a).append('&'));
+        } else {
+            // Если area не указан, используем "all" по умолчанию
+            url.append("area=all&");
+        }
         url.append("metric=").append(metric).append('&');
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
