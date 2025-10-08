@@ -68,91 +68,20 @@ cp assistant-telegram/src/main/resources/application.yml target/config/telegram-
 echo "████████████████████████████████████████ 100%"
 echo "✅ Configuration files copied"
 
-# Create startup script
+# Copy shell scripts
 echo
-echo "[8/8] Creating startup and stop scripts..."
+echo "[7.5/8] Copying shell scripts..."
 echo "████████████████████████████████████████ 0%"
-cat > target/start.sh << 'EOF'
-#!/bin/bash
+cp start.sh target/ 2>/dev/null
+echo "████████████████████████████████████████ 50%"
+cp stop.sh target/ 2>/dev/null
+echo "████████████████████████████████████████ 100%"
+echo "✅ Shell scripts copied"
 
-echo "Starting Repair AI Assistant..."
-
-# Check if Ollama is running
-echo "Checking Ollama service..."
-if ! curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
-    echo "Ollama is not running! Please start Ollama first."
-    exit 1
-fi
-
-# Start assistant-core
-echo "Starting assistant-core..."
-java -jar jars/assistant-core-0.0.1-SNAPSHOT.war --spring.config.location=config/core-application.yml > logs/core.log 2>&1 &
-CORE_PID=$!
-
-# Wait for core service
-echo "Waiting for core service to start..."
-while ! curl -s http://localhost:8080/actuator/health > /dev/null 2>&1; do
-    sleep 2
-done
-
-# Start assistant-web
-echo "Starting assistant-web..."
-java -jar jars/assistant-web-0.0.1-SNAPSHOT.war --spring.config.location=config/web-application.yml > logs/web.log 2>&1 &
-WEB_PID=$!
-
-# Wait for web service
-echo "Waiting for web service to start..."
-while ! curl -s http://localhost:8081 > /dev/null 2>&1; do
-    sleep 2
-done
-
-# Start assistant-telegram
-echo "Starting assistant-telegram..."
-java -jar jars/assistant-telegram-0.0.1-SNAPSHOT.war --spring.config.location=config/telegram-application.yml > logs/telegram.log 2>&1 &
-TELEGRAM_PID=$!
-
-echo "All services started successfully!"
-echo "Web interface: http://localhost:8081"
-echo "Core API: http://localhost:8080"
-echo "Telegram bot: Running on port 8082"
-echo ""
-echo "PIDs: Core=$CORE_PID, Web=$WEB_PID, Telegram=$TELEGRAM_PID"
-echo "Logs are in ./logs/ directory"
-echo "Press Ctrl+C to stop all services"
-
-# Save PIDs for stop script
-echo "$CORE_PID $WEB_PID $TELEGRAM_PID" > .pids
-
-# Wait for interrupt
-trap 'kill $CORE_PID $WEB_PID $TELEGRAM_PID; rm -f .pids; exit' INT
-wait
-EOF
-
-# Create stop script
-echo "Creating stop script..."
-cat > target/stop.sh << 'EOF'
-#!/bin/bash
-
-echo "Stopping Repair AI Assistant services..."
-
-# Kill processes by port
-kill $(lsof -t -i:8080) 2>/dev/null
-kill $(lsof -t -i:8081) 2>/dev/null
-kill $(lsof -t -i:8082) 2>/dev/null
-
-# Kill processes by PID if available
-if [ -f .pids ]; then
-    kill $(cat .pids) 2>/dev/null
-    rm -f .pids
-fi
-
-echo "All services stopped."
-EOF
-
-# Make scripts executable
+# Make copied scripts executable
 chmod +x target/start.sh target/stop.sh
 echo "████████████████████████████████████████ 100%"
-echo "✅ Scripts created"
+echo "✅ Scripts made executable"
 
 echo
 echo "========================================"
