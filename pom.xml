@@ -25,6 +25,7 @@
         <module>assistant-web</module>
         <module>assistant-telegram</module>
         <module>assistant-ai</module>
+        <module>assistant-base_update</module>
     </modules>
 
     <properties>

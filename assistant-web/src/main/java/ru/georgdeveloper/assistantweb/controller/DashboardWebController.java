@@ -66,6 +66,12 @@ public class DashboardWebController {
     }
 
     @SuppressWarnings("unchecked")
+    @GetMapping("/top-breakdowns-current")
+    public List<Map<String, Object>> topBreakdownsCurrent() {
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns-current", List.class);
+    }
+
+    @SuppressWarnings("unchecked")
     @GetMapping("/pm-plan-fact-tag")
     public List<Map<String, Object>> pmPlanFactTag() {
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/pm-plan-fact-tag", List.class);

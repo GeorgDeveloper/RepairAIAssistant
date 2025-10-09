@@ -4,4 +4,4 @@ server:
 
 spring:
   config:
-    import: file:../application.yml
+    import: optional:file:../application.yml

@@ -17,27 +17,27 @@ echo ✅ Java found
 
 REM Check if Maven is available
 echo [2/8] Checking Maven installation...
-mvn -version >nul 2>&1
-if errorlevel 1 (
-    echo ❌ Maven not found! Please install Maven.
+call mvn -version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Maven not found! Please install Maven.
+    pause
     exit /b 1
 )
-echo ✅ Maven found
+echo [OK] Maven found
 
 REM Clean and build all modules
-echo.
 echo [3/8] Cleaning previous builds...
-echo ████████████████████████████████████████ 0%%
-mvn clean -q
-echo ████████████████████████████████████████ 100%%
-echo ✅ Clean completed
+echo [                                        ] 0%%
+call mvn clean -q
+echo [########################################] 100%%
+echo [OK] Clean completed
 
 echo.
 echo [4/8] Building all modules...
-echo ████████████████████████████████████████ 0%%
-mvn package -DskipTests -q
-echo ████████████████████████████████████████ 100%%
-echo ✅ Build completed
+echo [                                        ] 0%%
+call mvn package -DskipTests -q
+echo [########################################] 100%%
+echo [OK] Build completed
 
 REM Create target directory structure
 echo.
@@ -56,10 +56,14 @@ echo.
 echo [6/8] Copying application files...
 echo ████████████████████████████████████████ 0%%
 copy "assistant-core\target\*.war" "target\jars\" >nul 2>&1
-echo ████████████████████████████████████████ 33%%
+echo ████████████████████████████████████████ 20%%
 copy "assistant-web\target\*.war" "target\jars\" >nul 2>&1
-echo ████████████████████████████████████████ 66%%
+echo ████████████████████████████████████████ 40%%
 copy "assistant-telegram\target\*.war" "target\jars\" >nul 2>&1
+echo ████████████████████████████████████████ 60%%
+copy "assistant-ai\target\*.war" "target\jars\" >nul 2>&1
+echo ████████████████████████████████████████ 80%%
+copy "assistant-base_update\target\*.war" "target\jars\" >nul 2>&1
 echo ████████████████████████████████████████ 100%%
 echo ✅ Application files copied
 
@@ -68,10 +72,16 @@ echo.
 echo [7/8] Copying configuration files...
 echo ████████████████████████████████████████ 0%%
 copy "assistant-core\src\main\resources\application.yml" "target\config\core-application.yml" >nul 2>&1
-echo ████████████████████████████████████████ 33%%
+echo ████████████████████████████████████████ 20%%
 copy "assistant-web\src\main\resources\application.yml" "target\config\web-application.yml" >nul 2>&1
-echo ████████████████████████████████████████ 66%%
+echo ████████████████████████████████████████ 40%%
 copy "assistant-telegram\src\main\resources\application.yml" "target\config\telegram-application.yml" >nul 2>&1
+echo ████████████████████████████████████████ 60%%
+copy "assistant-ai\src\main\resources\application.yml" "target\config\ai-application.yml" >nul 2>&1
+echo ████████████████████████████████████████ 80%%
+copy "assistant-base_update\src\main\resources\application.yml" "target\config\base-update-application.yml" >nul 2>&1
+echo ████████████████████████████████████████ 90%%
+copy "application.yml" "target\application.yml" >nul 2>&1
 echo ████████████████████████████████████████ 100%%
 echo ✅ Configuration files copied
 
@@ -80,67 +90,31 @@ echo.
 echo [8/8] Preparing Linux deployment scripts...
 echo ████████████████████████████████████████ 0%%
 
-REM Create Linux start script
+REM Create Linux start script (minimal, no checks or wait loops)
+setlocal DisableDelayedExpansion
 (
 echo #!/bin/bash
-echo.
-echo echo "Starting Repair AI Assistant..."
-echo.
-echo # Check if Java is available
-echo if ! command -v java ^&^> /dev/null; then
-echo     echo "Java not found! Please install Java 17 or higher."
-echo     exit 1
-echo fi
-echo.
-echo # Check if Ollama is running
-echo echo "Checking Ollama service..."
-echo if ! curl -s http://localhost:11434/api/tags ^&^> /dev/null 2^>^&1; then
-echo     echo "Ollama is not running! Please start Ollama first."
-echo     exit 1
-echo fi
-echo.
-echo # Start assistant-core
-echo echo "Starting assistant-core..."
-echo java -jar jars/assistant-core-0.0.1-SNAPSHOT.war --spring.config.location=config/core-application.yml ^> logs/core.log 2^>^&1 ^&
+echo
+echo mkdir -p logs
+echo
+echo echo "Starting services..."
+echo
+echo java -jar jars/assistant-core-0.0.1-SNAPSHOT.war --spring.config.location=config/core-application.yml --spring.config.additional-location=optional:application.yml ^> logs/core.log 2^>^&1 ^&
 echo CORE_PID=$!
-echo.
-echo # Wait for core service
-echo echo "Waiting for core service to start..."
-echo while ! curl -s http://localhost:8080/actuator/health ^&^> /dev/null 2^>^&1; do
-echo     sleep 2
-echo done
-echo.
-echo # Start assistant-web
-echo echo "Starting assistant-web..."
-echo java -jar jars/assistant-web-0.0.1-SNAPSHOT.war --spring.config.location=config/web-application.yml ^> logs/web.log 2^>^&1 ^&
+echo java -jar jars/assistant-web-0.0.1-SNAPSHOT.war --spring.config.location=config/web-application.yml --spring.config.additional-location=optional:application.yml ^> logs/web.log 2^>^&1 ^&
 echo WEB_PID=$!
-echo.
-echo # Wait for web service
-echo echo "Waiting for web service to start..."
-echo while ! curl -s http://localhost:8081 ^&^> /dev/null 2^>^&1; do
-echo     sleep 2
-echo done
-echo.
-echo # Start assistant-telegram
-echo echo "Starting assistant-telegram..."
-echo java -jar jars/assistant-telegram-0.0.1-SNAPSHOT.war --spring.config.location=config/telegram-application.yml ^> logs/telegram.log 2^>^&1 ^&
+echo java -jar jars/assistant-telegram-0.0.1-SNAPSHOT.war --spring.config.location=config/telegram-application.yml --spring.config.additional-location=optional:application.yml ^> logs/telegram.log 2^>^&1 ^&
 echo TELEGRAM_PID=$!
-echo.
-echo echo "All services started successfully!"
-echo echo "Web interface: http://localhost:8081"
-echo echo "Core API: http://localhost:8080"
-echo echo "Telegram bot: Running on port 8082"
-echo echo ""
-echo echo "PIDs: Core=$CORE_PID, Web=$WEB_PID, Telegram=$TELEGRAM_PID"
-echo echo "Logs are in ./logs/ directory"
-echo echo "Press Ctrl+C to stop all services"
-echo.
-echo # Save PIDs for stop script
-echo echo "$CORE_PID $WEB_PID $TELEGRAM_PID" ^> .pids
-echo.
-echo # Wait for interrupt
-echo trap 'kill $CORE_PID $WEB_PID $TELEGRAM_PID; rm -f .pids; exit' INT
-echo wait
+echo java -jar jars/assistant-ai-0.0.1-SNAPSHOT.war --spring.config.location=config/ai-application.yml --spring.config.additional-location=optional:application.yml ^> logs/ai.log 2^>^&1 ^&
+echo AI_PID=$!
+echo java -jar jars/assistant-base_update-1.0.0.war --spring.config.location=config/base-update-application.yml --spring.config.additional-location=optional:application.yml ^> logs/base-update.log 2^>^&1 ^&
+echo BASE_UPDATE_PID=$!
+echo
+echo echo "Started. Logs: ./logs."
+echo echo "PIDs: Core=$CORE_PID Web=$WEB_PID Telegram=$TELEGRAM_PID AI=$AI_PID BaseUpdate=$BASE_UPDATE_PID"
+echo echo "Use scripts/stop.sh to stop."
+echo
+echo echo "$CORE_PID $WEB_PID $TELEGRAM_PID $AI_PID $BASE_UPDATE_PID" ^> .pids
 ) > "target\scripts\start.sh"
 
 REM Create Linux stop script
@@ -153,6 +127,8 @@ echo # Kill processes by port
 echo kill $(lsof -t -i:8080^) 2^>^/dev/null
 echo kill $(lsof -t -i:8081^) 2^>^/dev/null
 echo kill $(lsof -t -i:8082^) 2^>^/dev/null
+echo kill $(lsof -t -i:8085^) 2^>^/dev/null
+echo kill $(lsof -t -i:8084^) 2^>^/dev/null
 echo.
 echo # Kill processes by PID if available
 echo if [ -f .pids ]; then
@@ -162,6 +138,7 @@ echo fi
 echo.
 echo echo "All services stopped."
 ) > "target\scripts\stop.sh"
+setlocal EnableDelayedExpansion
 
 REM Create deployment instructions
 (
@@ -186,11 +163,15 @@ echo ## Services
 echo - Core API: http://localhost:8080
 echo - Web Interface: http://localhost:8081  
 echo - Telegram Bot: Port 8082
+echo - AI Service: Port 8083
+echo - Base Update Service: Port 8084
 echo.
 echo ## Logs
 echo - Core: logs/core.log
 echo - Web: logs/web.log
 echo - Telegram: logs/telegram.log
+echo - AI: logs/ai.log
+echo - Base Update: logs/base-update.log
 echo.
 echo ## Stop Services
 echo ./scripts/stop.sh
@@ -199,15 +180,37 @@ echo ./scripts/stop.sh
 echo ████████████████████████████████████████ 100%%
 echo ✅ Linux deployment scripts created
 
+REM Make shell scripts executable (for WSL or Git Bash)
+echo.
+echo [9/8] Setting executable permissions...
+if exist "target\scripts\start.sh" (
+    echo Setting permissions for start.sh...
+    call wsl chmod +x target/scripts/start.sh 2>nul || echo Note: WSL not available, permissions will be set on Linux
+)
+if exist "target\scripts\stop.sh" (
+    echo Setting permissions for stop.sh...
+    call wsl chmod +x target/scripts/stop.sh 2>nul || echo Note: WSL not available, permissions will be set on Linux
+)
+REM Normalize encoding to UTF-8 (no BOM) and Unix line endings (LF)
+for %%F in ("target\scripts\start.sh" "target\scripts\stop.sh") do (
+    if exist %%F (
+        echo Converting %%F to UTF-8 (no BOM) with LF endings...
+        powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+          "$p='%%F'; $t=Get-Content -Raw -LiteralPath $p; $t=$t -replace '\r\n','\n' -replace '\r','\n'; ^
+           [IO.File]::WriteAllText($p, $t, New-Object System.Text.UTF8Encoding($false));"
+    )
+)
+echo ✅ Permissions configured
+
 echo.
 echo ========================================
 echo           BUILD COMPLETED!
 echo ========================================
 echo.
 echo 📦 Production build location:
-echo   • WAR files: target\jars\
-echo   • Configuration: target\config\
-echo   • Linux scripts: target\scripts\
+echo   • WAR files: target\jars\ (5 modules: core, web, telegram, ai, base_update)
+echo   • Configuration: target\config\ (5 config files)
+echo   • Linux scripts: target\scripts\ (start.sh, stop.sh)
 echo   • Deployment guide: target\DEPLOYMENT.md
 echo.
 echo 🚀 Next steps:
@@ -215,4 +218,4 @@ echo   1. Copy target\ directory to your Linux server
 echo   2. On Linux: chmod +x scripts/*.sh
 echo   3. On Linux: ./scripts/start.sh
 echo.
-echo ✅ Production build successful! Ready for Linux deployment.
+echo ✅ Production build successful! All 5 modules ready for Linux deployment.

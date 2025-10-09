@@ -30,7 +30,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: dbaPass
+    password: DbaPass123!
     driver-class-name: com.mysql.cj.jdbc.Driver
   http:
     encoding:
@@ -67,8 +67,8 @@ ai:
 telegram:
   bot:
     enabled: true
-    token: ${TELEGRAM_BOT_TOKEN:7086789672:AAEOnxfD5SiwEkuFiZssPlw5TgX8Pc4zpiw}
-    username: js_mai_bot
+    token: ${TELEGRAM_BOT_TOKEN:8012443751:AAHz3jiRV_QuUtu4nraFzb-P4mr7Z9XVm3k}
+    username: KvantAibot
     webhook-url: ${TELEGRAM_WEBHOOK_URL:}
 
 # Файловая система
@@ -131,9 +131,9 @@ data-sync:
     driver: com.microsoft.sqlserver.jdbc.SQLServerDriver
     timeout: 30
   mysql:
-    url: jdbc:mysql://10.130.142.142:3306/monitor_bd?useUnicode=true&characterEncoding=UTF-8
-    username: test_user
-    password: Password%123
+    url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
+    username: dba
+    password: DbaPass123!
     driver: com.mysql.cj.jdbc.Driver
   areas:
     - name: Plant

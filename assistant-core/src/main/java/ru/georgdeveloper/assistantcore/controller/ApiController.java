@@ -27,13 +27,46 @@ public class ApiController {
     
     // Используем MonitoringRepository вместо прямых SQL-запросов
     private final MonitoringRepository monitoringRepository;
+    private final ru.georgdeveloper.assistantcore.service.RepairAssistantService repairAssistantService;
 
     /**
      * Конструктор контроллера
      * @param monitoringRepository репозиторий для справочных данных
      */
-    public ApiController(MonitoringRepository monitoringRepository) {
+    public ApiController(MonitoringRepository monitoringRepository,
+                         ru.georgdeveloper.assistantcore.service.RepairAssistantService repairAssistantService) {
         this.monitoringRepository = monitoringRepository;
+        this.repairAssistantService = repairAssistantService;
+    }
+
+    /**
+     * Анализ запроса пользователя через AI.
+     * Тело запроса — строка (UTF-8 JSON string), возвращает текстовый ответ.
+     */
+    @PostMapping(value = "/analyze", consumes = "application/json;charset=UTF-8", produces = "text/plain;charset=UTF-8")
+    public String analyze(@RequestBody String request) {
+        logger.info("[analyze] incoming: {}", request);
+        String normalized = request;
+        if (normalized != null && normalized.length() >= 2 && normalized.startsWith("\"") && normalized.endsWith("\"")) {
+            normalized = normalized.substring(1, normalized.length() - 1)
+                    .replace("\\\"", "\"")
+                    .replace("\\n", "\n")
+                    .replace("\\r", "\r")
+                    .replace("\\t", "\t")
+                    .replace("\\\\", "\\");
+        }
+        String response = repairAssistantService.processRepairRequest(normalized);
+        logger.info("[analyze] response: {}", response);
+        return response;
+    }
+
+    /**
+     * Приём фидбэка из веб-интерфейса; сохранять пока некуда — просто логируем.
+     */
+    @PostMapping(value = "/feedback", consumes = "application/json;charset=UTF-8", produces = "text/plain;charset=UTF-8")
+    public String feedback(@RequestBody Map<String, Object> body) {
+        logger.info("[feedback] {}", body);
+        return "ok";
     }
     
 
