@@ -22,6 +22,7 @@
                     <a href="#">Инфопанель</a>
                     <ul class="submenu">
                         <li><a href="/dashboard">Показатели Online</a></li>
+                        <li><a href="/dashboard_graf">Показатели Online График</a></li>
                         <li><a href="/final">ИТОГИ</a></li>
                     </ul>
                 </li>
@@ -114,41 +115,39 @@
                 .total-content { height: 90% !important; }
 				.main-content { height: 100% !important; padding-top: 16px; }
 				.container { height: 100%; box-sizing: border-box; padding: 0 16px; }
-				.dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; grid-gap: 16px; height: calc(100vh - 128px); }
-				.stack { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); grid-gap: 16px; height: 100%; min-height: 0; }
+				.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; height: calc(100vh - 128px); }
+				.stack { display: grid; grid-gap: 16px; height: 100%; min-height: 0; overflow: auto; }
 				.card { background: #fff; padding: 8px; height: 100%; display: flex; flex-direction: column; min-height: 0; }
-				.right-stack { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); grid-gap: 16px; height: 100%; min-height: 0; }
+				.right-stack { display: grid; grid-gap: 16px; height: 100%; min-height: 0; overflow: auto;}
 				.panel { background: #fff; padding: 8px; height: 100%; display: flex; flex-direction: column; min-height: 0; }
 				.panel h3 { margin-top: 0; }
-				.chart-container, #metricsTable, #topBreakdownsTable, #topBreakdownsKeyLinesTable { height: 100%; }
+				.chart-container, #metricsTable, #topBreakdownsTable { height: auto; }
 				.chart-container { overflow: hidden; }
-				.table-container { height: 100%; overflow: auto; }
+				.table-container { height: 100%;}
+
+				/* Таблицы метрик и топов */
+				.target-met { background-color: #e6ffed; color: #115e1b; }
+				.target-not-met { background-color: #ffe6e6; color: #7a1212; }
+				.table-container-metrics { height: 100%;}
+				.chart-container-metrics { height: 100%;}
 			</style>
             <div class="container">
 				<div class="dashboard-grid">
 					<div class="stack">
-						<div class="card">
-							<div id="resizable_breakDownOnline" class="chart-container" style="height: 100%">
-								<div id="breakDown" style="height: 100%; width: 100%;"></div>
+
+							<div class="table-container-metrics">
+								<div class="chart-container-metrics">
+									<div id="metricsTable-lines"></div>
+								</div>
 							</div>
-						</div>
-						<div class="card">
-							<div id="resizable_availabilityOnline" class="chart-container" style="height: 100%">
-								<div id="availabilityOnline" style="height: 100%; width: 100%;"></div>
-							</div>
-						</div>
 					</div>
 					<div class="right-stack">
-						<div class="card">
-							<div class="table-container">
-								<div class="chart-container">
+							<div class="table-container-metrics">
+								<div class="chart-container-metrics">
 									<div id="metricsTable"></div>
 								</div>
 							</div>
-						</div>
-                        <div class="panel">
-                            <h3 id="keyLinesHeader">Ключевые линии</h3>
-							<div id="topBreakdownsKeyLinesTable"></div>
+                        <div class="chart-container-metrics">
                             <h3 id="topBreakdownsHeader">Топ поломок за сутки</h3>
 							<div id="topBreakdownsTable"></div>
                             <h3 id="topBreakdownsCurrentHeader">Топ поломок — <span id="currentDateSpan"></span></h3>
@@ -288,6 +287,7 @@
                 
                 // Обновляем таблицу с текущими данными
                 createMetricsTable(bdData, availabilityData);
+                createKeyLinesMetricsTable(bdData, availabilityData);
             } catch (error) {
                 console.error('Ошибка при загрузке онлайн графиков:', error);
             }
@@ -358,6 +358,73 @@
             document.getElementById('metricsTable').innerHTML = tableHTML;
         }
 
+        // Таблица метрик по ключевым линиям (используем значения их участков)
+        function createKeyLinesMetricsTable(bdData, availabilityData) {
+            const currentDate = new Date().toLocaleDateString('ru-RU');
+
+            // Сопоставление ключевых линий с участками (area), чтобы подставить их текущие значения
+            const keyLinesMap = [
+                { label: 'Mixer GK 270 T-C 2.1', areaKey: 'NewMixingArea' },
+                { label: 'Mixer GK 320 E 1.1', areaKey: 'NewMixingArea' },
+                { label: 'Calender Complex Berstorf - 01', areaKey: 'SemifinishingArea' },
+                { label: 'Bandina - 01', areaKey: 'SemifinishingArea' },
+                { label: 'Duplex - 01', areaKey: 'SemifinishingArea' },
+                { label: 'Calender Comerio Ercole - 01', areaKey: 'SemifinishingArea' },
+                { label: 'VMI APEX - 01', areaKey: 'BuildingArea' },
+                { label: 'VMI APEX - 02', areaKey: 'BuildingArea' },
+                { label: 'Trafila Quadruplex - 01', areaKey: 'SemifinishingArea' },
+                { label: 'Bartell Bead Machine - 01', areaKey: 'SemifinishingArea' },
+                { label: 'TTM fisher belt cutting - 01', areaKey: 'FinishingArea' },
+                { label: 'VMI TPCS 1600-1000', areaKey: 'BuildingArea' }
+            ];
+
+            const getCurrentValueByArea = (data, areaKey) => {
+                if (!data || !Array.isArray(data)) return 0;
+                const areaData = data.filter(item => item.area === areaKey);
+                if (areaData.length === 0) return 0;
+                const last = areaData[areaData.length - 1];
+                const val = Number(last && last.value);
+                return isNaN(val) ? 0 : val;
+            };
+
+            let tableHTML = `
+            <table class="metrics-table">
+                <thead>
+                    <tr>
+                        <th>Ключевая линия</th>
+                        <th>Цель</th>
+                        <th>${currentDate}</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            keyLinesMap.forEach(({ label, areaKey }) => {
+                const bdValue = getCurrentValueByArea(bdData, areaKey);
+                const availabilityValue = getCurrentValueByArea(availabilityData, areaKey);
+
+                tableHTML += `
+                <tr class="section-header">
+                    <td colspan="3">${label}</td>
+                </tr>
+                <tr>
+                    <td>BD</td>
+                    <td>2%</td>
+                    <td class="${bdValue <= 2 ? 'target-met' : 'target-not-met'}">${bdValue.toFixed(2)}%</td>
+                </tr>
+                <tr>
+                    <td>Доступность</td>
+                    <td>97%</td>
+                    <td class="${availabilityValue >= 97 ? 'target-met' : 'target-not-met'}">${availabilityValue.toFixed(2)}%</td>
+                </tr>
+            `;
+            });
+
+            tableHTML += '</tbody></table>';
+            const container = document.getElementById('metricsTable-lines');
+            if (container) container.innerHTML = tableHTML;
+        }
+
         // Функция для создания таблицы топ поломок
         function createTopBreakdownsTable(data, containerId, isWeekly = false) {
             if (!data || !Array.isArray(data) || data.length === 0) {
@@ -392,8 +459,6 @@
         async function loadTopBreakdownsTables() {
             const topBreakdowns = await fetchData('/dashboard/top-breakdowns');
             createTopBreakdownsTable(topBreakdowns, 'topBreakdownsTable');
-            const topBreakdownsKeyLines = await fetchData('/dashboard/top-breakdowns-key-lines');
-    createTopBreakdownsTable(topBreakdownsKeyLines, 'topBreakdownsKeyLinesTable', true);
 
     // Текущий ТОП (онлайн)
     const topCurrent = await fetchData('/dashboard/top-breakdowns-current');
@@ -423,9 +488,7 @@
     // Добавляем в заголовки дату прошедших суток и текущую дату
     const yesterday = new Date(Date.now() - 24*60*60*1000).toLocaleDateString('ru-RU');
     const today = new Date().toLocaleDateString('ru-RU');
-    const keyLinesHeader = document.getElementById('keyLinesHeader');
     const topBreakdownsHeader = document.getElementById('topBreakdownsHeader');
-    if (keyLinesHeader) keyLinesHeader.textContent = `Ключевые линии — ${yesterday}`;
     if (topBreakdownsHeader) topBreakdownsHeader.textContent = `Топ поломок за сутки — ${yesterday}`;
     const currentSpan = document.getElementById('currentDateSpan');
     if (currentSpan) currentSpan.textContent = today;

@@ -1,13 +1,45 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Repair AI Assistant</title>
     <link rel="icon" type="image/png" href="/static/images/LogoPirelli3.png">
     <link rel="stylesheet" href="static/styles/style.css">
-    <link href="https://canvasjs.com/assets/css/jquery-ui.1.11.2.min.css" rel="stylesheet" />
+    <link href="https://canvasjs.com/assets/css/jquery-ui.1.11.2.min.css" rel="stylesheet">
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-gap: 16px;
+            height: calc(100vh - 136px);
+            padding: 20px 0;
+        }
+        .left-pane {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            grid-row-gap: 16px;
+        }
+        .top-charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-gap: 16px;
+            height: 100%;
+        }
+        .top-charts .chart-container,
+        .pm-holder .chart-container,
+        .pm-holder #resizablePm {
+            height: 100% !important;
+        }
+        .pm-holder {
+            min-height: 0;
+            height: 100%;
+        }
+        .pm-holder .table-container {
+            height: 100% !important;
+            max-height: none;
+        }
+    </style>
 </head>
 
 <body>
@@ -23,6 +55,7 @@
                     <a href="#">Инфопанель</a>
                     <ul class="submenu">
                         <li><a href="/dashboard">Показатели Online</a></li>
+                        <li><a href="/dashboard_graf">Показатели Online График</a></li>
                         <li><a href="/final">ИТОГИ</a></li>
                     </ul>
                 </li>
@@ -110,18 +143,7 @@
             </div>
         </div>
 
-        <div class="main-content" style="width: auto !important; height: 100% - 80px !important;">
-            <style>
-                .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; height: calc(100vh - 136px); padding-top: 20px; padding-bottom: 20px; }
-                .left-pane { display: grid; grid-template-rows: 1fr 1fr; grid-row-gap: 16px; min-height: 0; }
-                .top-charts { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; height: 100%; }
-                .top-charts .chart-container { height: 100% !important; }
-                .weekly-section .chart-container { height: auto; }
-                .pm-holder .chart-container { height: 100% !important; }
-                .pm-holder #resizablePm { height: 100% !important; }
-                .pm-holder { min-height: 0; height: 100%; }
-                .pm-holder .table-container { height: 100% !important; max-height: none; }
-            </style>
+        <div class="main-content" style="width: auto !important; height: calc(100% - 80px) !important;">
 
             <div class="dashboard-grid">
                 <div class="left-pane">
@@ -134,9 +156,6 @@
                         </div>
                     </div>
 
-                    <!-- <div class="weekly-section">
-                        
-                    </div> -->
 
                     <div class="pm-holder">
                         <div class="table-container">
@@ -152,13 +171,12 @@
                         <div class="chart-container-metrics">
                             <div id="metricsTable"></div>
                         </div>
-
-                            <div class="chart-container-metrics">
-                                <h3>Ключевые линии (неделя)</h3>
-                                <div id="topBreakdownsWeekKeyLinesTable"></div>
-                                <h3>Топ поломок за неделю</h3>
-                                <div id="topBreakdownsWeekTable"></div>
-                            </div>
+                        <div class="chart-container-metrics">
+                            <h3>Ключевые линии (неделя)</h3>
+                            <div id="topBreakdownsWeekKeyLinesTable"></div>
+                            <h3>Топ поломок за неделю</h3>
+                            <div id="topBreakdownsWeekTable"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -171,380 +189,324 @@
     <script src="https://cdn.canvasjs.com/jquery.canvasjs.min.js"></script>
 
     <script>
-        // Функция для получения данных с сервера
-        async function fetchData(url) {
-            try {
-                console.log('Запрос данных по URL:', url);
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+        // API функции
+        const API = {
+            async fetchData(url) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    console.error('Ошибка при получении данных:', error);
+                    return null;
                 }
-                const data = await response.json();
-                console.log('Получены данные:', data);
-                return data;
-            } catch (error) {
-                console.error('Ошибка при получении данных:', error);
-                return null;
+            },
+            
+            async fetchCurrentMetrics() {
+                return this.fetchData('/dashboard/current-metrics');
             }
-        }
+        };
 
-        // Функция для получения текущих показателей
-        async function fetchCurrentMetrics() {
-            try {
-                const response = await fetch('/dashboard/current-metrics');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+        // Утилиты
+        const Utils = {
+            filterEmptyData(dataPoints) {
+                return dataPoints?.filter(point => 
+                    point.y !== null && point.y !== undefined && point.y !== 0
+                ) || [];
+            },
+            
+            getColorForPoint(value, type) {
+                if (type === "breakDown" && value > 2) return "#dc3545";
+                if (type === "availability" && value < 97) return "#dc3545";
+                return "#007bff";
+            },
+            
+            formatSecondsToHHMMSS(totalSeconds) {
+                const s = Number(totalSeconds || 0);
+                const h = Math.floor(s / 3600);
+                const m = Math.floor((s % 3600) / 60);
+                const sec = Math.floor(s % 60);
+                const pad = n => String(n).padStart(2, '0');
+                return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+            }
+        };
+
+        // Создание графиков
+        const Charts = {
+            create(containerId, chartId, title, dataPoints, chartType) {
+                const filteredData = Utils.filterEmptyData(dataPoints);
+                
+                if (!filteredData.length) {
+                    document.querySelector(chartId).innerHTML = 
+                        `<div style="text-align: center; padding-top: 50px; color: #677;">
+                            <h3>${title}</h3>
+                            <p>Нет данных для отображения</p>
+                        </div>`;
+                    return;
                 }
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Ошибка при получении текущих показателей:', error);
-                return null;
-            }
-        }
+                
+                const uniqueDataMap = new Map();
+                filteredData.forEach(point => {
+                    if (point.label && point.y != null) {
+                        uniqueDataMap.set(point.label, point.y);
+                    }
+                });
+                
+                const coloredDataPoints = Array.from(uniqueDataMap.entries())
+                    .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+                    .map(([label, y]) => ({
+                        label, y,
+                        color: Utils.getColorForPoint(y, chartType)
+                    }));
+                
+                const options = {
+                    animationEnabled: true,
+                    title: { text: title, fontSize: 14 },
+                    axisX: {
+                        labelAngle: -45,
+                        interval: 2,
+                        labelAutoFit: true,
+                        labelMaxWidth: 80,
+                        labelFontSize: 10
+                    },
+                    axisY: { suffix: "%", labelFontSize: 10 },
+                    data: [{
+                        type: "column",
+                        showInLegend: false,
+                        dataPoints: coloredDataPoints,
+                        dataPointWidth: 10
+                    }]
+                };
+                
+                $(containerId).resizable({
+                    create() {
+                        $(chartId).CanvasJSChart(options);
+                        const chart = $(chartId).CanvasJSChart();
+                        setTimeout(() => chart.render(), 0);
+                        setTimeout(() => chart.render(), 150);
+                    },
+                    resize() {
+                        $(chartId).CanvasJSChart().render();
+                    }
+                });
+            },
 
-        // Функция для фильтрации пустых данных
-        function filterEmptyData(dataPoints) {
-            if (!dataPoints || dataPoints.length === 0) return [];
-
-            return dataPoints.filter(point =>
-                point.y !== null && point.y !== undefined && point.y !== 0
-            );
-        }
-
-        // Функция для определения цвета точки
-        function getColorForPoint(value, type) {
-            if (type === "breakDown" && value > 2) {
-                return "#dc3545"; // Красный для breakDown > 2%
-            } else if (type === "availability" && value < 97) {
-                return "#dc3545"; // Красный для availability < 97%
-            }
-            return "#007bff"; // Синий по умолчанию
-        }
-
-        // Функция для создания графика
-        function createChart(containerId, chartId, title, dataPoints, chartType) {
-            console.log(`Создание графика ${title} с данными:`, dataPoints);
-
-            // Фильтруем пустые данные
-            const filteredData = filterEmptyData(dataPoints);
-
-            if (!filteredData || filteredData.length === 0) {
-                console.warn('Нет данных для графика:', title);
-                document.querySelector(chartId).innerHTML =
-                    `<div style="text-align: center; padding-top: 50px; color: #677;">
-                <h3>${title}</h3>
-                <p>Нет данных для отображения</p>
-            </div>`;
-                return;
-            }
-
-            // Убедимся, что все даты уникальны и отсортированы
-            const uniqueDataMap = new Map();
-            filteredData.forEach(point => {
-                if (point.label && point.y !== null && point.y !== undefined) {
-                    uniqueDataMap.set(point.label, point.y);
+            
+            createPmLineChart(containerSelector, chartSelector, data) {
+                if (!data?.length) {
+                    document.querySelector(chartSelector).innerHTML = '<p>Нет данных для отображения</p>';
+                    return;
                 }
-            });
+                
+                const parse = key => data.map(x => ({ 
+                    label: x.production_day, 
+                    y: Number(x[key]) || 0 
+                }));
+                
+                const totalPlan = data.reduce((s, x) => s + (Number(x.plan) || 0), 0);
+                const totalFact = data.reduce((s, x) => s + (Number(x.fact) || 0), 0);
+                const completion = totalPlan > 0 ? Math.round((totalFact / totalPlan) * 100) : 0;
+                
+                const options = {
+                    animationEnabled: true,
+                    backgroundColor: "#ffffff",
+                    title: { text: "PM: План / Факт / Tag", fontSize: 14 },
+                    subtitles: [{
+                        text: `Выполнение: ${completion}%`,
+                        verticalAlign: "top",
+                        horizontalAlign: "right",
+                        dockInsidePlotArea: true
+                    }],
+                    axisX: { title: "Дата", labelAngle: -45, margin: 10, labelFontSize: 10 },
+                    axisY: { title: "Количество", includeZero: true, margin: 10, labelFontSize: 10 },
+                    legend: { verticalAlign: "bottom" },
+                    data: [
+                        { type: "line", name: "Plan", showInLegend: true, color: "#e31a1c", markerSize: 4, dataPoints: parse('plan') },
+                        { type: "line", name: "Fact", showInLegend: true, color: "#33a02c", markerSize: 4, dataPoints: parse('fact') },
+                        { type: "line", name: "Tag", showInLegend: true, color: "#1f78b4", markerSize: 4, dataPoints: parse('tag') }
+                    ]
+                };
+                
+                $(containerSelector).resizable({
+                    create() {
+                        $(chartSelector).CanvasJSChart(options);
+                        const chart = $(chartSelector).CanvasJSChart();
+                        setTimeout(() => chart.render(), 0);
+                        setTimeout(() => chart.render(), 150);
+                    },
+                    resize() { $(chartSelector).CanvasJSChart().render(); }
+                });
+            }
+        };
 
-            // Преобразуем обратно в массив и сортируем по дате
-            const uniqueDataPoints = Array.from(uniqueDataMap.entries())
-                .sort((a, b) => new Date(a[0]) - new Date(b[0]))
-                .map(([label, y]) => ({ label, y }));
-
-            console.log('Уникальные отсортированные данные:', uniqueDataPoints);
-
-            const coloredDataPoints = uniqueDataPoints.map(point => ({
-                label: point.label,
-                y: point.y,
-                color: getColorForPoint(point.y, chartType)
-            }));
-
-            const options = {
-                animationEnabled: true,
-                title: {
-                    text: title,
-                    fontSize: 14
-                },
-                axisX: {
-                    labelAngle: -45,
-                    interval: 2,
-                    labelAutoFit: true,
-                    labelMaxWidth: 80,
-                    labelFontSize: 10
-                },
-                axisY: {
-                    suffix: "%",
-                    labelFontSize: 10
-                },
-                data: [{
-                    type: "column",
-                    showInLegend: false,
-                    dataPoints: coloredDataPoints,
-                    dataPointWidth: 10
-                }]
-            };
-
-            $(containerId).resizable({
-                create: function () {
-                    $(chartId).CanvasJSChart(options);
-                    const chart = $(chartId).CanvasJSChart();
-                    // Дополнительные рендеры после раскладки, устраняют размытие
-                    setTimeout(() => chart.render(), 0);
-                    setTimeout(() => chart.render(), 150);
-                },
-                resize: function () {
-                    $(chartId).CanvasJSChart().render();
+        // Создание таблиц
+        const Tables = {
+            createMetrics(metricsData) {
+                if (!metricsData) {
+                    document.getElementById('metricsTable').innerHTML = '<p>Нет данных для отображения</p>';
+                    return;
                 }
-            });
-        }
-
-        // Линейный график для PM (План/Факт/Tag)
-        function createPmLineChart(containerSelector, chartSelector, data) {
-            if (!data || !Array.isArray(data) || data.length === 0) {
-                document.querySelector(chartSelector).innerHTML = '<p>Нет данных для отображения</p>';
-                return;
-            }
-
-            const parse = (key) => data.map(x => ({ label: x.production_day, y: Number(x[key]) || 0 }));
-
-            const totalPlan = data.reduce((s, x) => s + (Number(x.plan) || 0), 0);
-            const totalFact = data.reduce((s, x) => s + (Number(x.fact) || 0), 0);
-            const completion = totalPlan > 0 ? Math.round((totalFact / totalPlan) * 100) : 0;
-
-            const options = {
-                animationEnabled: true,
-                backgroundColor: "#ffffff",
-                title: { text: "PM: План / Факт / Tag", fontSize: 14 },
-                subtitles: [{
-                    text: "Выполнение: " + completion + "%",
-                    verticalAlign: "top",
-                    horizontalAlign: "right",
-                    dockInsidePlotArea: true
-                }],
-                axisX: {
-                    title: "Дата",
-                    labelAngle: -45,
-                    margin: 10,
-                    labelFontSize: 10
-                },
-                axisY: {
-                    title: "Количество",
-                    includeZero: true,
-                    margin: 10,
-                    labelFontSize: 10
-                },
-                legend: { verticalAlign: "bottom" },
-                data: [
-                    { type: "line", name: "Plan", showInLegend: true, color: "#e31a1c", markerSize: 4, dataPoints: parse('plan') },
-                    { type: "line", name: "Fact", showInLegend: true, color: "#33a02c", markerSize: 4, dataPoints: parse('fact') },
-                    { type: "line", name: "Tag", showInLegend: true, color: "#1f78b4", markerSize: 4, dataPoints: parse('tag') }
-                ]
-            };
-
-            $(containerSelector).resizable({
-                create: function () {
-                    $(chartSelector).CanvasJSChart(options);
-                    const chart = $(chartSelector).CanvasJSChart();
-                    setTimeout(() => chart.render(), 0);
-                    setTimeout(() => chart.render(), 150);
-                },
-                resize: function () { $(chartSelector).CanvasJSChart().render(); }
-            });
-        }
-
-        // Вспомогательная функция форматирования секунд в HH:MM:SS
-        function formatSecondsToHHMMSS(totalSeconds) {
-            const s = Number(totalSeconds || 0);
-            const h = Math.floor(s / 3600);
-            const m = Math.floor((s % 3600) / 60);
-            const sec = Math.floor(s % 60);
-            const pad = (n) => String(n).padStart(2, '0');
-            return `${pad(h)}:${pad(m)}:${pad(sec)}`;
-        }
-
-        // Функция для создания таблицы с показателями
-        function createMetricsTable(metricsData) {
-            if (!metricsData) {
-                document.getElementById('metricsTable').innerHTML =
-                    '<p>Нет данных для отображения</p>';
-                return;
-            }
-
-            // Дата предыдущих суток
-            const currentDate = new Date();
-            const prevDate = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000);
-            const prevDay = prevDate.toLocaleDateString('ru-RU');
-            const currentMonth = prevDate.toLocaleDateString('ru-RU', { month: 'long' }); // Исправлено: используем prevDate
-
-            let tableHTML = `
-            <table class="metrics-table">
-                <thead>
-                    <tr>
-                        <th>Показатель</th>
-                        <th>Цель</th>
-                        <th>${currentMonth}</th>
-                        <th>${prevDay}</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-            // Добавляем данные для каждого раздела
-            const sections = [
-                { name: 'Резиносмешение', prefix: 'report_new_mixing_area' },
-                { name: 'Сборка 1', prefix: 'report_semifinishing_area' },
-                { name: 'Сборка 2', prefix: 'report_building_area' },
-                { name: 'Вулканизация', prefix: 'report_curing_area' },
-                { name: 'УЗО', prefix: 'report_finishig_area' },
-                { name: 'Модули', prefix: 'report_modules' },
-                { name: 'Завод', prefix: 'report_plant' }
-            ];
-
-            sections.forEach(section => {
-                // Проверка наличия данных (0.0 — не подсвечивать)
-                const bdMonth = metricsData[`${section.prefix}_bd_month`];
-                const bdToday = metricsData[`${section.prefix}_bd_today`];
-                const avMonth = metricsData[`${section.prefix}_availability_month`];
-                const avToday = metricsData[`${section.prefix}_availability_today`];
-
-                tableHTML += `
-                <tr class="section-header">
-                    <td colspan="4">${section.name}</td>
-                </tr>
-                <tr>
-                    <td>BD</td>
-                    <td>2%</td>
-                    <td class="${bdMonth === 0 ? '' : (bdMonth <= 2 ? 'target-met' : 'target-not-met')}">
-                        ${bdMonth !== null && bdMonth !== undefined ? bdMonth.toFixed(2) + '%' : 'N/A'}
-                    </td>
-                    <td class="${bdToday === 0 ? '' : (bdToday <= 2 ? 'target-met' : 'target-not-met')}">
-                        ${bdToday !== null && bdToday !== undefined ? bdToday.toFixed(2) + '%' : 'N/A'}
-                    </td>
-                </tr>
-                <tr>
-                    <td>Доступность</td>
-                    <td>97%</td>
-                    <td class="${avMonth === 0 ? '' : (avMonth >= 97 ? 'target-met' : 'target-not-met')}">
-                        ${avMonth !== null && avMonth !== undefined ? avMonth.toFixed(2) + '%' : 'N/A'}
-                    </td>
-                    <td class="${avToday === 0 ? '' : (avToday >= 97 ? 'target-met' : 'target-not-met')}">
-                        ${avToday !== null && avToday !== undefined ? avToday.toFixed(2) + '%' : 'N/A'}
-                    </td>
-                </tr>
-            `;
-            });
-
-            tableHTML += '</tbody></table>';
-            document.getElementById('metricsTable').innerHTML = tableHTML;
-        }
-
-        // Функция для создания таблицы топ поломок
-        function createTopBreakdownsTable(data, containerId, isWeekly = false) {
-            if (!data || !Array.isArray(data) || data.length === 0) {
-                document.getElementById(containerId).innerHTML = '<p>Нет данных для отображения</p>';
-                return;
-            }
-            let tableHTML = `<table class="metrics-table">
-                <thead>
-                    <tr>`;
-            if (isWeekly) {
-                tableHTML += '<th>machine_name</th><th>machine_downtime</th>';
-            } else {
-                tableHTML += '<th>code</th><th>machine_name</th><th>machine_downtime</th><th>cause</th>';
-            }
-            tableHTML += `</tr>
-                </thead>
-                <tbody>`;
-            data.forEach(row => {
-                tableHTML += '<tr>';
-                if (isWeekly) {
-                    const seconds = row.machine_downtime_seconds;
-                    const downtime = seconds !== undefined && seconds !== null ? formatSecondsToHHMMSS(seconds) : (row.machine_downtime || '');
-                    tableHTML += `<td>${row.machine_name || ''}</td><td>${downtime}</td>`;
-                } else {
-                    tableHTML += `<td>${row.code || ''}</td><td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td><td>${row.cause || ''}</td>`;
+                
+                const prevDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                const prevDay = prevDate.toLocaleDateString('ru-RU');
+                const currentMonth = prevDate.toLocaleDateString('ru-RU', { month: 'long' });
+                
+                const sections = [
+                    { name: 'Резиносмешение', prefix: 'report_new_mixing_area' },
+                    { name: 'Сборка 1', prefix: 'report_semifinishing_area' },
+                    { name: 'Сборка 2', prefix: 'report_building_area' },
+                    { name: 'Вулканизация', prefix: 'report_curing_area' },
+                    { name: 'УЗО', prefix: 'report_finishig_area' },
+                    { name: 'Модули', prefix: 'report_modules' },
+                    { name: 'Завод', prefix: 'report_plant' }
+                ];
+                
+                let tableHTML = `
+                    <table class="metrics-table">
+                        <thead>
+                            <tr>
+                                <th>Показатель</th>
+                                <th>Цель</th>
+                                <th>${currentMonth}</th>
+                                <th>${prevDay}</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                sections.forEach(section => {
+                    const bdMonth = metricsData[`${section.prefix}_bd_month`];
+                    const bdToday = metricsData[`${section.prefix}_bd_today`];
+                    const avMonth = metricsData[`${section.prefix}_availability_month`];
+                    const avToday = metricsData[`${section.prefix}_availability_today`];
+                    
+                    const formatValue = (value, isPercentage = true) => 
+                        value != null ? value.toFixed(2) + (isPercentage ? '%' : '') : 'N/A';
+                    
+                    const getClass = (value, target, isGreater = false) => {
+                        if (value === 0) return '';
+                        return isGreater ? 
+                            (value >= target ? 'target-met' : 'target-not-met') :
+                            (value <= target ? 'target-met' : 'target-not-met');
+                    };
+                    
+                    tableHTML += `
+                        <tr class="section-header">
+                            <td colspan="4">${section.name}</td>
+                        </tr>
+                        <tr>
+                            <td>BD</td>
+                            <td>2%</td>
+                            <td class="${getClass(bdMonth, 2)}">${formatValue(bdMonth)}</td>
+                            <td class="${getClass(bdToday, 2)}">${formatValue(bdToday)}</td>
+                        </tr>
+                        <tr>
+                            <td>Доступность</td>
+                            <td>97%</td>
+                            <td class="${getClass(avMonth, 97, true)}">${formatValue(avMonth)}</td>
+                            <td class="${getClass(avToday, 97, true)}">${formatValue(avToday)}</td>
+                        </tr>`;
+                });
+                
+                tableHTML += '</tbody></table>';
+                document.getElementById('metricsTable').innerHTML = tableHTML;
+            },
+            
+            createTopBreakdowns(data, containerId, isWeekly = false) {
+                if (!data?.length) {
+                    document.getElementById(containerId).innerHTML = '<p>Нет данных для отображения</p>';
+                    return;
                 }
-                tableHTML += '</tr>';
-            });
-            tableHTML += '</tbody></table>';
-            document.getElementById(containerId).innerHTML = tableHTML;
-        }
+                
+                const headers = isWeekly ? 
+                    '<th>machine_name</th><th>machine_downtime</th>' :
+                    '<th>code</th><th>machine_name</th><th>machine_downtime</th><th>cause</th>';
+                
+                let tableHTML = `
+                    <table class="metrics-table">
+                        <thead><tr>${headers}</tr></thead>
+                        <tbody>`;
+                
+                data.forEach(row => {
+                    if (isWeekly) {
+                        const downtime = row.machine_downtime_seconds != null ? 
+                            Utils.formatSecondsToHHMMSS(row.machine_downtime_seconds) : 
+                            (row.machine_downtime || '');
+                        tableHTML += `<tr><td>${row.machine_name || ''}</td><td>${downtime}</td></tr>`;
+                    } else {
+                        tableHTML += `<tr>
+                            <td>${row.code || ''}</td>
+                            <td>${row.machine_name || ''}</td>
+                            <td>${row.machine_downtime || ''}</td>
+                            <td>${row.cause || ''}</td>
+                        </tr>`;
+                    }
+                });
+                
+                tableHTML += '</tbody></table>';
+                document.getElementById(containerId).innerHTML = tableHTML;
+            }
+        };
 
-        // Основная функция инициализации
+        // Инициализация дашборда
         async function initializeDashboard() {
-            console.log('Инициализация дашборда...');
-
             try {
-                // Загружаем данные для графиков
-                const breakDownData = await fetchData('/dashboard/breakDown');
-                const availabilityData = await fetchData('/dashboard/availability');
-
-                let breakDownPoints = [];
-                let availabilityPoints = [];
-
-                if (breakDownData && Array.isArray(breakDownData)) {
-                    breakDownPoints = breakDownData.map(item => ({
-                        label: item.production_day,
-                        y: item.downtime_percentage ? Number(item.downtime_percentage) : null
-                    }));
-                }
-
-                if (availabilityData && Array.isArray(availabilityData)) {
-                    availabilityPoints = availabilityData.map(item => ({
-                        label: item.production_day,
-                        y: item.availability ? Number(item.availability) : null
-                    }));
-                }
-
-                console.log('BreakDown точки:', breakDownPoints);
-                console.log('Availability точки:', availabilityPoints);
-
-                createChart("#resizable1", "#breakDown", "BreakDown %", breakDownPoints, "breakDown");
-                createChart("#resizable2", "#availability", "Availability %", availabilityPoints, "availability");
-
-                // Загружаем текущие показатели для таблицы
-                const currentMetrics = await fetchCurrentMetrics();
-                console.log('Текущие показатели:', currentMetrics);
-                createMetricsTable(currentMetrics);
-
-                // Загружаем недельные таблицы
-                const topBreakdownsWeek = await fetchData('/dashboard/top-breakdowns-week');
-                createTopBreakdownsTable(topBreakdownsWeek, 'topBreakdownsWeekTable', true);
-                const topBreakdownsWeekKeyLines = await fetchData('/dashboard/top-breakdowns-week-key-lines');
-                createTopBreakdownsTable(topBreakdownsWeekKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
-
-                // График PM План/Факт/Tag
-                const pmData = await fetchData('/dashboard/pm-plan-fact-tag');
-                createPmLineChart('#resizablePm', '#pmChart', pmData);
-
+                // Загрузка данных для графиков
+                const [breakDownData, availabilityData, currentMetrics, topBreakdownsWeek, topBreakdownsWeekKeyLines, pmData] = await Promise.all([
+                    API.fetchData('/dashboard/breakDown'),
+                    API.fetchData('/dashboard/availability'),
+                    API.fetchCurrentMetrics(),
+                    API.fetchData('/dashboard/top-breakdowns-week'),
+                    API.fetchData('/dashboard/top-breakdowns-week-key-lines'),
+                    API.fetchData('/dashboard/pm-plan-fact-tag')
+                ]);
+                
+                // Подготовка данных для графиков
+                const breakDownPoints = breakDownData?.map(item => ({
+                    label: item.production_day,
+                    y: item.downtime_percentage ? Number(item.downtime_percentage) : null
+                })) || [];
+                
+                const availabilityPoints = availabilityData?.map(item => ({
+                    label: item.production_day,
+                    y: item.availability ? Number(item.availability) : null
+                })) || [];
+                
+                // Создание графиков и таблиц
+                Charts.create("#resizable1", "#breakDown", "BreakDown %", breakDownPoints, "breakDown");
+                Charts.create("#resizable2", "#availability", "Availability %", availabilityPoints, "availability");
+                Charts.createPmLineChart('#resizablePm', '#pmChart', pmData);
+                
+                Tables.createMetrics(currentMetrics);
+                Tables.createTopBreakdowns(topBreakdownsWeek, 'topBreakdownsWeekTable', true);
+                Tables.createTopBreakdowns(topBreakdownsWeekKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
+                
             } catch (error) {
                 console.error('Ошибка при инициализации дашборда:', error);
             }
         }
-
+        
+        // Инициализация при загрузке страницы
         window.onload = async function() {
             await initializeDashboard();
-
-            // Наблюдатель за изменением размеров контейнеров — перерисовываем графики
-            try {
-                const rerender = () => {
-                    ['#breakDown', '#availability', '#pmChart'].forEach(sel => {
-                        try { const c = $(sel).CanvasJSChart(); c && c.render(); } catch (e) {}
-                    });
-                };
-                const grid = document.querySelector('.dashboard-grid');
-                if (grid && 'ResizeObserver' in window) {
-                    const ro = new ResizeObserver(() => rerender());
-                    ro.observe(grid);
-                }
-                // Ререндер через небольшой таймаут после полной загрузки
-                setTimeout(rerender, 200);
-                setTimeout(rerender, 400);
-            } catch (e) { console.warn('Resize observer init failed', e); }
+            
+            // Настройка автоматического перерендера графиков при изменении размеров
+            const rerender = () => {
+                ['#breakDown', '#availability', '#pmChart'].forEach(sel => {
+                    try { 
+                        const chart = $(sel).CanvasJSChart(); 
+                        chart?.render(); 
+                    } catch (e) {}
+                });
+            };
+            
+            const grid = document.querySelector('.dashboard-grid');
+            if (grid && window.ResizeObserver) {
+                new ResizeObserver(rerender).observe(grid);
+            }
+            
+            setTimeout(rerender, 200);
+            setTimeout(rerender, 400);
         };
-        // Функция для создания таблицы топ поломок
-    // функция удалена, перенесена на /dashboard
     </script>
 
 </body>

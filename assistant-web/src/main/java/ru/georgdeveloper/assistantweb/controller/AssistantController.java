@@ -14,6 +14,11 @@ public class AssistantController {
         return "dashboard";
     }
     
+    @GetMapping("/dashboard_graf")
+    public String dashboardGraf() {
+        return "dashboard_graf";
+    }
+    
     private final CoreServiceClient coreServiceClient;
 
     @Value("${ai.enabled:true}")
