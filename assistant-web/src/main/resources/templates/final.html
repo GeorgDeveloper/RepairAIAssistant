@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Итоги месяца</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        html, body { height: 100%; overflow: hidden; }
+        .main-content { height: calc(100vh - 80px); width: 85%; overflow-y: auto; padding-right: 100px; }
+        .summary-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        .summary-table th, .summary-table td { border: 1px solid #e1e1e1; padding: 10px 12px; }
+        .summary-table th { background: #f8f9fa; width: 40%; text-align: left; }
+        .summary-table td { background: #fff; }
+        .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; background: #f5f5f5; padding: 12px; border-radius: 6px; }
+        .filters label { display: block; font-weight: 600; margin-bottom: 6px; }
+        .filters select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn-apply { background-color: #e74c3c; color: #fff; border: none; border-radius: 4px; padding: 10px 14px; cursor: pointer; font-weight: 600; }
+    </style>
+    <script>
+        $(function(){
+            function loadFilters(){
+                $.getJSON('/final/years', function(years){
+                    var yopts = years.map(function(y){ return '<option value="'+ y.year +'">'+ y.year +'</option>'; }).join('');
+                    $('#yearSelect').html(yopts).val(new Date().getFullYear());
+                    refreshMonths();
+                });
+            }
+
+            function refreshMonths(){
+                var ys = $('#yearSelect').val();
+                var yearsParam = Array.isArray(ys) ? ys : (ys ? [ys] : []);
+                var url = '/final/months' + (yearsParam.length? ('?'+ yearsParam.map(function(y){return 'year='+ encodeURIComponent(y)}).join('&')) : '');
+                $.getJSON(url, function(months){
+                    var names = ['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+                    var mopts = months.map(function(m){ return '<option value="'+ m.month +'">'+ names[m.month] +'</option>'; }).join('');
+                    $('#monthSelect').html(mopts);
+                    var current = new Date().getMonth()+1;
+                    if ($('#yearSelect').val() == new Date().getFullYear().toString()) {
+                        $('#monthSelect').val(current);
+                    }
+                });
+            }
+
+            function renderTable(rows){
+                // rows: [{metric, m1..mN}]
+                var head = '<tr><th>Показатель</th>';
+                var maxCols = 0;
+                rows.forEach(function(r){
+                    var cols = Object.keys(r).filter(function(k){return /^m\d+$/.test(k)}).length; maxCols=Math.max(maxCols, cols);
+                });
+                for (var i=1;i<=maxCols;i++){ head += '<th class="month-col" data-col="m'+i+'"></th>'; }
+                head += '</tr>';
+                $('#summaryHead').html(head);
+
+                var body = rows.map(function(r){
+                    var row = '<tr><th>'+ r.metric +'</th>';
+                    for (var i=1;i<=maxCols;i++){ row += '<td>' + (r['m'+i] != null ? r['m'+i] : '') + '</td>'; }
+                    row += '</tr>';
+                    return row;
+                }).join('');
+                $('#summaryBody').html(body);
+            }
+
+            function updateHeadMonths(rows){
+                var monthsRow = rows.find(function(r){ return r.metric === 'Месяц'; }) || { };
+                $('#summaryHead th.month-col').each(function(){
+                    var col = $(this).data('col');
+                    $(this).text(monthsRow[col] || '');
+                });
+            }
+
+            function serializeMulti(name, values){
+                if (!values || values.length===0) return '';
+                return values.map(function(v){return name+'='+ encodeURIComponent(v)}).join('&');
+            }
+
+            function loadData(){
+                var yearsVal = $('#yearSelect').val();
+                var monthsVal = $('#monthSelect').val();
+                var years = Array.isArray(yearsVal) ? yearsVal : (yearsVal? [yearsVal] : []);
+                var months = Array.isArray(monthsVal) ? monthsVal : (monthsVal? [monthsVal] : []);
+                var parts = [];
+                parts.push('limit=6');
+                var yq = serializeMulti('year', years);
+                var mq = serializeMulti('month', months);
+                if (yq) parts.push(yq);
+                if (mq) parts.push(mq);
+                var url = '/final/data' + (parts.length? ('?'+ parts.join('&')) : '');
+                $.getJSON(url, function(rows){
+                    renderTable(rows);
+                    updateHeadMonths(rows);
+                });
+            }
+
+            $('#yearSelect').on('change', function(){ refreshMonths(); });
+            $('#applyBtn').on('click', function(){ loadData(); });
+
+            loadFilters();
+            loadData();
+        });
+    </script>
+    </head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="/static/images/LogoPirelli3.png" alt="Логотип компании">
+        </div>
+
+        <div class="nav-container">
+            <ul class="nav-menu">
+                <li class="has-submenu">
+                    <a href="#">Инфопанель</a>
+                    <ul class="submenu">
+                        <li><a href="/dashboard">Показатели Online</a></li>
+                        <li><a href="/final">ИТОГИ</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="/">Главная</a>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Поломки</a>
+                    <ul class="submenu">
+                        <li><a href="/dinamic_bd">Динамика</a></li>
+                        <li><a href="/bdav">Динамика BD/AV</a></li>
+                        <li><a href="/failures">Заявки на поломки</a></li>
+                        <li><a href="/top-causes">Топ причин</a></li>
+                        <li class="has-submenu">
+                            <a href="/top-causes">Топ поломок</a>
+                            <ul class="submenu">
+                                <li><a href="/top-equipment">Оборудование</a></li>
+                                <li><a href="/top_areas">Участки</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="/gantt">Диаграмма Ганта</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">ППР</a>
+                    <ul class="submenu">
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Отчеты</a></li>
+                        <li><a href="#">Tag-PM-BD</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Диагностика</a>
+                    <ul class="submenu">
+                        <li><a href="#">Отчёты</a></li>
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Пневматика</a></li>
+                        <li><a href="#">Чек-листы</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Графики</a>
+                            <ul class="submenu">
+                                <li class="has-submenu">
+                                    <a href="#">Год</a>
+                                    <ul class="submenu">
+                                        <li class="has-submenu">
+                                            <a href="#">2025</a>
+                                            <ul class="submenu">
+                                                <li><a href="#">Январь</a></li>
+                                                <li><a href="#">Февраль</a></li>
+                                                <li><a href="#">Март</a></li>
+                                                <li><a href="#">Апрель</a></li>
+                                                <li><a href="#">Май</a></li>
+                                                <li><a href="#">Июнь</a></li>
+                                                <li><a href="#">Июль</a></li>
+                                                <li><a href="#">Август</a></li>
+                                                <li><a href="#">Сентябрь</a></li>
+                                                <li><a href="#">Октябрь</a></li>
+                                                <li><a href="#">Ноябрь</a></li>
+                                                <li><a href="#">Декабрь</a></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Ассистент KVANT AI </a>
+                    <ul class="submenu">
+                        <li><a href="/chat">Чат с ассистентом</a></li>
+                        <li><a href="/long_report">Отчеты</a></li>
+                        <li><a href="/manuals">Мануалы</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">Привет, <a href="#">user</a></div>
+        </div>
+        <div class="main-content">
+            <h2>Итоги месяца</h2>
+            <div class="filters">
+                <div>
+                    <label for="yearSelect">Год</label>
+                    <select id="yearSelect"></select>
+                </div>
+                <div>
+                    <label for="monthSelect">Месяц</label>
+                    <select id="monthSelect" multiple size="6"></select>
+                </div>
+                <div style="align-self:end;">
+                    <button id="applyBtn" class="btn-apply">Показать</button>
+                </div>
+            </div>
+            <table class="summary-table">
+                <thead id="summaryHead"></thead>
+                <tbody id="summaryBody">
+                <!-- rows filled via /final/data -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+
+

@@ -95,6 +95,11 @@ public class AssistantController {
         return "failures";
     }
 
+    @GetMapping("/final")
+    public String finalPage() {
+        return "final";
+    }
+
     @PostMapping("/api/chat")
     @ResponseBody
     public String processChat(@RequestBody String message) {
