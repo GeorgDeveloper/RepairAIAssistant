@@ -260,7 +260,7 @@ body {
     table-layout: fixed;
     word-break: break-word;
     background: #fff;
-    font-size: 13px;
+    font-size: 15px;
     margin-bottom: 0;
 }
 
@@ -281,8 +281,8 @@ body {
     background: #e9ecef;
     font-weight: bold;
     text-align: left;
-    font-size: 8px;
-    padding: 2px 2px;
+    font-size: 12px;
+    padding: 4px 6px;
 }
 
 /* Цветовые классы для целей */
@@ -304,7 +304,7 @@ body {
     table-layout: fixed;
     word-break: break-word;
     background: #fff;
-    font-size: 8px;
+    font-size: 15px;
     margin-bottom: 0;
 }
 
@@ -575,6 +575,16 @@ body {
 .home-grid #resizablePm,
 .home-grid #pmChart { overflow: hidden; }
 .home-grid .pm-row, .home-grid .pm-row .col { min-height: 0; }
+
+.right-pane { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.table-container-metrics { height: 100%; display: flex; flex-direction: column; gap: 12px; overflow: auto; min-height: 0; }
+.chart-container-metrics { padding: 20px; border: 1px solid gray; background: #fff; box-sizing: border-box; flex: 0 0 auto; }
+.table-container-metrics .table-container { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.table-container-metrics .chart-container { height: auto; }
+#metricsTable { flex: 0 0 auto; }
+
+/* Override jQuery UI resizable south handle to remove negative bottom offset */
+.ui-resizable-s { bottom: 0 !important; }
 
 
 /* ====== Адаптивность ====== */

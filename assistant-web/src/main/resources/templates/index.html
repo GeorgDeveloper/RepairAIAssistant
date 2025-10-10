@@ -112,55 +112,55 @@
 
         <div class="main-content" style="width: auto !important; height: 100% - 80px !important;">
             <style>
-                .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
-                .pm-row .table-container, .pm-row .chart-container { height: 100% !important;}
-                #resizablePm { height: 100% !important; }
+                .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; height: calc(100vh - 136px); padding-top: 20px; padding-bottom: 20px; }
+                .left-pane { display: grid; grid-template-rows: 1fr 1fr; grid-row-gap: 16px; min-height: 0; }
+                .top-charts { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; height: 100%; }
+                .top-charts .chart-container { height: 100% !important; }
+                .weekly-section .chart-container { height: auto; }
+                .pm-holder .chart-container { height: 100% !important; }
+                .pm-holder #resizablePm { height: 100% !important; }
+                .pm-holder { min-height: 0; height: 100%; }
+                .pm-holder .table-container { height: 100% !important; max-height: none; }
             </style>
-            <div class="container home-grid" style="width: 100% !important;">
-                <div class="row">
-                    <div class="col">
+
+            <div class="dashboard-grid">
+                <div class="left-pane">
+                    <div class="top-charts">
+                        <div id="resizable2" class="chart-container">
+                            <div id="availability" style="height: 100%; width: 100%;"></div>
+                        </div>
                         <div id="resizable1" class="chart-container">
                             <div id="breakDown" style="height: 100%; width: 100%;"></div>
                         </div>
                     </div>
-                    <div class="col">
-                        <div id="resizable2" class="chart-container">
-                            <div id="availability" style="height: 100%; width: 100%;"></div>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="table-container">
-                            <div class="chart-container">
-                                <!-- <h3>Текущие показатели</h3> -->
-                                <div id="metricsTable"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row pm-row">
-                    <div class="col">
+
+                    <!-- <div class="weekly-section">
+                        
+                    </div> -->
+
+                    <div class="pm-holder">
                         <div class="table-container">
                             <div class="chart-container" id="resizablePm">
                                 <div id="pmChart"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="col">
-                        <div class="table-container">
-                            <div class="chart-container">
+                </div>
+
+                <div class="right-pane">
+                    <div class="table-container-metrics">
+                        <div class="chart-container-metrics">
+                            <div id="metricsTable"></div>
+                        </div>
+
+                            <div class="chart-container-metrics">
                                 <h3>Ключевые линии (неделя)</h3>
                                 <div id="topBreakdownsWeekKeyLinesTable"></div>
                                 <h3>Топ поломок за неделю</h3>
                                 <div id="topBreakdownsWeekTable"></div>
                             </div>
-                        </div>
                     </div>
                 </div>
-                <!-- <div class="row"></div> -->
-                <!-- <div class="row">
-                    <div class="col"></div>
-                    <div class="col"></div>
-                </div> -->
             </div>
 
         </div>
@@ -263,29 +263,37 @@
             const options = {
                 animationEnabled: true,
                 title: {
-                    text: title
+                    text: title,
+                    fontSize: 14
                 },
                 axisX: {
                     labelAngle: -45,
                     interval: 2,
                     labelAutoFit: true,
-                    labelMaxWidth: 80
+                    labelMaxWidth: 80,
+                    labelFontSize: 10
                 },
                 axisY: {
-                    suffix: "%"
+                    suffix: "%",
+                    labelFontSize: 10
                 },
                 data: [{
                     type: "column",
                     showInLegend: false,
-                    dataPoints: coloredDataPoints
+                    dataPoints: coloredDataPoints,
+                    dataPointWidth: 10
                 }]
             };
 
             $(containerId).resizable({
-                create: function (event, ui) {
+                create: function () {
                     $(chartId).CanvasJSChart(options);
+                    const chart = $(chartId).CanvasJSChart();
+                    // Дополнительные рендеры после раскладки, устраняют размытие
+                    setTimeout(() => chart.render(), 0);
+                    setTimeout(() => chart.render(), 150);
                 },
-                resize: function (event, ui) {
+                resize: function () {
                     $(chartId).CanvasJSChart().render();
                 }
             });
@@ -307,7 +315,7 @@
             const options = {
                 animationEnabled: true,
                 backgroundColor: "#ffffff",
-                title: { text: "PM: План / Факт / Tag" },
+                title: { text: "PM: План / Факт / Tag", fontSize: 14 },
                 subtitles: [{
                     text: "Выполнение: " + completion + "%",
                     verticalAlign: "top",
@@ -317,12 +325,14 @@
                 axisX: {
                     title: "Дата",
                     labelAngle: -45,
-                    margin: 10
+                    margin: 10,
+                    labelFontSize: 10
                 },
                 axisY: {
                     title: "Количество",
                     includeZero: true,
-                    margin: 10
+                    margin: 10,
+                    labelFontSize: 10
                 },
                 legend: { verticalAlign: "bottom" },
                 data: [
@@ -333,7 +343,12 @@
             };
 
             $(containerSelector).resizable({
-                create: function () { $(chartSelector).CanvasJSChart(options); },
+                create: function () {
+                    $(chartSelector).CanvasJSChart(options);
+                    const chart = $(chartSelector).CanvasJSChart();
+                    setTimeout(() => chart.render(), 0);
+                    setTimeout(() => chart.render(), 150);
+                },
                 resize: function () { $(chartSelector).CanvasJSChart().render(); }
             });
         }
@@ -508,7 +523,26 @@
             }
         }
 
-        window.onload = initializeDashboard;
+        window.onload = async function() {
+            await initializeDashboard();
+
+            // Наблюдатель за изменением размеров контейнеров — перерисовываем графики
+            try {
+                const rerender = () => {
+                    ['#breakDown', '#availability', '#pmChart'].forEach(sel => {
+                        try { const c = $(sel).CanvasJSChart(); c && c.render(); } catch (e) {}
+                    });
+                };
+                const grid = document.querySelector('.dashboard-grid');
+                if (grid && 'ResizeObserver' in window) {
+                    const ro = new ResizeObserver(() => rerender());
+                    ro.observe(grid);
+                }
+                // Ререндер через небольшой таймаут после полной загрузки
+                setTimeout(rerender, 200);
+                setTimeout(rerender, 400);
+            } catch (e) { console.warn('Resize observer init failed', e); }
+        };
         // Функция для создания таблицы топ поломок
     // функция удалена, перенесена на /dashboard
     </script>
