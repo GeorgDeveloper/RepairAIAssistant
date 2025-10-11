@@ -1,106 +1,18 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Repair AI Assistant — Графики</title>
     <link rel="stylesheet" href="static/styles/style.css">
+    <link rel="stylesheet" href="static/styles/dashboard.css">
     <link href="https://canvasjs.com/assets/css/jquery-ui.1.11.2.min.css" rel="stylesheet" />
 </head>
 
 <body>
 
-    <div class="sidebar">
-        <div class="logo">
-            <img src="static/images/LogoPirelli3.png" alt="Логотип компании">
-        </div>
-
-        <div class="nav-container">
-            <ul class="nav-menu">
-                <li class="has-submenu">
-                    <a href="#">Инфопанель</a>
-                    <ul class="submenu">
-                        <li><a href="/dashboard">Показатели Online</a></li>
-                        <li><a href="/dashboard_graf">Показатели Online График</a></li>
-                        <li><a href="/final">ИТОГИ</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="/">Главная</a>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Поломки</a>
-                    <ul class="submenu">
-                        <li><a href="/dinamic_bd">Динамика</a></li>
-                        <li><a href="/bdav">Динамика BD/AV</a></li>
-                        <li><a href="/failures">Заявки на поломки</a></li>
-                        <li><a href="/top-causes">Топ причин</a></li>
-                        <li class="has-submenu">
-                            <a href="/top-causes">Топ поломок</a>
-                            <ul class="submenu">
-                                <li><a href="/top-equipment">Оборудование</a></li>
-                                <li><a href="/top_areas">Участки</a></li>
-                            </ul>
-                        </li>
-                        <li><a href="/gantt">Диаграмма Ганта</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">ППР</a>
-                    <ul class="submenu">
-                        <li><a href="#">Динамика</a></li>
-                        <li><a href="#">Отчеты</a></li>
-                        <li><a href="#">Tag-PM-BD</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Диагностика</a>
-                    <ul class="submenu">
-                        <li><a href="#">Отчёты</a></li>
-                        <li><a href="#">Динамика</a></li>
-                        <li><a href="#">Пневматика</a></li>
-                        <li><a href="#">Чек-листы</a></li>
-                        <li class="has-submenu">
-                            <a href="#">Графики</a>
-                            <ul class="submenu">
-                                <li class="has-submenu">
-                                    <a href="#">Год</a>
-                                    <ul class="submenu">
-                                        <li class="has-submenu">
-                                            <a href="#">2025</a>
-                                            <ul class="submenu">
-                                                <li><a href="#">Январь</a></li>
-                                                <li><a href="#">Февраль</a></li>
-                                                <li><a href="#">Март</a></li>
-                                                <li><a href="#">Апрель</a></li>
-                                                <li><a href="#">Май</a></li>
-                                                <li><a href="#">Июнь</a></li>
-                                                <li><a href="#">Июль</a></li>
-                                                <li><a href="#">Август</a></li>
-                                                <li><a href="#">Сентябрь</a></li>
-                                                <li><a href="#">Октябрь</a></li>
-                                                <li><a href="#">Ноябрь</a></li>
-                                                <li><a href="#">Декабрь</a></li>
-                                            </ul>
-                                        </li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Ассистент KVANT AI </a>
-                    <ul class="submenu">
-                        <li><a href="/chat">Чат с ассистентом</a></li>
-                        <li><a href="/long_report">Отчеты</a></li>
-                        <li><a href="/manuals">Мануалы</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
+    <div th:replace="~{fragments/navigation :: nav}"></div>
 
     <div class="total-content">
         <div class="header">
@@ -110,25 +22,16 @@
         </div>
 
         <div class="main-content">
-            <style>
-                .total-content { height: 90% !important; }
-                .main-content { height: 100% !important; padding-top: 16px; }
-                .container { height: 100%; box-sizing: border-box; padding: 0 16px; }
-                /* Убрали dashboard-grid и правую колонку. Стек растянут на всю ширину */
-                .stack { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); grid-gap: 16px; height: calc(100vh - 128px); min-height: 0; }
-                .card { background: #fff; padding: 8px; height: 100%; display: flex; flex-direction: column; min-height: 0; }
-                .chart-container { height: 100%; overflow: hidden; }
-            </style>
             <div class="container">
                 <div class="stack">
                     <div class="card">
-                        <div id="resizable_breakDownOnline" class="chart-container" style="height: 100%">
-                            <div id="breakDown" style="height: 100%; width: 100%;"></div>
+                        <div id="resizable_breakDownOnline" class="chart-container">
+                            <div id="breakDown"></div>
                         </div>
                     </div>
                     <div class="card">
-                        <div id="resizable_availabilityOnline" class="chart-container" style="height: 100%">
-                            <div id="availabilityOnline" style="height: 100%; width: 100%;"></div>
+                        <div id="resizable_availabilityOnline" class="chart-container">
+                            <div id="availabilityOnline"></div>
                         </div>
                     </div>
                 </div>
@@ -139,100 +42,8 @@
     <script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
     <script src="https://canvasjs.com/assets/script/jquery-ui.1.11.2.min.js"></script>
     <script src="https://cdn.canvasjs.com/jquery.canvasjs.min.js"></script>
-    <script>
-        async function fetchData(url) {
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return await response.json();
-            } catch (error) {
-                console.error('Ошибка при получении данных:', error);
-                return null;
-            }
-        }
-
-        function createChart(containerId, chartId, title, dataPoints, yAxisSuffix = "%") {
-            const options = {
-                animationEnabled: true,
-                title: { text: title },
-                axisX: { title: "Время", labelAngle: -45 },
-                axisY: { title: "Значение", suffix: yAxisSuffix },
-                data: dataPoints
-            };
-
-            try {
-                const chart = $(chartId).CanvasJSChart();
-                if (chart && chart.render) {
-                    chart.options.title = options.title;
-                    chart.options.axisX = options.axisX;
-                    chart.options.axisY = options.axisY;
-                    chart.options.data = options.data;
-                    chart.render();
-                    return;
-                }
-            } catch (e) {}
-
-            $(containerId).resizable({
-                create: function() { $(chartId).CanvasJSChart(options); },
-                resize: function() { $(chartId).CanvasJSChart().render(); }
-            });
-        }
-
-        const areaColors = {
-            'NewMixingArea': '#FF6B6B',
-            'SemifinishingArea': '#4ECDC4',
-            'BuildingArea': '#45B7D1',
-            'CuringArea': '#96CEB4',
-            'FinishingArea': '#FFEAA7',
-            'Modules': '#DDA0DD',
-            'Plant': '#98D8C8'
-        };
-
-        function processChartData(rawData) {
-            const groupedData = {};
-            (rawData || []).forEach(item => {
-                if (!groupedData[item.area]) groupedData[item.area] = [];
-                groupedData[item.area].push({ label: item.timestamp, y: item.value });
-            });
-            return Object.keys(groupedData).map(area => ({
-                type: "line",
-                name: area,
-                showInLegend: true,
-                color: areaColors[area] || '#666666',
-                dataPoints: groupedData[area]
-            }));
-        }
-
-        async function loadOnlineCharts() {
-            try {
-                const bdData = await fetchData('/dashboard/online/bd');
-                const availabilityData = await fetchData('/dashboard/online/availability');
-
-                if (bdData) {
-                    const bdChartData = processChartData(bdData);
-                    createChart("#resizable_breakDownOnline", "#breakDown", "BD % (онлайн)", bdChartData);
-                }
-
-                if (availabilityData) {
-                    const availabilityChartData = processChartData(availabilityData);
-                    createChart("#resizable_availabilityOnline", "#availabilityOnline", "Доступность % (онлайн)", availabilityChartData);
-                }
-            } catch (error) {
-                console.error('Ошибка при загрузке онлайн графиков:', error);
-            }
-        }
-
-        async function initializeDashboard() {
-            await loadOnlineCharts();
-            setInterval(async () => { await loadOnlineCharts(); }, 60000);
-            setInterval(() => { window.location.reload(); }, 3600000);
-        }
-
-        window.onload = initializeDashboard;
-    </script>
-
+    <script src="static/scripts/dashboard.js"></script>
+    <script src="static/scripts/dashboard-graf.js"></script>
 </body>
 
 </html>

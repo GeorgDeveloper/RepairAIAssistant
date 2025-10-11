@@ -1,140 +1,18 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Repair AI Assistant</title>
     <link rel="icon" type="image/png" href="/static/images/LogoPirelli3.png">
     <link rel="stylesheet" href="static/styles/style.css">
+    <link rel="stylesheet" href="static/styles/dashboard.css">
     <link href="https://canvasjs.com/assets/css/jquery-ui.1.11.2.min.css" rel="stylesheet">
-    <style>
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-gap: 16px;
-            height: calc(100vh - 136px);
-            padding: 20px 0;
-        }
-        .left-pane {
-            display: grid;
-            grid-template-rows: 1fr 1fr;
-            grid-row-gap: 16px;
-        }
-        .top-charts {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-gap: 16px;
-            height: 100%;
-        }
-        .top-charts .chart-container,
-        .pm-holder .chart-container,
-        .pm-holder #resizablePm {
-            height: 100% !important;
-        }
-        .pm-holder {
-            min-height: 0;
-            height: 100%;
-        }
-        .pm-holder .table-container {
-            height: 100% !important;
-            max-height: none;
-        }
-    </style>
 </head>
 
 <body>
 
-    <div class="sidebar">
-        <div class="logo">
-            <img src="static/images/LogoPirelli3.png" alt="Логотип компании">
-        </div>
-
-        <div class="nav-container">
-            <ul class="nav-menu">
-                <li class="has-submenu">
-                    <a href="#">Инфопанель</a>
-                    <ul class="submenu">
-                        <li><a href="/dashboard">Показатели Online</a></li>
-                        <li><a href="/dashboard_graf">Показатели Online График</a></li>
-                        <li><a href="/final">ИТОГИ</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="/">Главная</a>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Поломки</a>
-                    <ul class="submenu">
-                        <li><a href="/dinamic_bd">Динамика</a></li>
-                        <li><a href="/bdav">Динамика BD/AV</a></li>
-                        <li><a href="/failures">Заявки на поломки</a></li>
-                        <li><a href="/top-causes">Топ причин</a></li>
-                        <li class="has-submenu">
-                            <a href="/top-causes">Топ поломок</a>
-                            <ul class="submenu">
-                                <li><a href="/top-equipment">Оборудование</a></li>
-                                <li><a href="/top_areas">Участки</a></li>
-                            </ul>
-                        </li>
-                        <li><a href="/gantt">Диаграмма Ганта</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">ППР</a>
-                    <ul class="submenu">
-                        <li><a href="#">Динамика</a></li>
-                        <li><a href="#">Отчеты</a></li>
-                        <li><a href="#">Tag-PM-BD</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Диагностика</a>
-                    <ul class="submenu">
-                        <li><a href="#">Отчёты</a></li>
-                        <li><a href="#">Динамика</a></li>
-                        <li><a href="#">Пневматика</a></li>
-                        <li><a href="#">Чек-листы</a></li>
-                        <li class="has-submenu">
-                            <a href="#">Графики</a>
-                            <ul class="submenu">
-                                <li class="has-submenu">
-                                    <a href="#">Год</a>
-                                    <ul class="submenu">
-                                        <li class="has-submenu">
-                                            <a href="#">2025</a>
-                                            <ul class="submenu">
-                                                <li><a href="#">Январь</a></li>
-                                                <li><a href="#">Февраль</a></li>
-                                                <li><a href="#">Март</a></li>
-                                                <li><a href="#">Апрель</a></li>
-                                                <li><a href="#">Май</a></li>
-                                                <li><a href="#">Июнь</a></li>
-                                                <li><a href="#">Июль</a></li>
-                                                <li><a href="#">Август</a></li>
-                                                <li><a href="#">Сентябрь</a></li>
-                                                <li><a href="#">Октябрь</a></li>
-                                                <li><a href="#">Ноябрь</a></li>
-                                                <li><a href="#">Декабрь</a></li>
-                                            </ul>
-                                        </li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Ассистент KVANT AI </a>
-                    <ul class="submenu">
-                        <li><a href="/chat">Чат с ассистентом</a></li>
-                        <li><a href="/long_report">Отчеты</a></li>
-                        <li><a href="/manuals">Мануалы</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-
+    <div th:replace="~{fragments/navigation :: nav}"></div>
 
     <div class="total-content">
         <div class="header">
@@ -143,16 +21,16 @@
             </div>
         </div>
 
-        <div class="main-content" style="width: auto !important; height: calc(100% - 80px) !important;">
+        <div class="main-content">
 
             <div class="dashboard-grid">
                 <div class="left-pane">
                     <div class="top-charts">
                         <div id="resizable2" class="chart-container">
-                            <div id="availability" style="height: 100%; width: 100%;"></div>
+                            <div id="availability"></div>
                         </div>
                         <div id="resizable1" class="chart-container">
-                            <div id="breakDown" style="height: 100%; width: 100%;"></div>
+                            <div id="breakDown"></div>
                         </div>
                     </div>
 
@@ -170,13 +48,16 @@
                     <div class="table-container-metrics">
                         <div class="chart-container-metrics">
                             <div id="metricsTable"></div>
-                        </div>
-                        <div class="chart-container-metrics">
+
+                            <br><br>
                             <h3>Ключевые линии (неделя)</h3>
                             <div id="topBreakdownsWeekKeyLinesTable"></div>
                             <h3>Топ поломок за неделю</h3>
                             <div id="topBreakdownsWeekTable"></div>
                         </div>
+                        <!-- <div class="chart-container-metrics">
+                            
+                        </div> -->
                     </div>
                 </div>
             </div>
@@ -187,328 +68,8 @@
     <script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
     <script src="https://canvasjs.com/assets/script/jquery-ui.1.11.2.min.js"></script>
     <script src="https://cdn.canvasjs.com/jquery.canvasjs.min.js"></script>
-
-    <script>
-        // API функции
-        const API = {
-            async fetchData(url) {
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    return await response.json();
-                } catch (error) {
-                    console.error('Ошибка при получении данных:', error);
-                    return null;
-                }
-            },
-            
-            async fetchCurrentMetrics() {
-                return this.fetchData('/dashboard/current-metrics');
-            }
-        };
-
-        // Утилиты
-        const Utils = {
-            filterEmptyData(dataPoints) {
-                return dataPoints?.filter(point => 
-                    point.y !== null && point.y !== undefined && point.y !== 0
-                ) || [];
-            },
-            
-            getColorForPoint(value, type) {
-                if (type === "breakDown" && value > 2) return "#dc3545";
-                if (type === "availability" && value < 97) return "#dc3545";
-                return "#007bff";
-            },
-            
-            formatSecondsToHHMMSS(totalSeconds) {
-                const s = Number(totalSeconds || 0);
-                const h = Math.floor(s / 3600);
-                const m = Math.floor((s % 3600) / 60);
-                const sec = Math.floor(s % 60);
-                const pad = n => String(n).padStart(2, '0');
-                return `${pad(h)}:${pad(m)}:${pad(sec)}`;
-            }
-        };
-
-        // Создание графиков
-        const Charts = {
-            create(containerId, chartId, title, dataPoints, chartType) {
-                const filteredData = Utils.filterEmptyData(dataPoints);
-                
-                if (!filteredData.length) {
-                    document.querySelector(chartId).innerHTML = 
-                        `<div style="text-align: center; padding-top: 50px; color: #677;">
-                            <h3>${title}</h3>
-                            <p>Нет данных для отображения</p>
-                        </div>`;
-                    return;
-                }
-                
-                const uniqueDataMap = new Map();
-                filteredData.forEach(point => {
-                    if (point.label && point.y != null) {
-                        uniqueDataMap.set(point.label, point.y);
-                    }
-                });
-                
-                const coloredDataPoints = Array.from(uniqueDataMap.entries())
-                    .sort((a, b) => new Date(a[0]) - new Date(b[0]))
-                    .map(([label, y]) => ({
-                        label, y,
-                        color: Utils.getColorForPoint(y, chartType)
-                    }));
-                
-                const options = {
-                    animationEnabled: true,
-                    title: { text: title, fontSize: 14 },
-                    axisX: {
-                        labelAngle: -45,
-                        interval: 2,
-                        labelAutoFit: true,
-                        labelMaxWidth: 80,
-                        labelFontSize: 10
-                    },
-                    axisY: { suffix: "%", labelFontSize: 10 },
-                    data: [{
-                        type: "column",
-                        showInLegend: false,
-                        dataPoints: coloredDataPoints,
-                        dataPointWidth: 10
-                    }]
-                };
-                
-                $(containerId).resizable({
-                    create() {
-                        $(chartId).CanvasJSChart(options);
-                        const chart = $(chartId).CanvasJSChart();
-                        setTimeout(() => chart.render(), 0);
-                        setTimeout(() => chart.render(), 150);
-                    },
-                    resize() {
-                        $(chartId).CanvasJSChart().render();
-                    }
-                });
-            },
-
-            
-            createPmLineChart(containerSelector, chartSelector, data) {
-                if (!data?.length) {
-                    document.querySelector(chartSelector).innerHTML = '<p>Нет данных для отображения</p>';
-                    return;
-                }
-                
-                const parse = key => data.map(x => ({ 
-                    label: x.production_day, 
-                    y: Number(x[key]) || 0 
-                }));
-                
-                const totalPlan = data.reduce((s, x) => s + (Number(x.plan) || 0), 0);
-                const totalFact = data.reduce((s, x) => s + (Number(x.fact) || 0), 0);
-                const completion = totalPlan > 0 ? Math.round((totalFact / totalPlan) * 100) : 0;
-                
-                const options = {
-                    animationEnabled: true,
-                    backgroundColor: "#ffffff",
-                    title: { text: "PM: План / Факт / Tag", fontSize: 14 },
-                    subtitles: [{
-                        text: `Выполнение: ${completion}%`,
-                        verticalAlign: "top",
-                        horizontalAlign: "right",
-                        dockInsidePlotArea: true
-                    }],
-                    axisX: { title: "Дата", labelAngle: -45, margin: 10, labelFontSize: 10 },
-                    axisY: { title: "Количество", includeZero: true, margin: 10, labelFontSize: 10 },
-                    legend: { verticalAlign: "bottom" },
-                    data: [
-                        { type: "line", name: "Plan", showInLegend: true, color: "#e31a1c", markerSize: 4, dataPoints: parse('plan') },
-                        { type: "line", name: "Fact", showInLegend: true, color: "#33a02c", markerSize: 4, dataPoints: parse('fact') },
-                        { type: "line", name: "Tag", showInLegend: true, color: "#1f78b4", markerSize: 4, dataPoints: parse('tag') }
-                    ]
-                };
-                
-                $(containerSelector).resizable({
-                    create() {
-                        $(chartSelector).CanvasJSChart(options);
-                        const chart = $(chartSelector).CanvasJSChart();
-                        setTimeout(() => chart.render(), 0);
-                        setTimeout(() => chart.render(), 150);
-                    },
-                    resize() { $(chartSelector).CanvasJSChart().render(); }
-                });
-            }
-        };
-
-        // Создание таблиц
-        const Tables = {
-            createMetrics(metricsData) {
-                if (!metricsData) {
-                    document.getElementById('metricsTable').innerHTML = '<p>Нет данных для отображения</p>';
-                    return;
-                }
-                
-                const prevDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-                const prevDay = prevDate.toLocaleDateString('ru-RU');
-                const currentMonth = prevDate.toLocaleDateString('ru-RU', { month: 'long' });
-                
-                const sections = [
-                    { name: 'Резиносмешение', prefix: 'report_new_mixing_area' },
-                    { name: 'Сборка 1', prefix: 'report_semifinishing_area' },
-                    { name: 'Сборка 2', prefix: 'report_building_area' },
-                    { name: 'Вулканизация', prefix: 'report_curing_area' },
-                    { name: 'УЗО', prefix: 'report_finishig_area' },
-                    { name: 'Модули', prefix: 'report_modules' },
-                    { name: 'Завод', prefix: 'report_plant' }
-                ];
-                
-                let tableHTML = `
-                    <table class="metrics-table">
-                        <thead>
-                            <tr>
-                                <th>Показатель</th>
-                                <th>Цель</th>
-                                <th>${currentMonth}</th>
-                                <th>${prevDay}</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-                
-                sections.forEach(section => {
-                    const bdMonth = metricsData[`${section.prefix}_bd_month`];
-                    const bdToday = metricsData[`${section.prefix}_bd_today`];
-                    const avMonth = metricsData[`${section.prefix}_availability_month`];
-                    const avToday = metricsData[`${section.prefix}_availability_today`];
-                    
-                    const formatValue = (value, isPercentage = true) => 
-                        value != null ? value.toFixed(2) + (isPercentage ? '%' : '') : 'N/A';
-                    
-                    const getClass = (value, target, isGreater = false) => {
-                        if (value === 0) return '';
-                        return isGreater ? 
-                            (value >= target ? 'target-met' : 'target-not-met') :
-                            (value <= target ? 'target-met' : 'target-not-met');
-                    };
-                    
-                    tableHTML += `
-                        <tr class="section-header">
-                            <td colspan="4">${section.name}</td>
-                        </tr>
-                        <tr>
-                            <td>BD</td>
-                            <td>2%</td>
-                            <td class="${getClass(bdMonth, 2)}">${formatValue(bdMonth)}</td>
-                            <td class="${getClass(bdToday, 2)}">${formatValue(bdToday)}</td>
-                        </tr>
-                        <tr>
-                            <td>Доступность</td>
-                            <td>97%</td>
-                            <td class="${getClass(avMonth, 97, true)}">${formatValue(avMonth)}</td>
-                            <td class="${getClass(avToday, 97, true)}">${formatValue(avToday)}</td>
-                        </tr>`;
-                });
-                
-                tableHTML += '</tbody></table>';
-                document.getElementById('metricsTable').innerHTML = tableHTML;
-            },
-            
-            createTopBreakdowns(data, containerId, isWeekly = false) {
-                if (!data?.length) {
-                    document.getElementById(containerId).innerHTML = '<p>Нет данных для отображения</p>';
-                    return;
-                }
-                
-                const headers = isWeekly ? 
-                    '<th>machine_name</th><th>machine_downtime</th>' :
-                    '<th>code</th><th>machine_name</th><th>machine_downtime</th><th>cause</th>';
-                
-                let tableHTML = `
-                    <table class="metrics-table">
-                        <thead><tr>${headers}</tr></thead>
-                        <tbody>`;
-                
-                data.forEach(row => {
-                    if (isWeekly) {
-                        const downtime = row.machine_downtime_seconds != null ? 
-                            Utils.formatSecondsToHHMMSS(row.machine_downtime_seconds) : 
-                            (row.machine_downtime || '');
-                        tableHTML += `<tr><td>${row.machine_name || ''}</td><td>${downtime}</td></tr>`;
-                    } else {
-                        tableHTML += `<tr>
-                            <td>${row.code || ''}</td>
-                            <td>${row.machine_name || ''}</td>
-                            <td>${row.machine_downtime || ''}</td>
-                            <td>${row.cause || ''}</td>
-                        </tr>`;
-                    }
-                });
-                
-                tableHTML += '</tbody></table>';
-                document.getElementById(containerId).innerHTML = tableHTML;
-            }
-        };
-
-        // Инициализация дашборда
-        async function initializeDashboard() {
-            try {
-                // Загрузка данных для графиков
-                const [breakDownData, availabilityData, currentMetrics, topBreakdownsWeek, topBreakdownsWeekKeyLines, pmData] = await Promise.all([
-                    API.fetchData('/dashboard/breakDown'),
-                    API.fetchData('/dashboard/availability'),
-                    API.fetchCurrentMetrics(),
-                    API.fetchData('/dashboard/top-breakdowns-week'),
-                    API.fetchData('/dashboard/top-breakdowns-week-key-lines'),
-                    API.fetchData('/dashboard/pm-plan-fact-tag')
-                ]);
-                
-                // Подготовка данных для графиков
-                const breakDownPoints = breakDownData?.map(item => ({
-                    label: item.production_day,
-                    y: item.downtime_percentage ? Number(item.downtime_percentage) : null
-                })) || [];
-                
-                const availabilityPoints = availabilityData?.map(item => ({
-                    label: item.production_day,
-                    y: item.availability ? Number(item.availability) : null
-                })) || [];
-                
-                // Создание графиков и таблиц
-                Charts.create("#resizable1", "#breakDown", "BreakDown %", breakDownPoints, "breakDown");
-                Charts.create("#resizable2", "#availability", "Availability %", availabilityPoints, "availability");
-                Charts.createPmLineChart('#resizablePm', '#pmChart', pmData);
-                
-                Tables.createMetrics(currentMetrics);
-                Tables.createTopBreakdowns(topBreakdownsWeek, 'topBreakdownsWeekTable', true);
-                Tables.createTopBreakdowns(topBreakdownsWeekKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
-                
-            } catch (error) {
-                console.error('Ошибка при инициализации дашборда:', error);
-            }
-        }
-        
-        // Инициализация при загрузке страницы
-        window.onload = async function() {
-            await initializeDashboard();
-            
-            // Настройка автоматического перерендера графиков при изменении размеров
-            const rerender = () => {
-                ['#breakDown', '#availability', '#pmChart'].forEach(sel => {
-                    try { 
-                        const chart = $(sel).CanvasJSChart(); 
-                        chart?.render(); 
-                    } catch (e) {}
-                });
-            };
-            
-            const grid = document.querySelector('.dashboard-grid');
-            if (grid && window.ResizeObserver) {
-                new ResizeObserver(rerender).observe(grid);
-            }
-            
-            setTimeout(rerender, 200);
-            setTimeout(rerender, 400);
-        };
-    </script>
-
+    <script src="static/scripts/dashboard.js"></script>
+    <script src="static/scripts/dashboard-index.js"></script>
 </body>
 
 </html>

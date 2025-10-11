@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation Fragment</title>
+</head>
+<body>
+    <div th:fragment="nav" class="sidebar">
+        <div class="logo">
+            <img src="static/images/LogoPirelli3.png" alt="Логотип компании">
+        </div>
+
+        <div class="nav-container">
+            <ul class="nav-menu">
+                <li class="has-submenu">
+                    <a href="#">Инфопанель</a>
+                    <ul class="submenu">
+                        <li><a href="/dashboard">Показатели Online</a></li>
+                        <li><a href="/dashboard_graf">Показатели Online График</a></li>
+                        <li><a href="/final">ИТОГИ</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="/">Главная</a>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Поломки</a>
+                    <ul class="submenu">
+                        <li><a href="/dinamic_bd">Динамика</a></li>
+                        <li><a href="/bdav">Динамика BD/AV</a></li>
+                        <li><a href="/failures">Заявки на поломки</a></li>
+                        <li><a href="/top-causes">Топ причин</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Топ поломок</a>
+                            <ul class="submenu">
+                                <li><a href="/top-equipment">Оборудование</a></li>
+                                <li><a href="/top_areas">Участки</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="/gantt">Диаграмма Ганта</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">ППР</a>
+                    <ul class="submenu">
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Отчеты</a></li>
+                        <li><a href="#">Tag-PM-BD</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Диагностика</a>
+                    <ul class="submenu">
+                        <li><a href="#">Отчёты</a></li>
+                        <li><a href="#">Динамика</a></li>
+                        <li><a href="#">Пневматика</a></li>
+                        <li><a href="#">Чек-листы</a></li>
+                        <li class="has-submenu">
+                            <a href="#">Графики</a>
+                            <ul class="submenu">
+                                <li class="has-submenu">
+                                    <a href="#">Год</a>
+                                    <ul class="submenu">
+                                        <li class="has-submenu">
+                                            <a href="#">2025</a>
+                                            <ul class="submenu">
+                                                <li><a href="#">Январь</a></li>
+                                                <li><a href="#">Февраль</a></li>
+                                                <li><a href="#">Март</a></li>
+                                                <li><a href="#">Апрель</a></li>
+                                                <li><a href="#">Май</a></li>
+                                                <li><a href="#">Июнь</a></li>
+                                                <li><a href="#">Июль</a></li>
+                                                <li><a href="#">Август</a></li>
+                                                <li><a href="#">Сентябрь</a></li>
+                                                <li><a href="#">Октябрь</a></li>
+                                                <li><a href="#">Ноябрь</a></li>
+                                                <li><a href="#">Декабрь</a></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Ассистент KVANT AI </a>
+                    <ul class="submenu">
+                        <li><a href="/chat">Чат с ассистентом</a></li>
+                        <li><a href="/long_report">Отчеты</a></li>
+                        <li><a href="/manuals">Мануалы</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,107 +1,18 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Repair AI Assistant</title>
     <link rel="stylesheet" href="static/styles/style.css">
+    <link rel="stylesheet" href="static/styles/dashboard.css">
     <link href="https://canvasjs.com/assets/css/jquery-ui.1.11.2.min.css" rel="stylesheet" />
 </head>
 
 <body>
 
-    <div class="sidebar">
-        <div class="logo">
-            <img src="static/images/LogoPirelli3.png" alt="Логотип компании">
-        </div>
-
-        <div class="nav-container">
-            <ul class="nav-menu">
-                <li class="has-submenu">
-                    <a href="#">Инфопанель</a>
-                    <ul class="submenu">
-                        <li><a href="/dashboard">Показатели Online</a></li>
-                        <li><a href="/dashboard_graf">Показатели Online График</a></li>
-                        <li><a href="/final">ИТОГИ</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="/">Главная</a>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Поломки</a>
-                    <ul class="submenu">
-                        <li><a href="/dinamic_bd">Динамика</a></li>
-                        <li><a href="/bdav">Динамика BD/AV</a></li>
-                        <li><a href="/failures">Заявки на поломки</a></li>
-                        <li><a href="/top-causes">Топ причин</a></li>
-                        <li class="has-submenu">
-                            <a href="/top-causes">Топ поломок</a>
-                            <ul class="submenu">
-                                <li><a href="/top-equipment">Оборудование</a></li>
-                                <li><a href="/top_areas">Участки</a></li>
-                            </ul>
-                        </li>
-                        <li><a href="/gantt">Диаграмма Ганта</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">ППР</a>
-                    <ul class="submenu">
-                        <li><a href="#">Динамика</a></li>
-                        <li><a href="#">Отчеты</a></li>
-                        <li><a href="#">Tag-PM-BD</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Диагностика</a>
-                    <ul class="submenu">
-                        <li><a href="#">Отчёты</a></li>
-                        <li><a href="#">Динамика</a></li>
-                        <li><a href="#">Пневматика</a></li>
-                        <li><a href="#">Чек-листы</a></li>
-                        <li class="has-submenu">
-                            <a href="#">Графики</a>
-                            <ul class="submenu">
-                                <li class="has-submenu">
-                                    <a href="#">Год</a>
-                                    <ul class="submenu">
-                                        <li class="has-submenu">
-                                            <a href="#">2025</a>
-                                            <ul class="submenu">
-                                                <li><a href="#">Январь</a></li>
-                                                <li><a href="#">Февраль</a></li>
-                                                <li><a href="#">Март</a></li>
-                                                <li><a href="#">Апрель</a></li>
-                                                <li><a href="#">Май</a></li>
-                                                <li><a href="#">Июнь</a></li>
-                                                <li><a href="#">Июль</a></li>
-                                                <li><a href="#">Август</a></li>
-                                                <li><a href="#">Сентябрь</a></li>
-                                                <li><a href="#">Октябрь</a></li>
-                                                <li><a href="#">Ноябрь</a></li>
-                                                <li><a href="#">Декабрь</a></li>
-                                            </ul>
-                                        </li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Ассистент KVANT AI </a>
-                    <ul class="submenu">
-                        <li><a href="/chat">Чат с ассистентом</a></li>
-                        <li><a href="/long_report">Отчеты</a></li>
-                        <li><a href="/manuals">Мануалы</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-
+    <div th:replace="~{fragments/navigation :: nav}"></div>
 
     <div class="total-content">
         <div class="header">
@@ -111,414 +22,38 @@
         </div>
 
         <div class="main-content">
-            <style>
-                .total-content { height: 90% !important; }
-				.main-content { height: 100% !important; padding-top: 16px; }
-				.container { height: 100%; box-sizing: border-box; padding: 0 16px; }
-				.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; height: calc(100vh - 128px); }
-				.stack { display: grid; grid-gap: 16px; height: 100%; min-height: 0; overflow: auto; }
-				.card { background: #fff; padding: 8px; height: 100%; display: flex; flex-direction: column; min-height: 0; }
-				.right-stack { display: grid; grid-gap: 16px; height: 100%; min-height: 0; overflow: auto;}
-				.panel { background: #fff; padding: 8px; height: 100%; display: flex; flex-direction: column; min-height: 0; }
-				.panel h3 { margin-top: 0; }
-				.chart-container, #metricsTable, #topBreakdownsTable { height: auto; }
-				.chart-container { overflow: hidden; }
-				.table-container { height: 100%;}
-
-				/* Таблицы метрик и топов */
-				.target-met { background-color: #e6ffed; color: #115e1b; }
-				.target-not-met { background-color: #ffe6e6; color: #7a1212; }
-				.table-container-metrics { height: 100%;}
-				.chart-container-metrics { height: 100%;}
-			</style>
             <div class="container">
-				<div class="dashboard-grid">
-					<div class="stack">
-
-							<div class="table-container-metrics">
-								<div class="chart-container-metrics">
-									<div id="metricsTable-lines"></div>
-								</div>
-							</div>
-					</div>
-					<div class="right-stack">
-							<div class="table-container-metrics">
-								<div class="chart-container-metrics">
-									<div id="metricsTable"></div>
-								</div>
-							</div>
+                <div class="dashboard-grid">
+                    <div class="stack">
+                        <div class="table-container-metrics">
+                            <div class="chart-container-metrics">
+                                <div id="metricsTable-lines"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="right-stack">
+                        <div class="table-container-metrics">
+                            <div class="chart-container-metrics">
+                                <div id="metricsTable"></div>
+                            </div>
+                        </div>
                         <div class="chart-container-metrics">
                             <h3 id="topBreakdownsHeader">Топ поломок за сутки</h3>
-							<div id="topBreakdownsTable"></div>
+                            <div id="topBreakdownsTable"></div>
                             <h3 id="topBreakdownsCurrentHeader">Топ поломок — <span id="currentDateSpan"></span></h3>
                             <div id="topBreakdownsCurrentTable"></div>
-						</div>
-					</div>
-				</div>
-			</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 		</div>
     </div>
 
     <script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
     <script src="https://canvasjs.com/assets/script/jquery-ui.1.11.2.min.js"></script>
     <script src="https://cdn.canvasjs.com/jquery.canvasjs.min.js"></script>
-    <script>
-        // Функция для получения данных с сервера
-        async function fetchData(url) {
-            try {
-                console.log('Запрос данных по URL:', url);
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                console.log('Получены данные:', data);
-                return data;
-            } catch (error) {
-                console.error('Ошибка при получении данных:', error);
-                return null;
-            }
-        }
-
-        // Функция для получения текущих показателей
-        async function fetchCurrentMetrics() {
-            try {
-                const response = await fetch('/dashboard/current-metrics');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Ошибка при получении текущих показателей:', error);
-                return null;
-            }
-        }
-
-        // Функция для создания графика
-        function createChart(containerId, chartId, title, dataPoints, yAxisSuffix = "%") {
-            const options = {
-                animationEnabled: true,
-                title: { text: title },
-                axisX: {
-                    title: "Время",
-                    labelAngle: -45
-                },
-                axisY: {
-                    title: "Значение",
-                    suffix: yAxisSuffix
-                },
-                data: dataPoints
-            };
-
-            // Если график уже инициализирован, обновляем данные и перерисовываем
-            try {
-                const chart = $(chartId).CanvasJSChart();
-                if (chart && chart.render) {
-                    chart.options.title = options.title;
-                    chart.options.axisX = options.axisX;
-                    chart.options.axisY = options.axisY;
-                    chart.options.data = options.data;
-                    chart.render();
-                    return;
-                }
-            } catch (e) { /* игнорируем инициализацию при первом запуске */ }
-
-            // Инициализация при первом создании
-            $(containerId).resizable({
-                create: function() {
-                    $(chartId).CanvasJSChart(options);
-                },
-                resize: function() {
-                    $(chartId).CanvasJSChart().render();
-                }
-            });
-        }
-
-        // Фиксированная цветовая схема для участков
-        const areaColors = {
-            'NewMixingArea': '#FF6B6B',      // Красный
-            'SemifinishingArea': '#4ECDC4',  // Бирюзовый
-            'BuildingArea': '#45B7D1',       // Голубой
-            'CuringArea': '#96CEB4',         // Зеленый
-            'FinishingArea': '#FFEAA7',      // Желтый
-            'Modules': '#DDA0DD',            // Фиолетовый
-            'Plant': '#98D8C8'               // Мятный
-        };
-
-        // Функция для обработки данных графика
-        function processChartData(rawData) {
-            const groupedData = {};
-            
-            rawData.forEach(item => {
-                if (!groupedData[item.area]) {
-                    groupedData[item.area] = [];
-                }
-                groupedData[item.area].push({
-                    label: item.timestamp,
-                    y: item.value
-                });
-            });
-
-            return Object.keys(groupedData).map(area => ({
-                type: "line",
-                name: area,
-                showInLegend: true,
-                color: areaColors[area] || '#666666', // Фиксированный цвет для участка
-                dataPoints: groupedData[area]
-            }));
-        }
-
-        // Загрузка графиков BD и доступности
-        async function loadOnlineCharts() {
-            try {
-                const bdData = await fetchData('/dashboard/online/bd');
-                const availabilityData = await fetchData('/dashboard/online/availability');
-
-                if (bdData) {
-                    const bdChartData = processChartData(bdData);
-                    createChart("#resizable_breakDownOnline", "#breakDown", "BD % (онлайн)", bdChartData);
-                }
-
-                if (availabilityData) {
-                    const availabilityChartData = processChartData(availabilityData);
-                    createChart("#resizable_availabilityOnline", "#availabilityOnline", "Доступность % (онлайн)", availabilityChartData);
-                }
-                
-                // Обновляем таблицу с текущими данными
-                createMetricsTable(bdData, availabilityData);
-                createKeyLinesMetricsTable(bdData, availabilityData);
-            } catch (error) {
-                console.error('Ошибка при загрузке онлайн графиков:', error);
-            }
-        }
-
-        // Функция для создания таблицы с показателями
-        function createMetricsTable(bdData, availabilityData) {
-            const currentDate = new Date().toLocaleDateString('ru-RU');
-            // Соответствие отображаемого названия области ключу area из БД
-            const areasMap = [
-                { label: 'Резиносмешение', key: 'NewMixingArea' },
-                { label: 'Сборка 1', key: 'SemifinishingArea' },
-                { label: 'Сборка 2', key: 'BuildingArea' },
-                { label: 'Вулканизация', key: 'CuringArea' },
-                { label: 'УЗО', key: 'FinishingArea' },
-                { label: 'Модули', key: 'Modules' },
-                { label: 'Завод', key: 'Plant' }
-            ];
-
-            // Получаем последние значения из данных графиков по ключу area
-            const getCurrentValue = (data, areaKey) => {
-                if (!data || !Array.isArray(data)) return 0;
-                const areaData = data.filter(item => item.area === areaKey);
-                if (areaData.length === 0) return 0;
-                const last = areaData[areaData.length - 1];
-                const val = Number(last && last.value);
-                return isNaN(val) ? 0 : val;
-            };
-
-            let tableHTML = `
-            <table class="metrics-table">
-                <thead>
-                    <tr>
-                        <th>Показатель</th>
-                        <th>Цель</th>
-                        <th>${currentDate}</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-            areasMap.forEach(({ label, key }) => {
-                const bdValue = getCurrentValue(bdData, key);
-                const availabilityValue = getCurrentValue(availabilityData, key);
-                
-                tableHTML += `
-                <tr class="section-header">
-                    <td colspan="3">${label}</td>
-                </tr>
-                <tr>
-                    <td>BD</td>
-                    <td>2%</td>
-                    <td class="${bdValue <= 2 ? 'target-met' : 'target-not-met'}">
-                        ${bdValue.toFixed(2)}%
-                    </td>
-                </tr>
-                <tr>
-                    <td>Доступность</td>
-                    <td>97%</td>
-                    <td class="${availabilityValue >= 97 ? 'target-met' : 'target-not-met'}">
-                        ${availabilityValue.toFixed(2)}%
-                    </td>
-                </tr>
-            `;
-            });
-
-            tableHTML += '</tbody></table>';
-            document.getElementById('metricsTable').innerHTML = tableHTML;
-        }
-
-        // Таблица метрик по ключевым линиям (используем значения их участков)
-        function createKeyLinesMetricsTable(bdData, availabilityData) {
-            const currentDate = new Date().toLocaleDateString('ru-RU');
-
-            // Сопоставление ключевых линий с участками (area), чтобы подставить их текущие значения
-            const keyLinesMap = [
-                { label: 'Mixer GK 270 T-C 2.1', areaKey: 'NewMixingArea' },
-                { label: 'Mixer GK 320 E 1.1', areaKey: 'NewMixingArea' },
-                { label: 'Calender Complex Berstorf - 01', areaKey: 'SemifinishingArea' },
-                { label: 'Bandina - 01', areaKey: 'SemifinishingArea' },
-                { label: 'Duplex - 01', areaKey: 'SemifinishingArea' },
-                { label: 'Calender Comerio Ercole - 01', areaKey: 'SemifinishingArea' },
-                { label: 'VMI APEX - 01', areaKey: 'BuildingArea' },
-                { label: 'VMI APEX - 02', areaKey: 'BuildingArea' },
-                { label: 'Trafila Quadruplex - 01', areaKey: 'SemifinishingArea' },
-                { label: 'Bartell Bead Machine - 01', areaKey: 'SemifinishingArea' },
-                { label: 'TTM fisher belt cutting - 01', areaKey: 'FinishingArea' },
-                { label: 'VMI TPCS 1600-1000', areaKey: 'BuildingArea' }
-            ];
-
-            const getCurrentValueByArea = (data, areaKey) => {
-                if (!data || !Array.isArray(data)) return 0;
-                const areaData = data.filter(item => item.area === areaKey);
-                if (areaData.length === 0) return 0;
-                const last = areaData[areaData.length - 1];
-                const val = Number(last && last.value);
-                return isNaN(val) ? 0 : val;
-            };
-
-            let tableHTML = `
-            <table class="metrics-table">
-                <thead>
-                    <tr>
-                        <th>Ключевая линия</th>
-                        <th>Цель</th>
-                        <th>${currentDate}</th>
-                    </tr>
-                </thead>
-                <tbody>
-            `;
-
-            keyLinesMap.forEach(({ label, areaKey }) => {
-                const bdValue = getCurrentValueByArea(bdData, areaKey);
-                const availabilityValue = getCurrentValueByArea(availabilityData, areaKey);
-
-                tableHTML += `
-                <tr class="section-header">
-                    <td colspan="3">${label}</td>
-                </tr>
-                <tr>
-                    <td>BD</td>
-                    <td>2%</td>
-                    <td class="${bdValue <= 2 ? 'target-met' : 'target-not-met'}">${bdValue.toFixed(2)}%</td>
-                </tr>
-                <tr>
-                    <td>Доступность</td>
-                    <td>97%</td>
-                    <td class="${availabilityValue >= 97 ? 'target-met' : 'target-not-met'}">${availabilityValue.toFixed(2)}%</td>
-                </tr>
-            `;
-            });
-
-            tableHTML += '</tbody></table>';
-            const container = document.getElementById('metricsTable-lines');
-            if (container) container.innerHTML = tableHTML;
-        }
-
-        // Функция для создания таблицы топ поломок
-        function createTopBreakdownsTable(data, containerId, isWeekly = false) {
-            if (!data || !Array.isArray(data) || data.length === 0) {
-                document.getElementById(containerId).innerHTML = '<p>Нет данных для отображения</p>';
-                return;
-            }
-            let tableHTML = `<table class="metrics-table">
-                <thead>
-                    <tr>`;
-            if (isWeekly) {
-                tableHTML += '<th>machine_name</th><th>machine_downtime</th>';
-            } else {
-                tableHTML += '<th>code</th><th>machine_name</th><th>machine_downtime</th><th>cause</th>';
-            }
-            tableHTML += `</tr>
-                </thead>
-                <tbody>`;
-            data.forEach(row => {
-                tableHTML += '<tr>';
-                if (isWeekly) {
-                    tableHTML += `<td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td>`;
-                } else {
-                    tableHTML += `<td>${row.code || ''}</td><td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td><td>${row.cause || ''}</td>`;
-                }
-                tableHTML += '</tr>';
-            });
-            tableHTML += '</tbody></table>';
-            document.getElementById(containerId).innerHTML = tableHTML;
-        }
-
-        // Загрузка и отображение топ поломок
-        async function loadTopBreakdownsTables() {
-            const topBreakdowns = await fetchData('/dashboard/top-breakdowns');
-            createTopBreakdownsTable(topBreakdowns, 'topBreakdownsTable');
-
-    // Текущий ТОП (онлайн)
-    const topCurrent = await fetchData('/dashboard/top-breakdowns-current');
-    if (topCurrent && Array.isArray(topCurrent)) {
-        let tableHTML = `<table class="metrics-table">
-            <thead>
-                <tr><th>area</th><th>machine_name</th><th>machine_downtime</th><th>cause</th></tr>
-            </thead>
-            <tbody>`;
-        const formatSeconds = (s) => {
-            if (s == null) return '';
-            const total = Number(s) || 0;
-            const h = Math.floor(total / 3600);
-            const m = Math.floor((total % 3600) / 60);
-            const sec = Math.floor(total % 60);
-            return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
-        };
-        topCurrent.forEach(row => {
-            const downtime = (row.machine_downtime_seconds != null) ? formatSeconds(row.machine_downtime_seconds) : (row.machine_downtime || '');
-            tableHTML += `<tr><td>${row.area || ''}</td><td>${row.machine_name || ''}</td><td>${downtime}</td><td>-</td></tr>`;
-        });
-        tableHTML += '</tbody></table>';
-        const currentContainer = document.getElementById('topBreakdownsCurrentTable');
-        if (currentContainer) currentContainer.innerHTML = tableHTML;
-    }
-
-    // Добавляем в заголовки дату прошедших суток и текущую дату
-    const yesterday = new Date(Date.now() - 24*60*60*1000).toLocaleDateString('ru-RU');
-    const today = new Date().toLocaleDateString('ru-RU');
-    const topBreakdownsHeader = document.getElementById('topBreakdownsHeader');
-    if (topBreakdownsHeader) topBreakdownsHeader.textContent = `Топ поломок за сутки — ${yesterday}`;
-    const currentSpan = document.getElementById('currentDateSpan');
-    if (currentSpan) currentSpan.textContent = today;
-        }
-
-        // Инициализация дашборда
-        async function initializeDashboard() {
-            await loadTopBreakdownsTables();
-            await loadOnlineCharts();
-            
-            // Обновление графиков и блиц-панели каждые 60 секунд
-            setInterval(async () => {
-                await loadOnlineCharts();
-            }, 60000);
-            
-            // Обновление таблиц топ поломок каждые 5 минут
-            setInterval(async () => {
-                await loadTopBreakdownsTables();
-            }, 300000); // 5 минут = 300000 мс
-            
-            // Полное обновление страницы каждый час
-            setInterval(() => {
-                window.location.reload();
-            }, 3600000); // 1 час = 3600000 мс
-        }
-
-        // Вызовем при инициализации
-        window.onload = initializeDashboard;
-    </script>
-
+    <script src="static/scripts/dashboard.js"></script>
+    <script src="static/scripts/dashboard-main.js"></script>
 </body>
 
 </html>

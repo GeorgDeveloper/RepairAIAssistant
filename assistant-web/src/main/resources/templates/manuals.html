@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Repair AI Assistant</title>
     <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/manuals.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
@@ -13,97 +14,7 @@
 
 <body>
 
-    <div class="sidebar">
-        <div class="logo">
-            <img src="/static/images/LogoPirelli3.png" alt="Логотип компании">
-        </div>
-
-        <div class="nav-container">
-            <ul class="nav-menu">
-                <li class="has-submenu">
-                    <a href="#">Инфопанель</a>
-                    <ul class="submenu">
-                        <li><a href="/dashboard">Показатели Online</a></li>
-                        <li><a href="/dashboard_graf">Показатели Online График</a></li>
-                        <li><a href="/final">ИТОГИ</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="/">Главная</a>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Поломки</a>
-                    <ul class="submenu">
-                        <li><a href="/dinamic_bd">Динамика</a></li>
-                        <li><a href="/bdav">Динамика BD/AV</a></li>
-                        <li><a href="/failures">Заявки на поломки</a></li>
-                        <li><a href="/top-causes">Топ причин</a></li>
-                        <li class="has-submenu">
-                            <a href="/top-causes">Топ поломок</a>
-                            <ul class="submenu">
-                                <li><a href="/top-equipment">Оборудование</a></li>
-                                <li><a href="/top_areas">Участки</a></li>
-                            </ul>
-                        </li>
-                        <li><a href="/gantt">Диаграмма Ганта</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">ППР</a>
-                    <ul class="submenu">
-                        <li><a href="#">Динамика</a></li>
-                        <li><a href="#">Отчеты</a></li>
-                        <li><a href="#">Tag-PM-BD</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Диагностика</a>
-                    <ul class="submenu">
-                        <li><a href="#">Отчёты</a></li>
-                        <li><a href="#">Динамика</a></li>
-                        <li><a href="#">Пневматика</a></li>
-                        <li><a href="#">Чек-листы</a></li>
-                        <li class="has-submenu">
-                            <a href="#">Графики</a>
-                            <ul class="submenu">
-                                <li class="has-submenu">
-                                    <a href="#">Год</a>
-                                    <ul class="submenu">
-                                        <li class="has-submenu">
-                                            <a href="#">2025</a>
-                                            <ul class="submenu">
-                                                <li><a href="#">Январь</a></li>
-                                                <li><a href="#">Февраль</a></li>
-                                                <li><a href="#">Март</a></li>
-                                                <li><a href="#">Апрель</a></li>
-                                                <li><a href="#">Май</a></li>
-                                                <li><a href="#">Июнь</a></li>
-                                                <li><a href="#">Июль</a></li>
-                                                <li><a href="#">Август</a></li>
-                                                <li><a href="#">Сентябрь</a></li>
-                                                <li><a href="#">Октябрь</a></li>
-                                                <li><a href="#">Ноябрь</a></li>
-                                                <li><a href="#">Декабрь</a></li>
-                                            </ul>
-                                        </li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Ассистент KVANT AI </a>
-                    <ul class="submenu">
-                        <li><a href="/chat">Чат с ассистентом</a></li>
-                        <li><a href="/long_report">Отчеты</a></li>
-                        <li><a href="/manuals">Мануалы</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-
+    <div th:replace="~{fragments/navigation :: nav}"></div>
 
     <div class="total-content">
         <div class="header">
@@ -113,465 +24,90 @@
         </div>
 
         <div class="main-content">
-            <style>
-                .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
-                .pm-row .table-container, .pm-row .chart-container { height: 100%; }
-                #resizablePm { height: 100% !important; }
-            </style>
-                        <div class="container">
-                            <div class="content">
-                <h1>Справочники и чертежи</h1>
+            <div class="container">
+                <div class="content">
+                    <h1>Справочники и чертежи</h1>
 
-                <button id="openUploadModalButton" style="margin-bottom: 20px;">Добавить документ</button>
+                    <button id="openUploadModalButton">Добавить документ</button>
 
-                <h1></h1>
-                <table id="manualsTable" class="display" style="width:100%">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Участок</th>
-                            <th>Оборудование</th>
-                            <th>Узел</th>
-                            <th>Тип документа</th>
-                            <th>Имя файла</th>
-                            <th>Комментарий</th>
-                            <th>Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Rows will be dynamically populated -->
-                    </tbody>
-                </table>
-            </div>
+                    <h1></h1>
+                    <table id="manualsTable" class="display">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Участок</th>
+                                <th>Оборудование</th>
+                                <th>Узел</th>
+                                <th>Тип документа</th>
+                                <th>Имя файла</th>
+                                <th>Комментарий</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows will be dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
 
+                <!-- Modal for uploading manuals -->
+                <div id="uploadManualModal" class="modal">
+                    <div class="modal-content">
+                        <h2>Загрузить мануал</h2>
+                        <form id="uploadManualForm" enctype="multipart/form-data">
+                            <select id="region" name="region" required>
+                                <option value="">Выберите участок</option>
+                            </select>
+                            <select id="equipment" name="equipment" required>
+                                <option value="">Выберите оборудование</option>
+                            </select>
+                            <select id="node" name="node" required>
+                                <option value="">Выберите узел</option>
+                            </select>
+                            <input type="text" name="deviceType" placeholder="Тип документа" required>
+                            <input type="text" name="content" placeholder="Содержание" required>
+                            <input type="file" name="file" accept=".txt,.pdf,.exls" required>
+                            <button type="submit">Загрузить</button>
+                            <button type="button" id="closeUploadModal">Закрыть</button>
+                        </form>
+                    </div>
+                </div>
 
-            <!-- Modal for uploading manuals -->
-            <div id="uploadManualModal" class="modal"
-                style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
-                <div class="modal-content"
-                    style="background: white; padding: 20px; border-radius: 8px; width: 50%; max-width: 600px;">
-                    <h2>Загрузить мануал</h2>
-                    <form id="uploadManualForm" enctype="multipart/form-data"
-                        style="display: flex; flex-direction: column; gap: 10px;">
-                        <select id="region" name="region" required>
-                            <option value="">Выберите участок</option>
-                        </select>
-                        <select id="equipment" name="equipment" required>
-                            <option value="">Выберите оборудование</option>
-                        </select>
-                        <select id="node" name="node" required>
-                            <option value="">Выберите узел</option>
-                        </select>
-                        <input type="text" name="deviceType" placeholder="Тип документа" required>
-                        <input type="text" name="content" placeholder="Содержание" required>
-                        <input type="file" name="file" accept=".txt,.pdf,.exls" required>
-                        <button type="submit">Загрузить</button>
-                        <button type="button" id="closeUploadModal">Закрыть</button>
-                    </form>
+                <!-- Modal for editing manuals -->
+                <div id="editManualModal" class="modal">
+                    <div class="modal-content">
+                        <h2>Редактировать мануал</h2>
+                        <form id="editManualForm">
+                            <input type="hidden" id="editManualId" name="id">
+                            <select id="editRegion" name="region" required>
+                                <option value="">Выберите участок</option>
+                            </select>
+                            <select id="editEquipment" name="equipment" required>
+                                <option value="">Выберите оборудование</option>
+                            </select>
+                            <select id="editNode" name="node" required>
+                                <option value="">Выберите узел</option>
+                            </select>
+                            <input type="text" id="editDeviceType" name="deviceType" placeholder="Тип документа" required>
+                            <input type="text" id="editContent" name="content" placeholder="Содержание" required>
+                            <button type="submit">Сохранить</button>
+                            <button type="button" id="closeEditModal">Закрыть</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Error Modal -->
+                <div id="errorModal" class="modal">
+                    <div class="modal-content">
+                        <p id="errorMessage"></p>
+                        <button onclick="document.getElementById('errorModal').style.display = 'none'">Закрыть</button>
+                    </div>
                 </div>
             </div>
-
-            <!-- Modal for editing manuals -->
-            <div id="editManualModal" class="modal"
-                style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
-                <div class="modal-content"
-                    style="background: white; padding: 20px; border-radius: 8px; width: 50%; max-width: 600px;">
-                    <h2>Редактировать мануал</h2>
-                    <form id="editManualForm" style="display: flex; flex-direction: column; gap: 10px;">
-                        <input type="hidden" id="editManualId" name="id">
-                        <select id="editRegion" name="region" required>
-                            <option value="">Выберите участок</option>
-                        </select>
-                        <select id="editEquipment" name="equipment" required>
-                            <option value="">Выберите оборудование</option>
-                        </select>
-                        <select id="editNode" name="node" required>
-                            <option value="">Выберите узел</option>
-                        </select>
-                        <input type="text" id="editDeviceType" name="deviceType" placeholder="Тип документа" required>
-                        <input type="text" id="editContent" name="content" placeholder="Содержание" required>
-                        <button type="submit">Сохранить</button>
-                        <button type="button" id="closeEditModal">Закрыть</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Error Modal -->
-            <div id="errorModal"
-                style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 1000;">
-                <div style="background: white; padding: 20px; border-radius: 8px; text-align: center;">
-                    <p id="errorMessage"></p>
-                    <button onclick="document.getElementById('errorModal').style.display = 'none'">Закрыть</button>
-                </div>
-            </div>
-
         </div>
     </div>
 
-    <script>
-        $(document).ready(function () {
-           var table = $('#manualsTable').DataTable({
-                ajax: {
-                    url: '/manuals/all',
-                    dataSrc: ''
-                },
-                columns: [
-                    { data: 'id' },
-                    { data: 'region' },
-                    { data: 'equipment' },
-                    { data: 'node' },
-                    { data: 'deviceType' },
-                    {
-                        data: 'fileName',
-                        render: function (data, type, row) {
-                            return `<a href='#' class='download-link' data-id='${row.id}'>${data}</a>`;
-                        }
-                    },
-                    { data: 'content' },
-                    {
-                        data: null,
-                        render: function (data, type, row) {
-                            return `
-                                <button class='edit-button' data-id='${row.id}'>Редактировать</button>
-                                <button class='delete-button' data-id='${row.id}'>Удалить</button>
-                            `;
-                        }
-                    }
-                ],
-                language: {
-                    search: "Поиск:",
-                    lengthMenu: "Показать _MENU_ записей",
-                    info: "Показано с _START_ по _END_ из _TOTAL_ записей",
-                    paginate: { first: "Первая", last: "Последняя", next: "Следующая", previous: "Предыдущая" }
-                }
-            });
-
-            table.order([0, 'desc']).draw();
-
-            // Обработчик для скачивания файлов
-            $(document).on('click', '.download-link', function (e) {
-                e.preventDefault();
-                const fileId = $(this).data('id');
-                const fileName = $(this).text();
-                downloadFile(fileId, fileName);
-            });
-
-            // Modal open and close functionality
-            const uploadModal = document.getElementById('uploadManualModal');
-            const openUploadModalButton = document.getElementById('openUploadModalButton');
-            const closeUploadModalButton = document.getElementById('closeUploadModal');
-
-            openUploadModalButton.addEventListener('click', () => {
-                uploadModal.style.display = 'flex';
-            });
-
-            closeUploadModalButton.addEventListener('click', () => {
-                uploadModal.style.display = 'none';
-            });
-
-            // Handle form submission
-            document.getElementById('uploadManualForm').addEventListener('submit', function (event) {
-                event.preventDefault();
-
-                const region = document.getElementById('region');
-                const equipment = document.getElementById('equipment');
-                const node = document.getElementById('node');
-                const deviceType = document.querySelector('input[name="deviceType"]');
-                const content = document.querySelector('input[name="content"]');
-                const file = document.querySelector('input[name="file"]');
-
-                if (!region.value.trim()) {
-                    alert('Поле "Регион" обязательно для заполнения.');
-                    region.focus();
-                    return;
-                }
-
-                if (!equipment.value.trim()) {
-                    alert('Поле "Оборудование" обязательно для заполнения.');
-                    equipment.focus();
-                    return;
-                }
-
-                if (!node.value.trim()) {
-                    alert('Поле "Узел" обязательно для заполнения.');
-                    node.focus();
-                    return;
-                }
-
-                if (!deviceType.value.trim()) {
-                    alert('Поле "Тип устройства" обязательно для заполнения.');
-                    deviceType.focus();
-                    return;
-                }
-
-                if (!content.value.trim()) {
-                    alert('Поле "Содержание" обязательно для заполнения.');
-                    content.focus();
-                    return;
-                }
-
-                if (!file.files.length) {
-                    alert('Необходимо выбрать файл для загрузки.');
-                    file.focus();
-                    return;
-                }
-
-                // Получаем текстовые названия вместо ID
-                const regionText = $('#region option:selected').text();
-                const equipmentText = $('#equipment option:selected').text();
-                const nodeText = $('#node option:selected').text();
-
-                // Создаем FormData и добавляем параметры по отдельности
-                const formData = new FormData();
-                formData.append('file', file.files[0]);
-                formData.append('region', regionText); // Отправляем текст, а не значение
-                formData.append('equipment', equipmentText); // Отправляем текст, а не значение
-                formData.append('node', nodeText); // Отправляем текст, а не значение
-                formData.append('deviceType', deviceType.value);
-                formData.append('content', content.value);
-
-
-                fetch('/manuals/upload', {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(response => response.text())
-                    .then(data => {
-                        alert(data);
-                        document.getElementById('uploadManualModal').style.display = 'none';
-                        // Reload the table to show new data
-                        $('#manualsTable').DataTable().ajax.reload();
-                    })
-                    .catch(error => {
-                        alert('Ошибка при загрузке: ' + error.message);
-                    });
-            });
-
-            // Загрузка данных для списка регионов
-            fetch('/api/regions')
-                .then(response => response.json())
-                .then(data => {
-                    const regionSelect = $('#region');
-                    data.forEach(region => {
-                        regionSelect.append(new Option(region.name_region, region.id));
-                    });
-                });
-
-            // Обновление списка оборудования при выборе региона
-            $('#region').on('change', function () {
-                const regionId = $(this).val();
-                const equipmentSelect = $('#equipment');
-                equipmentSelect.empty().append(new Option('Выберите оборудование', ''));
-
-                if (regionId) {
-                    fetch(`/api/equipment?regionId=${regionId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            data.forEach(equipment => {
-                                equipmentSelect.append(new Option(equipment.name_equipment, equipment.id));
-                            });
-                        });
-                }
-            });
-
-            // Обновление списка узлов при выборе оборудования
-            $('#equipment').on('change', function () {
-                const equipmentId = $(this).val();
-                const nodeSelect = $('#node');
-                nodeSelect.empty().append(new Option('Выберите узел', ''));
-
-                if (equipmentId) {
-                    fetch(`/api/nodes?equipmentId=${equipmentId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            data.forEach(node => {
-                                nodeSelect.append(new Option(node.name_node, node.id));
-                            });
-                        });
-                }
-            });
-
-            // Добавлен обработчик для кнопок удаления и редактирования
-            $(document).on('click', '.delete-button', function () {
-                const id = $(this).data('id');
-                if (confirm('Вы уверены, что хотите удалить эту запись?')) {
-                    // Добавлены заголовки в запрос DELETE для manuals
-                    fetch(`/manuals/delete/${id}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        }
-                    })
-                        .then(() => $('#manualsTable').DataTable().ajax.reload())
-                        .catch(error => alert('Ошибка при удалении: ' + error.message));
-                }
-            });
-
-            $(document).on('click', '.edit-button', function () {
-                const id = $(this).data('id');
-                const table = $('#manualsTable').DataTable();
-                const rowData = table.row($(this).parents('tr')).data();
-                // Заполнить скрытое поле id
-                $('#editManualId').val(rowData.id);
-
-                // 1. Загрузить регионы
-            fetch('/api/regions')
-                    .then(response => response.json())
-                    .then(regions => {
-                        const regionSelect = $('#editRegion');
-                        regionSelect.empty().append(new Option('Выберите участок', ''));
-                        regions.forEach(region => {
-                            regionSelect.append(new Option(region.name_region, region.id));
-                        });
-                        // Установить выбранный регион
-                        regionSelect.val(rowData.region);
-
-                        // 2. Загрузить оборудование для выбранного региона
-                        if (rowData.region) {
-                            fetch(`/api/equipment?regionId=${rowData.region}`)
-                                .then(response => response.json())
-                                .then(equipments => {
-                                    const equipmentSelect = $('#editEquipment');
-                                    equipmentSelect.empty().append(new Option('Выберите оборудование', ''));
-                                    equipments.forEach(equipment => {
-                                        equipmentSelect.append(new Option(equipment.name_equipment, equipment.id));
-                                    });
-                                    equipmentSelect.val(rowData.equipment);
-
-                                    // 3. Загрузить узлы для выбранного оборудования
-                                    if (rowData.equipment) {
-                                        fetch(`/api/nodes?equipmentId=${rowData.equipment}`)
-                                            .then(response => response.json())
-                                            .then(nodes => {
-                                                const nodeSelect = $('#editNode');
-                                                nodeSelect.empty().append(new Option('Выберите узел', ''));
-                                                nodes.forEach(node => {
-                                                    nodeSelect.append(new Option(node.name_node, node.id));
-                                                });
-                                                nodeSelect.val(rowData.node);
-                                            });
-                                    } else {
-                                        $('#editNode').empty().append(new Option('Выберите узел', ''));
-                                    }
-                                });
-                        } else {
-                            $('#editEquipment').empty().append(new Option('Выберите оборудование', ''));
-                            $('#editNode').empty().append(new Option('Выберите узел', ''));
-                        }
-                    });
-
-                // Остальные поля
-                $('#editDeviceType').val(rowData.deviceType);
-                $('#editContent').val(rowData.content);
-                // Показать модальное окно
-                $('#editManualModal').css('display', 'flex');
-            });
-
-            // Каскадное обновление списков в модальном окне редактирования
-            $('#editRegion').on('change', function () {
-                const regionId = $(this).val();
-                const equipmentSelect = $('#editEquipment');
-                equipmentSelect.empty().append(new Option('Выберите оборудование', ''));
-                $('#editNode').empty().append(new Option('Выберите узел', ''));
-                if (regionId) {
-                    fetch(`/api/equipment?regionId=${regionId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            data.forEach(equipment => {
-                                equipmentSelect.append(new Option(equipment.name_equipment, equipment.id));
-                            });
-                        });
-                }
-            });
-            $('#editEquipment').on('change', function () {
-                const equipmentId = $(this).val();
-                const nodeSelect = $('#editNode');
-                nodeSelect.empty().append(new Option('Выберите узел', ''));
-                if (equipmentId) {
-                    fetch(`/api/nodes?equipmentId=${equipmentId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            data.forEach(node => {
-                                nodeSelect.append(new Option(node.name_node, node.id));
-                            });
-                        });
-                }
-            });
-
-            // Закрыть модальное окно редактирования
-            $('#closeEditModal').on('click', function () {
-                $('#editManualModal').css('display', 'none');
-            });
-
-            // Обработка отправки формы редактирования
-            $('#editManualForm').on('submit', function (event) {
-                event.preventDefault();
-                const id = $('#editManualId').val();
-                const manual = {
-                    region: $('#editRegion option:selected').text(),
-                    equipment: $('#editEquipment option:selected').text(),
-                    node: $('#editNode option:selected').text(),
-                    deviceType: $('#editDeviceType').val(),
-                    content: $('#editContent').val()
-                };
-                fetch(`/manuals/manuals/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(manual)
-                })
-                    .then(response => {
-                        if (!response.ok) throw new Error('Ошибка при обновлении');
-                        $('#editManualModal').css('display', 'none');
-                        $('#manualsTable').DataTable().ajax.reload();
-                    })
-                    .catch(error => alert(error.message));
-            });
-        });
-
-        // Функция для скачивания файла
-        function downloadFile(fileId, fileName) {
-            fetch(`/manuals/download/${fileId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(errorText => {
-                            try {
-                                const errorData = JSON.parse(errorText);
-                                throw new Error(errorData.error || 'Файл не найден');
-                            } catch {
-                                throw new Error(errorText || 'Файл не найден');
-                            }
-                        });
-                    }
-                    return response.blob();
-                })
-                .then(blob => {
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = fileName || 'file';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                })
-                .catch(error => {
-                    showErrorModal(error.message);
-                });
-        }
-
-        // Функция для отображения модального окна с ошибкой
-        function showErrorModal(message) {
-            const errorModal = document.getElementById('errorModal');
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = message;
-            errorModal.style.display = 'flex';
-        }
-    </script>
+    <script src="/static/js/manuals.js"></script>
 </body>
 
 </html>

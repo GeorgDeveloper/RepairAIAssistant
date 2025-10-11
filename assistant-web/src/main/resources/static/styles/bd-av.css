@@ -1,0 +1,100 @@
+/* Styles extracted from bd_av.html */
+html, body { height: 100vh; overflow: hidden; }
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 6px; }
+.filter-group { display: flex; flex-direction: column; }
+.filter-group label { font-weight: 600; margin-bottom: 6px; }
+.filter-control { padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+.btn { border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-weight: 600; }
+.btn-apply { background: #e74c3c; color: #fff; }
+.btn-toggle { background: #3498db; color: #fff; }
+
+.multi-select {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.multi-select-button {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.multi-select-button:hover {
+    border-color: #e74c3c;
+}
+
+.multi-select-button::after {
+    content: '▼';
+    font-size: 12px;
+    transition: transform 0.3s;
+}
+
+.multi-select-button.open::after {
+    transform: rotate(180deg);
+}
+
+.multi-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.multi-select-dropdown.open {
+    display: block;
+}
+
+.multi-select-option {
+    padding: 8px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.multi-select-option:last-child {
+    border-bottom: none;
+}
+
+.multi-select-option:hover {
+    background-color: #f5f5f5;
+}
+
+.multi-select-option input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.multi-select-option label {
+    cursor: pointer;
+    margin: 0;
+    flex: 1;
+}
+
+/* Вписать контент в экран */
+.total-content { height: 100vh; overflow: hidden; }
+.main-content { height: calc(100vh - 60px); overflow: hidden; padding-bottom: 16px; }
+.container { height: 100%; display: flex; flex-direction: column; }
+.chart-container { margin-top: 12px; margin-bottom: 16px; padding: 16px; background: #fff; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,.06); flex: 1 1 auto; min-height: 0; }
+.chart-container canvas { width: 100% !important; height: 100% !important; }
+
+.pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
+.pm-row .table-container, .pm-row .chart-container { height: 100%; }
+#resizablePm { height: 100% !important; }

@@ -1,131 +1,18 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Топ причин</title>
     <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/top-causes.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 6px; }
-        .filter-group { display: flex; flex-direction: column; }
-        .filter-group label { font-weight: 600; margin-bottom: 6px; }
-        .filter-control { padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-        .btn-apply { background: #e74c3c; color: #fff; border: 0; border-radius: 4px; padding: 9px 14px; cursor: pointer; grid-column: 1 / -1; }
-        .chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-        .chart-container { padding: 16px; background: #fff; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 560px; }
-        .legend-container { padding: 16px; background: #fff; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-height: 560px; overflow-y: auto; }
-        .legend-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #eee; }
-        .legend-item:last-child { border-bottom: 0; }
-        .legend-left { display: flex; align-items: center; gap: 8px; }
-        .legend-color { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-        .legend-item.disabled { opacity: .45; }
-        .loading, .error { display: none; text-align: center; padding: 12px; }
-        .error { color: #e74c3c; background: #ffefef; border-radius: 4px; }
-
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); align-items: center; justify-content: center; }
-        .modal-content { width: min(1000px, 92vw); height: 80vh; background: #fff; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; }
-        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
-        .modal-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-        .close-btn { border: 0; background: #e74c3c; color: #fff; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
-        .back-btn { border: 0; background: #7f8c8d; color: #fff; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
-    </style>
 </head>
 
 <body>
 
-    <div class="sidebar">
-        <div class="logo">
-            <img src="/static/images/LogoPirelli3.png" alt="Логотип компании">
-        </div>
-
-        <div class="nav-container">
-            <ul class="nav-menu">
-                <li class="has-submenu">
-                    <a href="#">Инфопанель</a>
-                    <ul class="submenu">
-                        <li><a href="/dashboard">Показатели Online</a></li>
-                        <li><a href="/dashboard_graf">Показатели Online График</a></li>
-                        <li><a href="/final">ИТОГИ</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="/">Главная</a>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Поломки</a>
-                    <ul class="submenu">
-                        <li><a href="/dinamic_bd">Динамика</a></li>
-                        <li><a href="/bdav">Динамика BD/AV</a></li>
-                        <li><a href="/failures">Заявки на поломки</a></li>
-                        <li><a href="/top-causes">Топ причин</a></li>
-                        <li class="has-submenu">
-                            <a href="/top-causes">Топ поломок</a>
-                            <ul class="submenu">
-                                <li><a href="/top-equipment">Оборудование</a></li>
-                                <li><a href="/top_areas">Участки</a></li>
-                            </ul>
-                        </li>
-                        <li><a href="/gantt">Диаграмма Ганта</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">ППР</a>
-                    <ul class="submenu">
-                        <li><a href="#">Динамика</a></li>
-                        <li><a href="#">Отчеты</a></li>
-                        <li><a href="#">Tag-PM-BD</a></li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Диагностика</a>
-                    <ul class="submenu">
-                        <li><a href="#">Отчёты</a></li>
-                        <li><a href="#">Динамика</a></li>
-                        <li><a href="#">Пневматика</a></li>
-                        <li><a href="#">Чек-листы</a></li>
-                        <li class="has-submenu">
-                            <a href="#">Графики</a>
-                            <ul class="submenu">
-                                <li class="has-submenu">
-                                    <a href="#">Год</a>
-                                    <ul class="submenu">
-                                        <li class="has-submenu">
-                                            <a href="#">2025</a>
-                                            <ul class="submenu">
-                                                <li><a href="#">Январь</a></li>
-                                                <li><a href="#">Февраль</a></li>
-                                                <li><a href="#">Март</a></li>
-                                                <li><a href="#">Апрель</a></li>
-                                                <li><a href="#">Май</a></li>
-                                                <li><a href="#">Июнь</a></li>
-                                                <li><a href="#">Июль</a></li>
-                                                <li><a href="#">Август</a></li>
-                                                <li><a href="#">Сентябрь</a></li>
-                                                <li><a href="#">Октябрь</a></li>
-                                                <li><a href="#">Ноябрь</a></li>
-                                                <li><a href="#">Декабрь</a></li>
-                                            </ul>
-                                        </li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-                <li class="has-submenu">
-                    <a href="#">Ассистент KVANT AI </a>
-                    <ul class="submenu">
-                        <li><a href="/chat">Чат с ассистентом</a></li>
-                        <li><a href="/long_report">Отчеты</a></li>
-                        <li><a href="/manuals">Мануалы</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-
+    <div th:replace="~{fragments/navigation :: nav}"></div>
 
     <div class="total-content">
         <div class="header">
@@ -135,365 +22,73 @@
         </div>
 
         <div class="main-content">
-            <style>
-                .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
-                .pm-row .table-container, .pm-row .chart-container { height: 100%; }
-                #resizablePm { height: 100% !important; }
-            </style>
             <div class="container">
-        <h2>Топ причин простоев</h2>
+                <div class="content-header">
+                    <h1>Топ причин простоев</h1>
+                </div>
 
-        <div class="filters">
-            <div class="filter-group">
-                <label>Дата с</label>
-                <input id="dateFrom" type="date" class="filter-control" />
-            </div>
-            <div class="filter-group">
-                <label>Дата по</label>
-                <input id="dateTo" type="date" class="filter-control" />
-            </div>
-            <div class="filter-group">
-                <label>Номер недели</label>
-                <select id="week" class="filter-control"></select>
-            </div>
-            <div class="filter-group">
-                <label>Зона</label>
-                <select id="area" class="filter-control"></select>
-            </div>
-            <div class="filter-group">
-                <label>Оборудование</label>
-                <select id="machine" class="filter-control"></select>
-            </div>
-            <div class="filter-group">
-                <label>Тип поломки</label>
-                <select id="failureType" class="filter-control"></select>
-            </div>
-            <button class="btn-apply" onclick="applyFilters()">Применить</button>
-        </div>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Дата с</label>
+                        <input id="dateFrom" type="date" class="filter-control" />
+                    </div>
+                    <div class="filter-group">
+                        <label>Дата по</label>
+                        <input id="dateTo" type="date" class="filter-control" />
+                    </div>
+                    <div class="filter-group">
+                        <label>Номер недели</label>
+                        <select id="week" class="filter-control"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Зона</label>
+                        <select id="area" class="filter-control"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Оборудование</label>
+                        <select id="machine" class="filter-control"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Тип поломки</label>
+                        <select id="failureType" class="filter-control"></select>
+                    </div>
+                    <button id="applyBtn" class="btn-apply">Применить</button>
+                </div>
 
-        <div class="chart-row">
-            <div class="chart-container">
-                <canvas id="topChart"></canvas>
-            </div>
-            <div class="legend-container">
-                <h3>Легенда</h3>
-                <div id="legend"></div>
-            </div>
-        </div>
-
-        <div id="loading" class="loading">Загрузка...</div>
-        <div id="error" class="error"></div>
-
-        <div id="drillModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 id="drillTitle">Детализация</h3>
-                    <div>
-                        <button id="backBtn" class="back-btn" style="display:none" onclick="backModal()">Назад</button>
-                        <button class="close-btn" onclick="closeModal()">Закрыть</button>
+                <div class="chart-row">
+                    <div class="chart-container">
+                        <canvas id="topChart"></canvas>
+                    </div>
+                    <div class="legend-container">
+                        <div class="legend-header">Легенда</div>
+                        <div id="legend"></div>
                     </div>
                 </div>
-                <div class="modal-body">
-                    <canvas id="drillChart"></canvas>
+
+                <div id="loading" class="loading">Загрузка...</div>
+                <div id="error" class="error"></div>
+
+                <div id="drillModal" class="modal" role="dialog" aria-modal="true">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="drillTitle" class="modal-title">Детализация</h3>
+                            <div class="modal-actions">
+                                <button id="backBtn" class="back-btn" style="display:none;">Назад</button>
+                                <button id="closeBtn" class="close-btn">Закрыть</button>
+                            </div>
+                        </div>
+                        <div class="modal-body">
+                            <canvas id="drillChart" class="chart-canvas"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-</div>
 
-    <script>
-        const apiBase = '/top-causes';
-        let chart;
-        let drillChart;
-        let drillLevel = 'machines';
-        let cachedMachines = null;
-        let cachedMechanisms = null;
-        let currentCause = '';
-        let currentMachine = '';
-        const hiddenCauses = new Set();
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            await Promise.all([loadWeeks(), loadAreas(), loadFailureTypes()]);
-            await loadMachines();
-            await applyFilters();
-            document.getElementById('area').addEventListener('change', loadMachines);
-        });
-
-        async function loadWeeks() {
-            const res = await fetch(`${apiBase}/weeks`);
-            const data = await res.json();
-            const el = document.getElementById('week');
-            el.innerHTML = '<option value="all">Все</option>';
-            data.forEach(w => el.innerHTML += `<option value="${w.week_number}">${w.week_number}</option>`);
-        }
-
-        async function loadAreas() {
-            const res = await fetch(`${apiBase}/areas`);
-            const data = await res.json();
-            const el = document.getElementById('area');
-            el.innerHTML = '<option value="all">Все</option>';
-            data.forEach(a => el.innerHTML += `<option value="${a.area}">${a.area}</option>`);
-        }
-
-        async function loadMachines() {
-            const area = document.getElementById('area').value || 'all';
-            const res = await fetch(`${apiBase}/machines?area=${encodeURIComponent(area)}`);
-            const data = await res.json();
-            const el = document.getElementById('machine');
-            el.innerHTML = '<option value="all">Всё оборудование</option>';
-            data.forEach(m => el.innerHTML += `<option value="${m.machine_name}">${m.machine_name}</option>`);
-        }
-
-        async function loadFailureTypes() {
-            const res = await fetch(`${apiBase}/failure-types`);
-            const data = await res.json();
-            const el = document.getElementById('failureType');
-            el.innerHTML = '<option value="all">Все</option>';
-            data.forEach(t => el.innerHTML += `<option value="${t.failure_type}">${t.failure_type}</option>`);
-        }
-
-        async function applyFilters() {
-            const params = new URLSearchParams();
-            const df = document.getElementById('dateFrom').value;
-            const dt = document.getElementById('dateTo').value;
-            const w = document.getElementById('week').value;
-            const a = document.getElementById('area').value;
-            const m = document.getElementById('machine').value;
-            const ft = document.getElementById('failureType').value;
-            if (df) params.append('dateFrom', df);
-            if (dt) params.append('dateTo', dt);
-            if (w && w !== 'all') params.append('week', w);
-            if (a && a !== 'all') params.append('area', a);
-            if (m && m !== 'all') params.append('machine', m);
-            if (ft && ft !== 'all') params.append('failureType', ft);
-            params.append('limit', 30);
-
-            const res = await fetch(`${apiBase}/data?${params.toString()}`);
-            const data = await res.json();
-            renderChart(data);
-            renderLegend(data);
-        }
-
-        let baseChartData = { labels: [], downtime: [], counts: [], colors: [] };
-        function renderChart(data) {
-            baseChartData.labels = data.map(d => d.cause);
-            baseChartData.downtime = data.map(d => Number(d.total_downtime_hours).toFixed(2));
-            baseChartData.counts = data.map(d => d.failure_count);
-            baseChartData.colors = baseChartData.labels.map((_, i) => `hsl(${(i*37)%360} 70% 55%)`);
-            updateMainChart();
-        }
-
-        function getFilteredChart() {
-            const labels = [];
-            const downtime = [];
-            const counts = [];
-            const colors = [];
-            baseChartData.labels.forEach((label, i) => {
-                if (!hiddenCauses.has(label)) {
-                    labels.push(label);
-                    downtime.push(baseChartData.downtime[i]);
-                    counts.push(baseChartData.counts[i]);
-                    colors.push(baseChartData.colors[i]);
-                }
-            });
-            return { labels, downtime, counts, colors };
-        }
-
-        function updateMainChart() {
-            const filtered = getFilteredChart();
-            const ctx = document.getElementById('topChart').getContext('2d');
-            if (chart) chart.destroy();
-            chart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: filtered.labels,
-                    datasets: [
-                        { label: 'Время простоя (ч)', data: filtered.downtime, backgroundColor: filtered.colors },
-                        { label: 'Кол-во заявок', data: filtered.counts, backgroundColor: 'rgba(52, 152, 219, 0.45)' }
-                    ]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: true } },
-                    scales: { x: { beginAtZero: true } }
-                }
-            });
-
-            document.getElementById('topChart').onclick = async (evt) => {
-                const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
-                if (!points.length) return;
-                const idx = points[0].index;
-                const cause = filtered.labels[idx];
-                await openDrilldown(cause);
-            };
-        }
-
-        function renderLegend(data) {
-            const container = document.getElementById('legend');
-            container.innerHTML = '';
-            data.forEach((d, i) => {
-                const color = baseChartData.colors[i] || `hsl(${(i*37)%360} 70% 55%)`;
-                const row = document.createElement('div');
-                row.className = 'legend-item' + (hiddenCauses.has(d.cause) ? ' disabled' : '');
-                row.style.cursor = 'pointer';
-                row.onclick = () => toggleLegendItem(d.cause);
-                row.innerHTML = `<div class=\"legend-left\"><span class=\"legend-color\" style=\"background:${color}\"></span><span>${d.cause}</span></div><div>${Number(d.total_downtime_hours).toFixed(2)} ч | ${d.failure_count}</div>`;
-                container.appendChild(row);
-            });
-        }
-
-        function toggleLegendItem(cause){
-            if (hiddenCauses.has(cause)) hiddenCauses.delete(cause); else hiddenCauses.add(cause);
-            updateMainChart();
-            const data = baseChartData.labels.map((label, i) => ({
-                cause: label,
-                total_downtime_hours: baseChartData.downtime[i],
-                failure_count: baseChartData.counts[i]
-            }));
-            renderLegend(data);
-        }
-
-        function openModal(title){
-            document.getElementById('drillTitle').textContent = title;
-            document.getElementById('drillModal').style.display = 'flex';
-        }
-        function closeModal(){
-            document.getElementById('drillModal').style.display = 'none';
-            if (drillChart) { drillChart.destroy(); drillChart = null; }
-            drillLevel = 'machines';
-            cachedMachines = null;
-            cachedMechanisms = null;
-            currentCause = '';
-            currentMachine = '';
-        }
-
-        function backModal(){
-            const body = document.querySelector('#drillModal .modal-body');
-            if (drillLevel === 'events' && cachedMechanisms){
-                body.innerHTML = '<canvas id="drillChart"></canvas>';
-                renderDrillChart(`Узел: ${currentMachine}`, cachedMechanisms.labels, cachedMechanisms.downtime, cachedMechanisms.counts, cachedMechanisms.onBarClick);
-                drillLevel = 'mechanisms';
-                document.getElementById('backBtn').style.display = 'inline-block';
-                return;
-            }
-            if (drillLevel === 'mechanisms' && cachedMachines){
-                body.innerHTML = '<canvas id="drillChart"></canvas>';
-                renderDrillChart('По оборудованию', cachedMachines.labels, cachedMachines.downtime, cachedMachines.counts, cachedMachines.onBarClick);
-                drillLevel = 'machines';
-                document.getElementById('backBtn').style.display = 'none';
-                return;
-            }
-            closeModal();
-        }
-
-        async function openDrilldown(cause){
-            openModal(`Причина: ${cause}`);
-            currentCause = cause;
-            const params = new URLSearchParams();
-            const df = document.getElementById('dateFrom').value;
-            const dt = document.getElementById('dateTo').value;
-            const w = document.getElementById('week').value;
-            const a = document.getElementById('area').value;
-            if (df) params.append('dateFrom', df);
-            if (dt) params.append('dateTo', dt);
-            if (w && w !== 'all') params.append('week', w);
-            if (a && a !== 'all') params.append('area', a);
-            params.append('cause', cause);
-
-            const machines = await (await fetch(`${apiBase}/drilldown/machines?${params}`)).json();
-            const labels = machines.map(m=>m.machine_name);
-            const downtime = machines.map(m=>Number(m.total_downtime_hours).toFixed(2));
-            const counts = machines.map(m=>m.failure_count);
-            const onBarClick = async (machineName)=>{
-                const p2 = new URLSearchParams(params);
-                p2.append('machine', machineName);
-                const nodes = await (await fetch(`${apiBase}/drilldown/mechanisms?${p2}`)).json();
-                const mechLabels = nodes.map(n=>n.mechanism_node);
-                const mechDowntime = nodes.map(n=>Number(n.total_downtime_hours).toFixed(2));
-                const mechCounts = nodes.map(n=>n.failure_count);
-                const mechOnClick = async (mechanismName)=>{
-                    const p3 = new URLSearchParams(p2);
-                    p3.append('mechanism', mechanismName);
-                    const events = await (await fetch(`${apiBase}/drilldown/events?${p3}`)).json();
-                    renderEventsTable(mechanismName, events);
-                    drillLevel = 'events';
-                    document.getElementById('backBtn').style.display = 'inline-block';
-                };
-                renderDrillChart(`Узел: ${machineName}`, mechLabels, mechDowntime, mechCounts, mechOnClick);
-                cachedMechanisms = { labels: mechLabels, downtime: mechDowntime, counts: mechCounts, onBarClick: mechOnClick };
-                currentMachine = machineName;
-                drillLevel = 'mechanisms';
-                document.getElementById('backBtn').style.display = 'inline-block';
-            };
-            cachedMachines = { labels, downtime, counts, onBarClick };
-            renderDrillChart('По оборудованию', labels, downtime, counts, onBarClick);
-            drillLevel = 'machines';
-            document.getElementById('backBtn').style.display = 'none';
-        }
-
-        function renderDrillChart(title, labels, downtime, counts, onBarClick){
-            const ctx = document.getElementById('drillChart').getContext('2d');
-            if (drillChart) drillChart.destroy();
-            drillChart = new Chart(ctx, {
-                type: 'bar',
-                data: { labels, datasets: [
-                    { label: 'Время простоя (ч)', data: downtime, backgroundColor: 'rgba(231, 76, 60, .8)' },
-                    { label: 'Кол-во заявок', data: counts, backgroundColor: 'rgba(52, 152, 219, 0.45)' }
-                ]},
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
-            });
-            if (onBarClick){
-                document.getElementById('drillChart').onclick = (evt)=>{
-                    const points = drillChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
-                    if (!points.length) return;
-                    const idx = points[0].index;
-                    onBarClick(labels[idx]);
-                };
-            } else {
-                document.getElementById('drillChart').onclick = null;
-            }
-        }
-
-        function renderEventsTable(mechanismName, events){
-            const container = document.querySelector('#drillChart').parentElement;
-            if (drillChart) { drillChart.destroy(); drillChart = null; }
-            container.innerHTML = `
-                <div style="display:flex; flex-direction:column; height:100%;">
-                    <div style="font-weight:600; margin-bottom:8px; flex-shrink:0;">События: ${mechanismName}</div>
-                    <div style="flex:1; overflow-y:auto; border:1px solid #eee; border-radius:6px; min-height:0;">
-                        <table style="width:100%; border-collapse: separate; border-spacing:0; font-size: 14px;">
-                            <thead style="position: sticky; top: 0; background: #fafafa; z-index: 1;">
-                                <tr style="text-align:left; border-bottom:1px solid #eee;">
-                                    <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Код события</th>
-                                    <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Время простоя</th>
-                                    <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Комментарии</th>
-                                    <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Причина</th>
-                                    <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Дата</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${events.map(e => `
-                                    <tr style="border-bottom:1px dashed #eee;">
-                                        <td style="padding:8px; white-space:nowrap;">${e.code ?? ''}</td>
-                                        <td style="padding:8px; white-space:nowrap;">${e.machine_downtime ?? ''}</td>
-                                        <td style="padding:8px;">${(e.comments ?? '').toString()}</td>
-                                        <td style="padding:8px; white-space:nowrap;">${e.cause ?? ''}</td>
-                                        <td style="padding:8px; white-space:nowrap;">${e.start_bd_t1 ?? ''}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-        }
-    </script>
+    <script src="/static/js/common.js"></script>
+    <script src="/static/js/top-causes.js"></script>
 
 </body>
 
 </html>
-
-

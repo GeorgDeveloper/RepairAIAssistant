@@ -1,0 +1,46 @@
+.pm-row { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    grid-gap: 16px; 
+}
+
+.pm-row .table-container, .pm-row .chart-container { 
+    height: 100%; 
+}
+
+#resizablePm { 
+    height: 100% !important; 
+}
+
+.modal {
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0, 0, 0, 0.8); 
+    justify-content: center; 
+    align-items: center; 
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white; 
+    padding: 20px; 
+    border-radius: 8px; 
+    width: 50%; 
+    max-width: 600px;
+}
+
+#uploadManualForm {
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px;
+}
+
+#editManualForm {
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px;
+}

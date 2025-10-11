@@ -1,0 +1,225 @@
+/* Styles extracted from dashboard.html */
+.total-content {
+    height: 90% !important;
+}
+
+.main-content {
+    height: 100% !important;
+    padding-top: 16px !important;
+    width: auto !important;
+    height: calc(100% - 80px) !important;
+}
+
+.container {
+    height: 100%;
+    box-sizing: border-box;
+    padding: 0 16px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 16px;
+    height: calc(100vh - 128px);
+}
+
+.stack {
+    display: grid;
+    grid-gap: 16px;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+}
+
+.card {
+    background: #fff;
+    padding: 8px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.right-stack {
+    display: grid;
+    grid-gap: 16px;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+}
+
+.panel {
+    background: #fff;
+    padding: 8px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.panel h3 {
+    margin-top: 0;
+}
+
+.chart-container, #metricsTable, #topBreakdownsTable {
+    height: auto;
+}
+
+.chart-container {
+    overflow: hidden;
+    padding: 20px !important;
+    height: 370px !important;
+    border: 1px solid gray !important;
+    box-sizing: border-box !important;
+}
+
+.table-container {
+    height: 100% !important;
+    max-height: 380px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+    display: block !important;
+}
+
+/* Таблицы метрик и топов */
+.target-met {
+    background-color: #e6ffed !important;
+    color: #115e1b !important;
+}
+
+.target-not-met {
+    background-color: #ffe6e6 !important;
+    color: #7a1212 !important;
+}
+
+.table-container-metrics {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+}
+
+.chart-container-metrics {
+    height: 100% !important;
+    padding: 20px !important;
+    border: 1px solid gray !important;
+    background: #fff !important;
+    box-sizing: border-box !important;
+    flex: 0 0 auto !important;
+}
+
+/* Styles extracted from dashboard_graf.html */
+.total-content {
+    height: 90% !important;
+}
+
+.main-content {
+    height: 100% !important;
+    padding-top: 16px !important;
+}
+
+.container {
+    height: 100%;
+    box-sizing: border-box;
+    padding: 0 16px;
+}
+
+/* Убрали dashboard-grid и правую колонку. Стек растянут на всю ширину */
+.stack {
+    display: grid;
+    /* grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); */
+    grid-gap: 16px;
+    height: calc(100vh - 128px);
+    min-height: 0;
+}
+
+.card {
+    background: #fff;
+    padding: 8px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.chart-container {
+    height: 100% !important;
+    overflow: hidden !important;
+    padding: 20px !important;
+    height: 370px !important;
+    border: 1px solid gray !important;
+    box-sizing: border-box !important;
+}
+
+/* Styles extracted from index.html */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 16px;
+    /* height: calc(100vh - 136px); */
+    padding: 20px 0;
+}
+
+.left-pane {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    grid-row-gap: 16px;
+}
+
+.top-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 16px;
+    height: 100%;
+}
+
+.top-charts .chart-container,
+.pm-holder .chart-container,
+.pm-holder #resizablePm {
+    height: 100% !important;
+}
+
+.pm-holder {
+    min-height: 0;
+    height: 100%;
+}
+
+.pm-holder .table-container {
+    height: 100% !important;
+    max-height: none !important;
+}
+/* Styles for inline styles that were removed from HTML */
+#resizable_breakDownOnline.chart-container,
+#resizable_availabilityOnline.chart-container {
+    height: 100% !important;
+}
+
+#breakDown,
+#availabilityOnline {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.main-content {
+    width: auto !important;
+    height: calc(100% - 80px) !important;
+}
+
+#availability,
+#breakDown {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.table-container-metrics .table-container {
+    flex: 1 1 auto !important;
+}
+
+.table-container-metrics .chart-container {
+    height: auto !important;
+}
+
+#metricsTable {
+    flex: 0 0 auto !important;
+}

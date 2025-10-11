@@ -1,0 +1,31 @@
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 6px; }
+.filter-group { display: flex; flex-direction: column; }
+.filter-group label { font-weight: 600; margin-bottom: 6px; }
+.filter-control { padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+.btn-apply { background: #e74c3c; color: #fff; border: 0; border-radius: 4px; padding: 9px 14px; cursor: pointer; grid-column: 1 / -1; }
+.chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+.chart-container { padding: 16px; background: #fff; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 560px; }
+.legend-container { padding: 16px; background: #fff; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-height: 560px; overflow-y: auto; }
+.legend-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #eee; cursor: pointer; }
+.legend-item:last-child { border-bottom: 0; }
+.legend-left { display: flex; align-items: center; gap: 8px; }
+.legend-color { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.legend-item.disabled { opacity: .45; }
+.loading, .error { display: none; text-align: center; padding: 12px; }
+.error { color: #e74c3c; background: #ffefef; border-radius: 4px; }
+
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); align-items: center; justify-content: center; }
+.modal-content { width: min(1000px, 92vw); height: 80vh; background: #fff; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+.modal-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.close-btn { border: 0; background: #e74c3c; color: #fff; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+.back-btn { border: 0; background: #7f8c8d; color: #fff; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+
+.pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
+.pm-row .table-container, .pm-row .chart-container { height: 100%; }
+#resizablePm { height: 100% !important; }
+
+.legend-header { font-weight: 600; margin-bottom: 6px; }
+.modal-title { margin: 0; }
+.modal-actions { display: flex; gap: 8px; }
+.chart-canvas { width: 100%; height: 100%; }

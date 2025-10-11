@@ -1,0 +1,172 @@
+document.addEventListener('DOMContentLoaded', function() {
+    const api = '/top-areas';
+    const legendEl = document.getElementById('legend');
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+
+    let chart = null;
+    let drillChart = null;
+    let drillLevel = 0;
+    let currentArea = null;
+    let currentCategory = null;
+    let areasCache = [];
+    let selectedAreas = new Set();
+
+    async function loadWeeks() {
+        const data = await fetch(api + '/weeks').then(r=>r.json());
+        const sel = document.getElementById('week');
+        sel.innerHTML = '<option value="all">Все</option>' + data.map(w=>`<option value="${w.week_number}">${w.week_number}</option>`).join('');
+    }
+    
+    async function loadFailureTypes() {
+        const data = await fetch(api + '/failure-types').then(r=>r.json());
+        const sel = document.getElementById('failureType');
+        sel.innerHTML = '<option value="all">Все</option>' + data.map(a=>`<option value="${a.failure_type}">${a.failure_type}</option>`).join('');
+    }
+
+    function getParams(){
+        const dateFrom = document.getElementById('dateFrom').value || '';
+        const dateTo = document.getElementById('dateTo').value || '';
+        const week = document.getElementById('week').value || 'all';
+        const failureType = document.getElementById('failureType').value || 'all';
+        return { dateFrom, dateTo, week, failureType };
+    }
+
+    async function loadLegend(){
+        const {dateFrom, dateTo, week, failureType} = getParams();
+        const params = new URLSearchParams({ dateFrom, dateTo, week, failureType, limit: 30 });
+        const data = await fetch(api + '/data?' + params.toString()).then(r=>r.json());
+        areasCache = data;
+        if (selectedAreas.size === 0) data.forEach(d => selectedAreas.add(d.area));
+        renderLegend(data);
+    }
+
+    function renderLegend(items){
+        legendEl.innerHTML = '';
+        items.forEach((it, idx)=>{
+            const row = document.createElement('div');
+            row.className = 'legend-item' + (selectedAreas.has(it.area) ? '' : ' disabled');
+            row.innerHTML = `
+                <div class="legend-left">
+                    <span class="legend-color" style="background:#${(idx*47%255).toString(16).padStart(2,'0')}a3${(idx*91%255).toString(16).padStart(2,'0')}"></span>
+                    <span>${it.area}</span>
+                </div>
+                <div style="display:flex; gap:10px; font-variant-numeric: tabular-nums;">
+                    <span>${(it.total_downtime_hours||0).toFixed(1)} ч</span>
+                    <span>|</span>
+                    <span>${it.failure_count||0}</span>
+                </div>`;
+            row.onclick = () => { if (selectedAreas.has(it.area)) selectedAreas.delete(it.area); else selectedAreas.add(it.area); row.classList.toggle('disabled'); applyFilters(false); };
+            legendEl.appendChild(row);
+        });
+    }
+
+    function getSelectedAreas(){
+        const arr = areasCache.filter(a => selectedAreas.has(a.area));
+        arr.sort((a,b)=> Number(b.total_downtime_hours||0) - Number(a.total_downtime_hours||0));
+        return arr.slice(0,30);
+    }
+
+    async function applyFilters(reloadLegend = true){
+        showLoading();
+        hideError();
+        try {
+            if (reloadLegend) await loadLegend();
+            const data = getSelectedAreas();
+            renderChart(data);
+        } catch(e){
+            console.error(e); showError('Error loading data');
+        } finally { hideLoading(); }
+    }
+
+    function renderChart(data){
+        const ctx = document.getElementById('areaChart').getContext('2d');
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: data.map(d=>d.area), datasets: [
+                { label: 'Σ простоя, ч', data: data.map(d=>Number(d.total_downtime_hours||0)), backgroundColor: 'rgba(231,76,60,0.6)' },
+                { label: 'Кол-во вызовов', data: data.map(d=>Number(d.failure_count||0)), backgroundColor: 'rgba(52,152,219,0.6)' }
+            ]},
+            options: { indexAxis:'y', maintainAspectRatio:false, onClick: (_e, els)=>{ if(!els?.length) return; const idx=els[0].index; openCategories(chart.data.labels[idx]); }, plugins:{ legend:{ display:true }}, scales:{ x:{ beginAtZero:true }}}
+        });
+    }
+
+    function openModal(){ document.getElementById('drillModal').style.display='flex'; }
+    function closeModal(){ document.getElementById('drillModal').style.display='none'; drillLevel=0; currentArea=null; currentCategory=null; if (drillChart){ drillChart.destroy(); drillChart=null; } }
+
+    async function openCategories(area){
+        currentArea = area; drillLevel = 1; document.getElementById('modalTitle').innerText = `Участок: ${area}`; document.getElementById('backBtn').style.display='none'; openModal();
+        const {dateFrom, dateTo, week} = getParams();
+        const params = new URLSearchParams({ area, dateFrom, dateTo, week });
+        const data = await fetch(api + '/drilldown/categories?' + params.toString()).then(r=>r.json());
+        renderDrillChart('Категории поломок', data.map(r=>({ label: r.category, value: Number(r.total_downtime_hours||0) })), item => openCauses(item.label));
+    }
+
+    async function openCauses(category){
+        currentCategory = category; drillLevel = 2; document.getElementById('backBtn').style.display='inline-block';
+        const {dateFrom, dateTo, week} = getParams();
+        const params = new URLSearchParams({ area: currentArea, category, dateFrom, dateTo, week });
+        const data = await fetch(api + '/drilldown/causes?' + params.toString()).then(r=>r.json());
+        renderDrillChart('Причины', data.map(r=>({ label: r.cause, value: Number(r.total_downtime_hours||0) })), item => openEvents(item.label));
+    }
+
+    async function openEvents(cause){
+        drillLevel = 3; document.getElementById('backBtn').style.display='inline-block';
+        const {dateFrom, dateTo, week} = getParams();
+        const params = new URLSearchParams({ area: currentArea, category: currentCategory, cause, dateFrom, dateTo, week });
+        const events = await fetch(api + '/drilldown/events?' + params.toString()).then(r=>r.json());
+        renderEventsTable(`События: ${cause}`, events);
+    }
+
+    function renderDrillChart(title, items, onBarClick){
+        const ctx = ensureDrillCanvas(); if (drillChart) drillChart.destroy();
+        const labels = items.map(i=>i.label); const values = items.map(i=>i.value);
+        document.getElementById('modalTitle').innerText = `${title} — ${currentArea || ''} ${currentCategory?(' / '+currentCategory):''}`;
+        drillChart = new Chart(ctx, { type:'bar', data:{ labels, datasets:[{ label:'Σ простоя, ч', data: values, backgroundColor:'rgba(231,76,60,0.6)'}]}, options:{ indexAxis:'y', maintainAspectRatio:false, plugins:{legend:{display:false}}, onClick: (_e,els)=>{ if(els?.length){ const i=els[0].index; onBarClick({ label: labels[i], value: values[i] }); } }, scales:{x:{beginAtZero:true}} } });
+    }
+
+    function ensureDrillCanvas(){
+        const body = document.querySelector('.modal-body'); let c = document.getElementById('drillChart');
+        if (!c){ body.innerHTML = '<canvas id="drillChart" style="width:100%; height:100%;"></canvas>'; c = document.getElementById('drillChart'); }
+        return c.getContext('2d');
+    }
+
+    function renderEventsTable(title, events){
+        const container = document.querySelector('.modal-body'); if (drillChart){ drillChart.destroy(); drillChart=null; }
+        container.innerHTML = `
+            <div style="display:flex; flex-direction:column; height:100%;">
+                <div style="font-weight:600; margin-bottom:8px; flex-shrink:0;">${title}</div>
+                <div style="flex:1; overflow-y:auto; border:1px solid #eee; border-radius:6px; min-height:0;">
+                    <table style="width:100%; border-collapse: separate; border-spacing:0; font-size: 14px;">
+                        <thead style="position: sticky; top: 0; background: #fafafa; z-index: 1;">
+                            <tr style="text-align:left; border-bottom:1px solid #eee;">
+                                <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Код события</th>
+                                <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Время простоя</th>
+                                <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Комментарии</th>
+                                <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Причина</th>
+                                <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Дата</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${events.map(e => `
+                                <tr style="border-bottom:1px dashed #eee;">
+                                    <td style="padding:8px; white-space:nowrap;">${e.code ?? ''}</td>
+                                    <td style="padding:8px; white-space:nowrap;">${e.machine_downtime ?? ''}</td>
+                                    <td style="padding:8px;">${(e.comments ?? '').toString()}</td>
+                                    <td style="padding:8px; white-space:nowrap;">${e.cause ?? ''}</td>
+                                    <td style="padding:8px; white-space:nowrap;">${e.start_bd_t1 ?? ''}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+    }
+
+    document.getElementById('closeBtn').onclick = closeModal;
+    document.getElementById('backBtn').onclick = () => { if (drillLevel===3) openCauses(currentCategory); else if (drillLevel===2) openCategories(currentArea); else closeModal(); };
+    document.getElementById('applyBtn').onclick = () => { selectedAreas.clear(); applyFilters(true); };
+
+    (async function init(){ await Promise.all([loadWeeks(), loadFailureTypes()]); applyFilters(true); })();
+});
