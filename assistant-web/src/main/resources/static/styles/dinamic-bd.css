@@ -208,6 +208,22 @@
     margin-bottom: 15px;
 }
 
+.btn-toggle-all {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.btn-toggle-all:hover {
+    background: #5a6268;
+}
+
 #customLegend {
     overflow-y: auto; 
     flex: 1;

@@ -44,6 +44,10 @@ function setupEventListeners() {
     document.getElementById('toggleChartType').addEventListener('click', function() {
         toggleChartType();
     });
+    
+    document.getElementById('toggleAllLegend').addEventListener('click', function() {
+        toggleAllLegendItems();
+    });
 }
 
 function setupMultiSelect(prefix, onChangeCallback) {
@@ -421,6 +425,7 @@ function createCustomLegend(datasets) {
     datasets.forEach(dataset => {
         const legendItem = document.createElement('div');
         legendItem.style.cssText = 'display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;';
+        legendItem.dataset.label = dataset.label;
         
         const colorBox = document.createElement('div');
         colorBox.style.cssText = `width: 20px; height: 3px; background-color: ${dataset.borderColor}; margin-right: 8px; border-radius: 2px;`;
@@ -440,9 +445,41 @@ function createCustomLegend(datasets) {
                 meta.hidden = !meta.hidden;
                 legendItem.style.opacity = meta.hidden ? '0.5' : '1';
                 mainChart.update();
+                updateToggleAllButton();
             }
         });
     });
+    
+    updateToggleAllButton();
+}
+
+function toggleAllLegendItems() {
+    if (!mainChart) return;
+    
+    const legendItems = document.querySelectorAll('#customLegend > div');
+    const firstItemHidden = legendItems.length > 0 && (legendItems[0].style.opacity === '0.5');
+    
+    mainChart.data.datasets.forEach((dataset, index) => {
+        const meta = mainChart.getDatasetMeta(index);
+        meta.hidden = !firstItemHidden;
+    });
+    
+    legendItems.forEach(item => {
+        item.style.opacity = firstItemHidden ? '1' : '0.5';
+    });
+    
+    mainChart.update();
+    updateToggleAllButton();
+}
+
+function updateToggleAllButton() {
+    const button = document.getElementById('toggleAllLegend');
+    const legendItems = document.querySelectorAll('#customLegend > div');
+    
+    if (legendItems.length === 0) return;
+    
+    const firstItemHidden = legendItems[0].style.opacity === '0.5';
+    button.textContent = firstItemHidden ? 'Включить все' : 'Отключить все';
 }
 
 function toggleChartMode() {
@@ -471,7 +508,7 @@ function generateLabels(data, params) {
 }
 
 function generateDowntimeDatasets(data, labels) {
-    const uniqueTypes = [...new Set(data.map(item => item.failure_type))].filter(type => type).sort();
+    const uniqueTypes = [...new Set(data.map(item => item.failure_type?.trim()).filter(type => type))].sort();
     const colors = [
         '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
         '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA', '#F1948A', '#85929E', '#D7BDE2', '#A9DFBF',
@@ -482,7 +519,7 @@ function generateDowntimeDatasets(data, labels) {
     return uniqueTypes.map((type, index) => {
         const chartData = labels.map(label => {
             const items = data.filter(item => 
-                item.failure_type === type && 
+                item.failure_type?.trim() === type && 
                 item.period_label == label
             );
             return items.reduce((sum, item) => sum + (parseFloat(item.total_downtime) || 0), 0);
@@ -500,7 +537,7 @@ function generateDowntimeDatasets(data, labels) {
 }
 
 function generateCountDatasets(data, labels) {
-    const uniqueTypes = [...new Set(data.map(item => item.failure_type))].filter(type => type).sort();
+    const uniqueTypes = [...new Set(data.map(item => item.failure_type?.trim()).filter(type => type))].sort();
     const colors = [
         '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
         '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA', '#F1948A', '#85929E', '#D7BDE2', '#A9DFBF',
@@ -511,7 +548,7 @@ function generateCountDatasets(data, labels) {
     return uniqueTypes.map((type, index) => {
         const chartData = labels.map(label => {
             const items = data.filter(item => 
-                item.failure_type === type && 
+                item.failure_type?.trim() === type && 
                 item.period_label == label
             );
             return items.reduce((sum, item) => sum + (parseInt(item.failure_count) || 0), 0);

@@ -139,6 +139,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             row.innerHTML = `<div class="legend-left"><span class="legend-color" style="background:${color}"></span><span>${d.cause}</span></div><div>${Number(d.total_downtime_hours).toFixed(2)} ч | ${d.failure_count}</div>`;
             container.appendChild(row);
         });
+        updateToggleButton();
+    }
+    
+    function updateToggleButton() {
+        const button = document.getElementById('toggleAllLegend');
+        const allHidden = hiddenCauses.size === baseChartData.labels.length;
+        button.textContent = allHidden ? 'Включить все' : 'Отключить все';
     }
 
     function toggleLegendItem(cause){
@@ -288,8 +295,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         `;
     }
 
+    function toggleAllLegend() {
+        const button = document.getElementById('toggleAllLegend');
+        const allHidden = hiddenCauses.size === baseChartData.labels.length;
+        
+        if (allHidden) {
+            hiddenCauses.clear();
+            button.textContent = 'Отключить все';
+        } else {
+            baseChartData.labels.forEach(label => hiddenCauses.add(label));
+            button.textContent = 'Включить все';
+        }
+        
+        updateMainChart();
+        const data = baseChartData.labels.map((label, i) => ({
+            cause: label,
+            total_downtime_hours: baseChartData.downtime[i],
+            failure_count: baseChartData.counts[i]
+        }));
+        renderLegend(data);
+    }
+
     // Event listeners
     document.getElementById('applyBtn').addEventListener('click', applyFilters);
     document.getElementById('closeBtn').addEventListener('click', closeModal);
     document.getElementById('backBtn').addEventListener('click', backModal);
+    document.getElementById('toggleAllLegend').addEventListener('click', toggleAllLegend);
 });

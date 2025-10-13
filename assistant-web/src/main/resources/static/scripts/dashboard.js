@@ -67,7 +67,18 @@ const DashboardCharts = {
                 title: "Значение",
                 suffix: yAxisSuffix
             },
-            data: dataPoints
+            data: dataPoints,
+            legend: {
+                cursor: "pointer",
+                itemclick: function(e) {
+                    if (typeof(e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
+                        e.dataSeries.visible = false;
+                    } else {
+                        e.dataSeries.visible = true;
+                    }
+                    e.chart.render();
+                }
+            }
         };
 
         // Если график уже инициализирован, обновляем данные и перерисовываем

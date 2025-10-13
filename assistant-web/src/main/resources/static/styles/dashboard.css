@@ -271,3 +271,25 @@
     margin-top: 0;
     text-align: center;
 }
+
+.chart-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.btn-toggle-all {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.btn-toggle-all:hover {
+    background: #5a6268;
+}

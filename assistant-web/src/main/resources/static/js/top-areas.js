@@ -56,9 +56,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span>|</span>
                     <span>${it.failure_count||0}</span>
                 </div>`;
-            row.onclick = () => { if (selectedAreas.has(it.area)) selectedAreas.delete(it.area); else selectedAreas.add(it.area); row.classList.toggle('disabled'); applyFilters(false); };
+            row.onclick = () => { if (selectedAreas.has(it.area)) selectedAreas.delete(it.area); else selectedAreas.add(it.area); row.classList.toggle('disabled'); applyFilters(false); updateToggleButton(); };
             legendEl.appendChild(row);
         });
+        updateToggleButton();
+    }
+    
+    function updateToggleButton() {
+        const button = document.getElementById('toggleAllLegend');
+        const allSelected = selectedAreas.size === areasCache.length;
+        button.textContent = allSelected ? 'Отключить все' : 'Включить все';
     }
 
     function getSelectedAreas(){
@@ -167,6 +174,23 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('closeBtn').onclick = closeModal;
     document.getElementById('backBtn').onclick = () => { if (drillLevel===3) openCauses(currentCategory); else if (drillLevel===2) openCategories(currentArea); else closeModal(); };
     document.getElementById('applyBtn').onclick = () => { selectedAreas.clear(); applyFilters(true); };
+    document.getElementById('toggleAllLegend').onclick = toggleAllLegend;
+    
+    function toggleAllLegend() {
+        const button = document.getElementById('toggleAllLegend');
+        const allSelected = selectedAreas.size === areasCache.length;
+        
+        if (allSelected) {
+            selectedAreas.clear();
+            button.textContent = 'Включить все';
+        } else {
+            areasCache.forEach(area => selectedAreas.add(area.area));
+            button.textContent = 'Отключить все';
+        }
+        
+        renderLegend(areasCache);
+        applyFilters(false);
+    }
 
     (async function init(){ await Promise.all([loadWeeks(), loadFailureTypes()]); applyFilters(true); })();
 });

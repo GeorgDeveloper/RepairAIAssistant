@@ -72,12 +72,26 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <span>${it.failure_count||0}</span>
                 </div>`;
             row.onclick = () => {
-                if (selectedMachines.has(it.machine_name)) selectedMachines.delete(it.machine_name); else selectedMachines.add(it.machine_name);
-                row.classList.toggle('disabled');
-                applyFilters();
+                if (selectedMachines.has(it.machine_name)) {
+                    selectedMachines.delete(it.machine_name);
+                    row.classList.add('disabled');
+                } else {
+                    selectedMachines.add(it.machine_name);
+                    row.classList.remove('disabled');
+                }
+                updateToggleButton();
+                const data = getSelectedEquipment();
+                renderChart(data);
             };
             legendEl.appendChild(row);
         });
+        updateToggleButton();
+    }
+    
+    function updateToggleButton() {
+        const button = document.getElementById('toggleAllLegend');
+        const allSelected = selectedMachines.size === equipmentsCache.length;
+        button.textContent = allSelected ? 'Отключить все' : 'Включить все';
     }
 
     function getSelectedEquipment() {
@@ -87,17 +101,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function applyFilters() {
-        showLoading();
-        hideError();
         try {
             await loadLegend();
             const data = getSelectedEquipment();
             renderChart(data);
         } catch (e) {
-            showError('Error loading data');
             console.error(e);
-        } finally {
-            hideLoading();
         }
     }
 
@@ -221,6 +230,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>`;
     }
 
+    function toggleAllLegend() {
+        const allSelected = selectedMachines.size === equipmentsCache.length;
+        
+        if (allSelected) {
+            selectedMachines.clear();
+        } else {
+            equipmentsCache.forEach(eq => selectedMachines.add(eq.machine_name));
+        }
+        
+        renderLegend(equipmentsCache);
+        const data = getSelectedEquipment();
+        renderChart(data);
+    }
+
     // Event listeners
     document.getElementById('closeBtn').addEventListener('click', closeModal);
     document.getElementById('backBtn').addEventListener('click', () => {
@@ -229,4 +252,5 @@ document.addEventListener('DOMContentLoaded', async function() {
         else closeModal();
     });
     document.getElementById('applyBtn').addEventListener('click', () => { selectedMachines.clear(); applyFilters(); });
+    document.getElementById('toggleAllLegend').addEventListener('click', toggleAllLegend);
 });

@@ -24,3 +24,6 @@
 .pm-row { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 16px; }
 .pm-row .table-container, .pm-row .chart-container { height: 100%; }
 #resizablePm { height: 100% !important; }
+
+.btn-toggle-all { background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 12px; width: 100%; }
+.btn-toggle-all:hover { background: #5a6268; }
