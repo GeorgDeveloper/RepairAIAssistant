@@ -200,4 +200,58 @@ public class MonitoringRepository {
         }
         return result;
     }
+
+    public Map<String, Object> getMetricsForDate(String date) {
+        Map<String, Object> result = new java.util.HashMap<>();
+        String[][] tables = {
+            {"report_new_mixing_area", "report_new_mixing_area"},
+            {"report_semifinishing_area", "report_semifinishing_area"},
+            {"report_building_area", "report_building_area"},
+            {"report_curing_area", "report_curing_area"},
+            {"report_finishig_area", "report_finishig_area"},
+            {"report_modules", "report_modules"},
+            {"report_plant", "report_plant"}
+        };
+        for (String[] t : tables) {
+            String table = t[0];
+            String prefix = t[1];
+
+            String sqlToday = "SELECT AVG(downtime_percentage) as bd FROM " + table + " WHERE production_day = ?";
+            Double bdToday = null;
+            try {
+                bdToday = jdbcTemplate.queryForObject(sqlToday, Double.class, date);
+            } catch (Exception e) {
+                // If no data found, bdToday will remain null
+            }
+            result.put(prefix + "_bd_today", bdToday != null ? bdToday : 0.0);
+
+            String sqlMonth = "SELECT AVG(downtime_percentage) as bd FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(STR_TO_DATE(?, '%d.%m.%Y')) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(STR_TO_DATE(?, '%d.%m.%Y'))";
+            Double bdMonth = null;
+            try {
+                bdMonth = jdbcTemplate.queryForObject(sqlMonth, Double.class, date, date);
+            } catch (Exception e) {
+                // If no data found, bdMonth will remain null
+            }
+            result.put(prefix + "_bd_month", bdMonth != null ? bdMonth : 0.0);
+
+            String sqlTodayA = "SELECT AVG(availability) FROM " + table + " WHERE production_day = ?";
+            Double aToday = null;
+            try {
+                aToday = jdbcTemplate.queryForObject(sqlTodayA, Double.class, date);
+            } catch (Exception e) {
+                // If no data found, aToday will remain null
+            }
+            result.put(prefix + "_availability_today", aToday != null ? aToday : 0.0);
+
+            String sqlMonthA = "SELECT AVG(availability) FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(STR_TO_DATE(?, '%d.%m.%Y')) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(STR_TO_DATE(?, '%d.%m.%Y'))";
+            Double aMonth = null;
+            try {
+                aMonth = jdbcTemplate.queryForObject(sqlMonthA, Double.class, date, date);
+            } catch (Exception e) {
+                // If no data found, aMonth will remain null
+            }
+            result.put(prefix + "_availability_month", aMonth != null ? aMonth : 0.0);
+        }
+        return result;
+    }
 }

@@ -45,7 +45,7 @@ const DashboardUtils = {
     areaColors: {
         'NewMixingArea': '#001522',      // Красный
         'SemifinishingArea': '#0400fa',  // Бирюзовый
-        'BuildingArea': '#4152ff',       // Голубой
+        'BuildingArea': '#fa6000',       // Голубой
         'CuringArea': '#418b69',         // Зеленый
         'FinishingArea': '#ffd241',      // Желтый
         'Modules': '#c255c2',            // Фиолетовый

@@ -76,4 +76,10 @@ public class DashboardWebController {
     public List<Map<String, Object>> pmPlanFactTag() {
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/pm-plan-fact-tag", List.class);
     }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/metrics-for-date")
+    public Map<String, Object> getMetricsForDate(@RequestParam("date") String date) {
+        return (Map<String, Object>) restTemplate.getForObject(coreServiceUrl + "/dashboard/metrics-for-date?date=" + date, Map.class);
+    }
 }

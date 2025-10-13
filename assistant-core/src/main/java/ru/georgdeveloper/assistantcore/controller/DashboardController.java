@@ -67,6 +67,12 @@ public class DashboardController {
         return monitoringRepository.getCurrentMetrics();
     }
 
+    @GetMapping("/metrics-for-date")
+    @ResponseBody
+    public Map<String, Object> getMetricsForDate(@RequestParam("date") String date) {
+        return monitoringRepository.getMetricsForDate(date);
+    }
+
     @GetMapping("/equipment-maintenance-records")
     @ResponseBody
     public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords() {

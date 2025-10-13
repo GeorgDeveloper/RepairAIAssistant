@@ -58,7 +58,12 @@ const IndexDashboard = {
                     type: "column",
                     showInLegend: false,
                     dataPoints: coloredDataPoints,
-                    dataPointWidth: 10
+                    dataPointWidth: 10,
+                    click: function(e) {
+                        console.log('Chart column clicked:', e.dataPoint.label);
+                        const date = e.dataPoint.label;
+                        IndexDashboard.showIndicatorTable(date);
+                    }
                 }]
             };
             
@@ -260,3 +265,131 @@ window.onload = async function() {
     setTimeout(rerender, 200);
     setTimeout(rerender, 400);
 };
+
+// Function to create and show indicator table in modal
+IndexDashboard.showIndicatorTable = async function(date) {
+    try {
+        console.log('Showing indicator table for date:', date);
+        // Fetch metrics data for the selected date
+        const metricsData = await DashboardAPI.fetchData(`/dashboard/metrics-for-date?date=${date}`);
+        
+        if (!metricsData) {
+            console.log('No metrics data found for date:', date);
+            document.getElementById('indicatorTableContainer').innerHTML = '<p>Нет данных для отображения</p>';
+            return;
+        }
+        
+        console.log('Metrics data received:', metricsData);
+        // Set the selected date in the modal header
+        document.getElementById('selectedDate').textContent = date;
+        
+        // Create the table HTML
+        const sections = [
+            { name: 'Резиносмешение', prefix: 'report_new_mixing_area' },
+            { name: 'Сборка 1', prefix: 'report_semifinishing_area' },
+            { name: 'Сборка 2', prefix: 'report_building_area' },
+            { name: 'Вулканизация', prefix: 'report_curing_area' },
+            { name: 'УЗО', prefix: 'report_finishig_area' },
+            { name: 'Модули', prefix: 'report_modules' },
+            { name: 'Завод', prefix: 'report_plant' }
+        ];
+        
+        let tableHTML = `
+            <table class="metrics-table">
+                <thead>
+                    <tr>
+                        <th>Показатель</th>
+                        <th>Цель</th>
+                        <th>октябрь</th>
+                        <th>${date}</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+        
+        sections.forEach(section => {
+            const bdMonth = metricsData[`${section.prefix}_bd_month`];
+            const bdToday = metricsData[`${section.prefix}_bd_today`];
+            const avMonth = metricsData[`${section.prefix}_availability_month`];
+            const avToday = metricsData[`${section.prefix}_availability_today`];
+            
+            const formatValue = (value, isPercentage = true) =>
+                value != null ? value.toFixed(2) + (isPercentage ? '%' : '') : 'N/A';
+            
+            const getClass = (value, target, isGreater = false) => {
+                if (value === 0) return '';
+                return isGreater ?
+                    (value >= target ? 'target-met' : 'target-not-met') :
+                    (value <= target ? 'target-met' : 'target-not-met');
+            };
+            
+            tableHTML += `
+                <tr class="section-header">
+                    <td colspan="4">${section.name}</td>
+                </tr>
+                <tr>
+                    <td>BD</td>
+                    <td>2%</td>
+                    <td class="${getClass(bdMonth, 2)}">${formatValue(bdMonth)}</td>
+                    <td class="${getClass(bdToday, 2)}">${formatValue(bdToday)}</td>
+                </tr>
+                <tr>
+                    <td>Доступность</td>
+                    <td>97%</td>
+                    <td class="${getClass(avMonth, 97, true)}">${formatValue(avMonth)}</td>
+                    <td class="${getClass(avToday, 97, true)}">${formatValue(avToday)}</td>
+                </tr>`;
+        });
+        
+        tableHTML += '</tbody></table>';
+        document.getElementById('indicatorTableContainer').innerHTML = tableHTML;
+        
+        // Show the modal
+        console.log('Showing modal');
+        document.getElementById('indicatorModal').style.display = 'flex';
+    } catch (error) {
+        console.error('Ошибка при получении данных для таблицы:', error);
+        document.getElementById('indicatorTableContainer').innerHTML = '<p>Ошибка при загрузке данных</p>';
+    }
+};
+
+// Add click event listeners to charts after they are created
+IndexDashboard.addChartClickListeners = function() {
+    // Add click listener to BreakDown chart
+    const breakDownChart = $('#breakDown').CanvasJSChart();
+    if (breakDownChart) {
+        breakDownChart.options.data[0].click = function(e) {
+            const date = e.dataPoint.label;
+            IndexDashboard.showIndicatorTable(date);
+        };
+    }
+    
+    // Add click listener to Availability chart
+    const availabilityChart = $('#availability').CanvasJSChart();
+    if (availabilityChart) {
+        availabilityChart.options.data[0].click = function(e) {
+            const date = e.dataPoint.label;
+            IndexDashboard.showIndicatorTable(date);
+        };
+    }
+};
+
+// Add event listener to close modal when clicking on the close button
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('indicatorModal');
+    const closeBtn = document.querySelector('.modal .close');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            console.log('Close button clicked');
+            modal.style.display = 'none';
+        });
+    }
+    
+    // Close modal when clicking outside of it
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            console.log('Clicked outside modal');
+            modal.style.display = 'none';
+        }
+    });
+});
