@@ -1,13 +1,40 @@
+let zoomLevel = 1;
+let currentData = [];
+
 document.addEventListener('DOMContentLoaded', function() {
     initializeDatePickers();
     initializeSelect2();
     setupAreaFilterListener();
+    setupZoomControls();
     loadInitialData();
     
     document.getElementById('apply-filters').addEventListener('click', function() {
         applyFilters();
     });
 });
+
+function setupZoomControls() {
+    document.getElementById('zoom-in').addEventListener('click', function() {
+        if (zoomLevel < 3) {
+            zoomLevel += 0.25;
+            updateZoom();
+        }
+    });
+    
+    document.getElementById('zoom-out').addEventListener('click', function() {
+        if (zoomLevel > 0.25) {
+            zoomLevel -= 0.25;
+            updateZoom();
+        }
+    });
+}
+
+function updateZoom() {
+    document.getElementById('zoom-level').textContent = Math.round(zoomLevel * 100) + '%';
+    if (currentData.length > 0) {
+        generateGanttChart(currentData);
+    }
+}
 
 function initializeDatePickers() {
     flatpickr.localize(flatpickr.l10ns.ru);
@@ -187,6 +214,7 @@ async function applyFilters() {
 }
 
 function generateGanttChart(data) {
+    currentData = data;
     const dateFrom = document.getElementById('date-from').value;
     const dateTo = document.getElementById('date-to').value;
     
@@ -214,17 +242,51 @@ function generateTimeHeader(dateFrom, dateTo) {
     
     const fromDate = new Date(dateFrom);
     const toDate = new Date(dateTo);
-    const hoursDiff = Math.ceil((toDate - fromDate) / (1000 * 60 * 60));
     
-    for (let i = 0; i < hoursDiff; i++) {
-        const hourDate = new Date(fromDate);
-        hourDate.setHours(fromDate.getHours() + i);
-        
-        const timeSlot = document.createElement('div');
-        timeSlot.className = 'time-slot';
-        timeSlot.textContent = hourDate.getHours().toString().padStart(2, '0') + ':00';
-        timeHeader.appendChild(timeSlot);
+    // Определяем шаг времени в зависимости от масштаба
+    let stepMinutes, stepLabel;
+    if (zoomLevel >= 2.5) {
+        stepMinutes = 5; // 5 минут при максимальном увеличении
+        stepLabel = (date) => `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    } else if (zoomLevel >= 2) {
+        stepMinutes = 15; // 15 минут
+        stepLabel = (date) => `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    } else if (zoomLevel >= 1.5) {
+        stepMinutes = 30; // 30 минут
+        stepLabel = (date) => `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    } else if (zoomLevel >= 1) {
+        stepMinutes = 60; // 1 час
+        stepLabel = (date) => `${date.getHours().toString().padStart(2, '0')}:00`;
+    } else if (zoomLevel >= 0.5) {
+        stepMinutes = 120; // 2 часа
+        stepLabel = (date) => `${date.getHours().toString().padStart(2, '0')}:00`;
+    } else {
+        stepMinutes = 180; // 3 часа при максимальном уменьшении
+        stepLabel = (date) => `${date.getHours().toString().padStart(2, '0')}:00`;
     }
+    
+    const totalMinutes = (toDate - fromDate) / (1000 * 60);
+    const slotsCount = Math.ceil(totalMinutes / stepMinutes);
+    const baseWidth = 60;
+    const slotWidth = baseWidth * zoomLevel;
+    
+    for (let i = 0; i <= slotsCount; i++) {
+        const slotDate = new Date(fromDate);
+        slotDate.setMinutes(fromDate.getMinutes() + (i * stepMinutes));
+        
+        if (slotDate <= toDate) {
+            const timeSlot = document.createElement('div');
+            timeSlot.className = 'time-slot';
+            timeSlot.style.minWidth = slotWidth + 'px';
+            timeSlot.style.width = slotWidth + 'px';
+            timeSlot.textContent = stepLabel(slotDate);
+            timeHeader.appendChild(timeSlot);
+        }
+    }
+    
+    // Обновляем минимальную ширину контейнера временных слотов
+    const timeSlotsContainer = document.querySelector('.time-slots');
+    timeSlotsContainer.style.minWidth = (slotsCount * slotWidth) + 'px';
 }
 
 function generateGanttBody(groupedData, dateFrom, dateTo) {
@@ -233,14 +295,14 @@ function generateGanttBody(groupedData, dateFrom, dateTo) {
     
     const fromDate = new Date(dateFrom);
     const toDate = new Date(dateTo);
-    const totalHours = (toDate - fromDate) / (1000 * 60 * 60);
-    const containerWidth = document.querySelector('.time-slots').offsetWidth;
-    const hourWidth = containerWidth / totalHours;
+    const totalMinutes = (toDate - fromDate) / (1000 * 60);
+    const baseWidth = 60;
+    const minuteWidth = (baseWidth * zoomLevel) / 60; // Ширина одной минуты
     
     Object.keys(groupedData).sort().forEach(machine => {
         const machineRow = createMachineRow(machine);
         groupedData[machine].forEach(repair => {
-            createRepairBar(repair, machineRow, fromDate, hourWidth);
+            createRepairBar(repair, machineRow, fromDate, minuteWidth);
         });
         ganttBody.appendChild(machineRow);
     });
@@ -258,15 +320,15 @@ function createMachineRow(machine) {
     return row;
 }
 
-function createRepairBar(repair, machineRow, fromDate, hourWidth) {
+function createRepairBar(repair, machineRow, fromDate, minuteWidth) {
     const repairStart = new Date(repair.start_bd_t1);
     const repairEnd = new Date(repair.stop_bd_t4);
     
-    const startOffset = (repairStart - fromDate) / (1000 * 60 * 60);
-    const repairDuration = (repairEnd - repairStart) / (1000 * 60 * 60);
+    const startOffsetMinutes = (repairStart - fromDate) / (1000 * 60);
+    const repairDurationMinutes = (repairEnd - repairStart) / (1000 * 60);
     
-    const left = startOffset * hourWidth;
-    const width = Math.max(repairDuration * hourWidth, 5);
+    const left = startOffsetMinutes * minuteWidth;
+    const width = Math.max(repairDurationMinutes * minuteWidth, 3);
     
     if (width > 0) {
         const bar = document.createElement('div');
