@@ -50,18 +50,70 @@ public class GanttRepository {
         if (dateTo != null && !dateTo.isEmpty()) {
             sql.append("AND start_bd_t1 <= ? ");
         }
+        
+        // Фильтр по участку
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            sql.append("AND (");
+            switch (area) {
+                case "BuildingArea":
+                    sql.append("machine_name LIKE 'ATP%' OR machine_name LIKE 'VMI -%'");
+                    break;
+                case "CuringArea":
+                    sql.append("machine_name LIKE 'HFV2%'");
+                    break;
+                case "SemifinishingArea":
+                    sql.append("machine_name IN ('Bandina - 01', 'Bartell Bead Machine - 01', 'Calemard 1st stage - 01', ");
+                    sql.append("'Calender Complex Berstorf - 01', 'CMP APEX - 01', 'CMP APEX - 02', 'CMP APEX - 03', ");
+                    sql.append("'Duplex - 01', 'Low Angle - 01', 'Trafila Quadruplex - 01', 'TTM fisher belt cutting - 01', ");
+                    sql.append("'VMI APEX - 01', 'VMI APEX - 02', 'VMI TPCS 1600-1000')");
+                    break;
+                case "FinishigArea":
+                    sql.append("machine_name LIKE '%visual control%' OR machine_name LIKE 'A-TEC%' OR ");
+                    sql.append("machine_name IN ('Matteuzzi RRM 50T', 'Module A-1', 'Module A-2', 'Module A-3', 'Saivatori')");
+                    break;
+                case "NewMixingArea":
+                    sql.append("machine_name IN ('Automatic Chemistry Dosing System', 'Calender Comerio Ercole - 01', ");
+                    sql.append("'Grinding manual', 'Intake raw materials', 'Isolation solution', 'Manual dosing', ");
+                    sql.append("'Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1')");
+                    break;
+            }
+            sql.append(") ");
+        }
+        
+        // Фильтр по оборудованию (множественный выбор)
         if (equipment != null && !equipment.isEmpty() && !equipment.equals("all")) {
-            sql.append("AND machine_name = ? ");
+            String[] equipmentList = equipment.split(",");
+            sql.append("AND machine_name IN (");
+            for (int i = 0; i < equipmentList.length; i++) {
+                sql.append("?");
+                if (i < equipmentList.length - 1) sql.append(",");
+            }
+            sql.append(") ");
         }
+        
+        // Фильтр по типу поломки (множественный выбор)
         if (failureType != null && !failureType.isEmpty() && !failureType.equals("all")) {
-            sql.append("AND failure_type = ? ");
+            String[] failureTypeList = failureType.split(",");
+            sql.append("AND failure_type IN (");
+            for (int i = 0; i < failureTypeList.length; i++) {
+                sql.append("?");
+                if (i < failureTypeList.length - 1) sql.append(",");
+            }
+            sql.append(") ");
         }
+        
+        // Фильтр по статусу (множественный выбор)
         if (status != null && !status.isEmpty() && !status.equals("all")) {
-            sql.append("AND status = ? ");
+            String[] statusList = status.split(",");
+            sql.append("AND status IN (");
+            for (int i = 0; i < statusList.length; i++) {
+                sql.append("?");
+                if (i < statusList.length - 1) sql.append(",");
+            }
+            sql.append(") ");
         }
 
         sql.append("ORDER BY start_bd_t1 DESC ");
-        // sql.append("LIMIT 1000");
 
         // Подготавливаем параметры
         Object[] params = buildParams(dateFrom, dateTo, area, equipment, failureType, status);
@@ -79,14 +131,29 @@ public class GanttRepository {
         if (dateTo != null && !dateTo.isEmpty()) {
             params.add(dateTo);
         }
+        
+        // Параметры для множественного выбора оборудования
         if (equipment != null && !equipment.isEmpty() && !equipment.equals("all")) {
-            params.add(equipment);
+            String[] equipmentList = equipment.split(",");
+            for (String eq : equipmentList) {
+                params.add(eq.trim());
+            }
         }
+        
+        // Параметры для множественного выбора типа поломки
         if (failureType != null && !failureType.isEmpty() && !failureType.equals("all")) {
-            params.add(failureType);
+            String[] failureTypeList = failureType.split(",");
+            for (String ft : failureTypeList) {
+                params.add(ft.trim());
+            }
         }
+        
+        // Параметры для множественного выбора статуса
         if (status != null && !status.isEmpty() && !status.equals("all")) {
-            params.add(status);
+            String[] statusList = status.split(",");
+            for (String st : statusList) {
+                params.add(st.trim());
+            }
         }
         
         return params.toArray();

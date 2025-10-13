@@ -37,6 +37,21 @@ function initializeSelect2() {
         allowClear: true,
         width: '100%'
     });
+    
+    // Обработка выбора "Всё" для множественных селектов
+    $('#equipment, #failure-type, #status').on('select2:select', function(e) {
+        const selectedValue = e.params.data.id;
+        if (selectedValue === 'all') {
+            $(this).val(['all']).trigger('change');
+        } else {
+            const currentValues = $(this).val() || [];
+            if (currentValues.includes('all')) {
+                const newValues = currentValues.filter(val => val !== 'all');
+                newValues.push(selectedValue);
+                $(this).val(newValues).trigger('change');
+            }
+        }
+    });
 }
 
 function setupAreaFilterListener() {
@@ -58,7 +73,8 @@ async function loadEquipment(area) {
             equipmentSelect.append(new Option(item.machine_name, item.machine_name));
         });
         
-        equipmentSelect.trigger('change');
+        // Устанавливаем значение по умолчанию
+        equipmentSelect.val(['all']).trigger('change');
     } catch (error) {
         console.error('Ошибка загрузки оборудования:', error);
     }
@@ -95,6 +111,9 @@ async function loadFailureTypes() {
         types.forEach(item => {
             select.append(new Option(item.failure_type, item.failure_type));
         });
+        
+        // Устанавливаем значение по умолчанию
+        select.val(['all']).trigger('change');
     } catch (error) {
         console.error('Ошибка загрузки типов поломок:', error);
     }
@@ -112,6 +131,9 @@ async function loadStatuses() {
         statuses.forEach(item => {
             select.append(new Option(item.status, item.status));
         });
+        
+        // Устанавливаем значение по умолчанию
+        select.val(['all']).trigger('change');
     } catch (error) {
         console.error('Ошибка загрузки статусов:', error);
     }
@@ -120,7 +142,7 @@ async function loadStatuses() {
 async function fetchDataFromDatabase(params = {}) {
     const url = new URL('/gantt/data', window.location.origin);
     Object.keys(params).forEach(key => {
-        if (params[key] && params[key] !== 'all') {
+        if (params[key] !== null && params[key] !== undefined && params[key] !== '' && params[key] !== 'all') {
             url.searchParams.append(key, params[key]);
         }
     });
@@ -134,19 +156,30 @@ async function fetchDataFromDatabase(params = {}) {
 
 async function applyFilters() {
     showLoading(true);
+    hideError(); // Очищаем предыдущие ошибки
+    
     try {
+        const equipmentVal = $('#equipment').val();
+        const failureTypeVal = $('#failure-type').val();
+        const statusVal = $('#status').val();
+        
         const params = {
             dateFrom: document.getElementById('date-from').value,
             dateTo: document.getElementById('date-to').value,
             area: document.getElementById('area').value,
-            equipment: $('#equipment').val()?.join(','),
-            failureType: $('#failure-type').val()?.join(','),
-            status: $('#status').val()?.join(',')
+            equipment: equipmentVal && equipmentVal.length > 0 && !equipmentVal.includes('all') ? equipmentVal.join(',') : null,
+            failureType: failureTypeVal && failureTypeVal.length > 0 && !failureTypeVal.includes('all') ? failureTypeVal.join(',') : null,
+            status: statusVal && statusVal.length > 0 && !statusVal.includes('all') ? statusVal.join(',') : null
         };
+        
+        console.log('Применяем фильтры:', params);
         
         const data = await fetchDataFromDatabase(params);
         generateGanttChart(data);
+        
+        console.log('Фильтры применены успешно. Найдено записей:', data.length);
     } catch (error) {
+        console.error('Ошибка применения фильтров:', error);
         showError('Ошибка применения фильтров: ' + error.message);
     } finally {
         showLoading(false);
@@ -364,4 +397,9 @@ function showError(message) {
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
     setTimeout(() => errorDiv.style.display = 'none', 5000);
+}
+
+function hideError() {
+    const errorDiv = document.getElementById('error');
+    errorDiv.style.display = 'none';
 }
