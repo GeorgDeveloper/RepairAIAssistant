@@ -113,15 +113,18 @@ public class DataSyncService {
         // 3. Получаем время простоя из SQL Server
         Double downtime = getDowntimeFromSqlServer(area, dateRange[0], dateRange[1]);
 
-        // 4. Рассчитываем метрики
-        Double downtimePercentage = calculateDowntimePercentage(downtime, workingTime);
+        // 4. Рассчитываем инкрементальное рабочее время
+        Double incrementalWorkingTime = calculateIncrementalWorkingTime(workingTime, dateRange[0]);
+        
+        // 5. Рассчитываем метрики
+        Double downtimePercentage = calculateDowntimePercentage(downtime, incrementalWorkingTime);
         Double availability = calculateAvailability(downtimePercentage);
 
-        // 5. Сохраняем в MySQL
-        saveMetricsToMysql(area.getName(), downtime, workingTime, downtimePercentage, availability);
+        // 6. Сохраняем в MySQL
+        saveMetricsToMysql(area.getName(), downtime, incrementalWorkingTime, downtimePercentage, availability);
 
-        logger.debug("Область {} синхронизирована: downtime={}, wt={}, percentage={}, availability={}", 
-                   area.getName(), downtime, workingTime, downtimePercentage, availability);
+        logger.debug("Область {} синхронизирована: downtime={}, wt={}, incremental_wt={}, percentage={}, availability={}", 
+                   area.getName(), downtime, workingTime, incrementalWorkingTime, downtimePercentage, availability);
     }
 
     /**
@@ -299,6 +302,36 @@ public class DataSyncService {
         }
     }
 
+    /**
+     * Рассчитывает инкрементальное рабочее время на основе текущего времени
+     */
+    private Double calculateIncrementalWorkingTime(Double fullWorkingTime, LocalDateTime startDate) {
+        if (fullWorkingTime == null || fullWorkingTime == 0) {
+            return fullWorkingTime;
+        }
+        
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime currentStart = startDate;
+        LocalDateTime currentEnd = startDate.plusDays(1);
+        
+        // Если текущее время вне диапазона 08:00-08:00, возвращаем полное значение
+        if (now.isBefore(currentStart) || now.isAfter(currentEnd)) {
+            return fullWorkingTime;
+        }
+        
+        // Вычисляем количество прошедших 3-минутных интервалов с 08:00
+        long minutesFromStart = java.time.Duration.between(currentStart, now).toMinutes();
+        long intervals = minutesFromStart / 3 + 1; // +1 чтобы начинать с 1
+        
+        // Общее количество интервалов в сутках (24 часа * 60 минут / 3 минуты = 480)
+        long totalIntervals = 480;
+        
+        // Рассчитываем инкремент на интервал
+        double increment = fullWorkingTime / totalIntervals;
+        
+        return Math.round(increment * intervals * 100.0) / 100.0;
+    }
+    
     /**
      * Рассчитывает процент простоя
      */
