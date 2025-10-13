@@ -65,71 +65,61 @@ const MainDashboard = {
         document.getElementById('metricsTable').innerHTML = tableHTML;
     },
 
-    // Таблица метрик по ключевым линиям (используем значения их участков)
-    createKeyLinesMetricsTable(bdData, availabilityData) {
+    // Таблица метрик по ключевым линиям (используем реальные данные из main_lines_online)
+    async createKeyLinesMetricsTable() {
         const currentDate = new Date().toLocaleDateString('ru-RU');
 
-        // Сопоставление ключевых линий с участками (area), чтобы подставить их текущие значения
-        const keyLinesMap = [
-            { label: 'Mixer GK 270 T-C 2.1', areaKey: 'NewMixingArea' },
-            { label: 'Mixer GK 320 E 1.1', areaKey: 'NewMixingArea' },
-            { label: 'Calender Complex Berstorf - 01', areaKey: 'SemifinishingArea' },
-            { label: 'Bandina - 01', areaKey: 'SemifinishingArea' },
-            { label: 'Duplex - 01', areaKey: 'SemifinishingArea' },
-            { label: 'Calender Comerio Ercole - 01', areaKey: 'SemifinishingArea' },
-            { label: 'VMI APEX - 01', areaKey: 'BuildingArea' },
-            { label: 'VMI APEX - 02', areaKey: 'BuildingArea' },
-            { label: 'Trafila Quadruplex - 01', areaKey: 'SemifinishingArea' },
-            { label: 'Bartell Bead Machine - 01', areaKey: 'SemifinishingArea' },
-            { label: 'TTM fisher belt cutting - 01', areaKey: 'FinishingArea' },
-            { label: 'VMI TPCS 1600-1000', areaKey: 'BuildingArea' }
-        ];
+        try {
+            // Получаем текущие метрики ключевых линий
+            const mainLinesData = await DashboardAPI.fetchData('/dashboard/main-lines/current');
+            
+            if (!mainLinesData || !Array.isArray(mainLinesData)) {
+                console.warn('Нет данных о ключевых линиях');
+                return;
+            }
 
-        const getCurrentValueByArea = (data, areaKey) => {
-            if (!data || !Array.isArray(data)) return 0;
-            const areaData = data.filter(item => item.area === areaKey);
-            if (areaData.length === 0) return 0;
-            const last = areaData[areaData.length - 1];
-            const val = Number(last && last.value);
-            return isNaN(val) ? 0 : val;
-        };
+            let tableHTML = `
+            <table class="metrics-table">
+                <thead>
+                    <tr>
+                        <th>Ключевая линия</th>
+                        <th>Цель</th>
+                        <th>${currentDate}</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
 
-        let tableHTML = `
-        <table class="metrics-table">
-            <thead>
-                <tr>
-                    <th>Ключевая линия</th>
-                    <th>Цель</th>
-                    <th>${currentDate}</th>
+            mainLinesData.forEach(line => {
+                const bdValue = Number(line.downtime_percentage) || 0;
+                const availabilityValue = Number(line.availability) || 0;
+
+                tableHTML += `
+                <tr class="section-header">
+                    <td colspan="3">${line.line_name || ''}</td>
                 </tr>
-            </thead>
-            <tbody>
-        `;
+                <tr>
+                    <td>BD</td>
+                    <td>2%</td>
+                    <td class="${bdValue <= 2 ? 'target-met' : 'target-not-met'}">${bdValue.toFixed(2)}%</td>
+                </tr>
+                <tr>
+                    <td>Доступность</td>
+                    <td>97%</td>
+                    <td class="${availabilityValue >= 97 ? 'target-met' : 'target-not-met'}">${availabilityValue.toFixed(2)}%</td>
+                </tr>
+            `;
+            });
 
-        keyLinesMap.forEach(({ label, areaKey }) => {
-            const bdValue = getCurrentValueByArea(bdData, areaKey);
-            const availabilityValue = getCurrentValueByArea(availabilityData, areaKey);
+            tableHTML += '</tbody></table>';
+            const container = document.getElementById('metricsTable-lines');
+            if (container) container.innerHTML = tableHTML;
 
-            tableHTML += `
-            <tr class="section-header">
-                <td colspan="3">${label}</td>
-            </tr>
-            <tr>
-                <td>BD</td>
-                <td>2%</td>
-                <td class="${bdValue <= 2 ? 'target-met' : 'target-not-met'}">${bdValue.toFixed(2)}%</td>
-            </tr>
-            <tr>
-                <td>Доступность</td>
-                <td>97%</td>
-                <td class="${availabilityValue >= 97 ? 'target-met' : 'target-not-met'}">${availabilityValue.toFixed(2)}%</td>
-            </tr>
-        `;
-        });
-
-        tableHTML += '</tbody></table>';
-        const container = document.getElementById('metricsTable-lines');
-        if (container) container.innerHTML = tableHTML;
+        } catch (error) {
+            console.error('Ошибка при загрузке данных ключевых линий:', error);
+            const container = document.getElementById('metricsTable-lines');
+            if (container) container.innerHTML = '<p>Ошибка загрузки данных ключевых линий</p>';
+        }
     },
 
     // Загрузка и отображение топ поломок
@@ -179,8 +169,10 @@ const MainDashboard = {
         if (bdData || availabilityData) {
             // Обновляем таблицу с текущими данными
             this.createMetricsTable(bdData, availabilityData);
-            this.createKeyLinesMetricsTable(bdData, availabilityData);
         }
+        
+        // Загружаем данные ключевых линий
+        await this.createKeyLinesMetricsTable();
         
         // Обновление графиков и блиц-панели каждые 60 секунд
         DashboardInit.startOnlineChartsRefresh(60000);
@@ -189,6 +181,11 @@ const MainDashboard = {
         setInterval(async () => {
             await this.loadTopBreakdownsTables();
         }, 300000); // 5 минут = 300000 мс
+        
+        // Обновление таблицы ключевых линий каждые 3 минуты
+        setInterval(async () => {
+            await this.createKeyLinesMetricsTable();
+        }, 180000); // 3 минуты = 180000 мс
         
         // Полное обновление страницы каждый час
         DashboardInit.startPageRefresh(3600000); // 1 час = 3600000 мс

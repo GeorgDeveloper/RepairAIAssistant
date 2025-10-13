@@ -43,13 +43,13 @@ const DashboardUtils = {
     
     // Фиксированная цветовая схема для участков
     areaColors: {
-        'NewMixingArea': '#FF6B6B',      // Красный
-        'SemifinishingArea': '#4ECDC4',  // Бирюзовый
-        'BuildingArea': '#45B7D1',       // Голубой
-        'CuringArea': '#96CEB4',         // Зеленый
-        'FinishingArea': '#FFEAA7',      // Желтый
-        'Modules': '#DDA0DD',            // Фиолетовый
-        'Plant': '#98D8C8'               // Мятный
+        'NewMixingArea': '#001522',      // Красный
+        'SemifinishingArea': '#0400fa',  // Бирюзовый
+        'BuildingArea': '#4152ff',       // Голубой
+        'CuringArea': '#418b69',         // Зеленый
+        'FinishingArea': '#ffd241',      // Желтый
+        'Modules': '#c255c2',            // Фиолетовый
+        'Plant': '#ff0505'      // Красный
     }
 };
 

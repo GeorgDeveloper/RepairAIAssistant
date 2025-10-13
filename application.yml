@@ -171,3 +171,47 @@ data-sync:
       default_wt: 23040.0
       filter_column: PlantDepartmentGeographicalCodeName
       filter_value: NewMixingArea
+    - name: Modules
+      working_time_table: working_time_of_modules
+      wt_column: wt_m_min
+      default_wt: 23040.0
+      filter_column: PlantDepartmentGeographicalCodeName
+      filter_value: Modules
+  # Конфигурация ключевых линий
+  main_lines:
+    - name: "Mixer GK 270 T-C 2.1"
+      area: "NewMixingArea"
+      machine_filter: "GK 270 T-C 2.1"
+    - name: "Mixer GK 320 E 1.1"
+      area: "NewMixingArea"
+      machine_filter: "GK 320 E 1.1"
+    - name: "Calender Complex Berstorf - 01"
+      area: "SemifinishingArea"
+      machine_filter: "Berstorf"
+    - name: "Bandina - 01"
+      area: "SemifinishingArea"
+      machine_filter: "Bandina"
+    - name: "Duplex - 01"
+      area: "SemifinishingArea"
+      machine_filter: "Duplex"
+    - name: "Calender Comerio Ercole - 01"
+      area: "SemifinishingArea"
+      machine_filter: "Comerio"
+    - name: "VMI APEX - 01"
+      area: "BuildingArea"
+      machine_filter: "VMI APEX"
+    - name: "VMI APEX - 02"
+      area: "BuildingArea"
+      machine_filter: "VMI APEX"
+    - name: "Trafila Quadruplex - 01"
+      area: "SemifinishingArea"
+      machine_filter: "Trafila"
+    - name: "Bartell Bead Machine - 01"
+      area: "SemifinishingArea"
+      machine_filter: "Bartell"
+    - name: "TTM fisher belt cutting - 01"
+      area: "FinishingArea"
+      machine_filter: "TTM"
+    - name: "VMI TPCS 1600-1000"
+      area: "BuildingArea"
+      machine_filter: "VMI TPCS"

@@ -8,7 +8,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.config.DataSyncProperties;
-import ru.georgdeveloper.assistantbaseupdate.entity.ProductionMetricsOnline;
 import ru.georgdeveloper.assistantbaseupdate.repository.ProductionMetricsOnlineRepository;
 
 import java.time.LocalDateTime;

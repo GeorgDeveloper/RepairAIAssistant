@@ -20,6 +20,7 @@ public class DataSyncProperties {
     private SqlServer sqlServer = new SqlServer();
     private Mysql mysql = new Mysql();
     private List<Area> areas;
+    private List<MainLine> mainLines;
 
     // Геттеры и сеттеры
     public boolean isEnabled() {
@@ -60,6 +61,14 @@ public class DataSyncProperties {
 
     public void setAreas(List<Area> areas) {
         this.areas = areas;
+    }
+
+    public List<MainLine> getMainLines() {
+        return mainLines;
+    }
+
+    public void setMainLines(List<MainLine> mainLines) {
+        this.mainLines = mainLines;
     }
 
     /**
@@ -215,6 +224,40 @@ public class DataSyncProperties {
 
         public void setFilterValue(String filterValue) {
             this.filterValue = filterValue;
+        }
+    }
+
+    /**
+     * Конфигурация ключевой линии для синхронизации
+     */
+    public static class MainLine {
+        private String name;
+        private String area;
+        private String machineFilter;
+
+        // Геттеры и сеттеры
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getArea() {
+            return area;
+        }
+
+        public void setArea(String area) {
+            this.area = area;
+        }
+
+        public String getMachineFilter() {
+            return machineFilter;
+        }
+
+        public void setMachineFilter(String machineFilter) {
+            this.machineFilter = machineFilter;
         }
     }
 }

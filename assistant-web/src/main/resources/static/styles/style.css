@@ -498,7 +498,7 @@ body {
 
 .chart-container {
     padding: 20px;
-    height: 370px;
+    height: 100%;
     border: 1px solid gray;
     box-sizing: border-box;
 }
