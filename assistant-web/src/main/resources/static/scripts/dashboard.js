@@ -172,7 +172,17 @@ const DashboardTables = {
         data.forEach(row => {
             tableHTML += '<tr>';
             if (isWeekly) {
-                tableHTML += `<td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td>`;
+                // Форматируем время для недельных таблиц
+                const formatSeconds = (s) => {
+                    if (s == null) return '';
+                    const total = Number(s) || 0;
+                    const h = Math.floor(total / 3600);
+                    const m = Math.floor((total % 3600) / 60);
+                    const sec = Math.floor(total % 60);
+                    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+                };
+                const downtime = (row.machine_downtime_seconds != null) ? formatSeconds(row.machine_downtime_seconds) : (row.machine_downtime || '');
+                tableHTML += `<td>${row.machine_name || ''}</td><td>${downtime}</td>`;
             } else {
                 tableHTML += `<td>${row.code || ''}</td><td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td><td>${row.cause || ''}</td>`;
             }

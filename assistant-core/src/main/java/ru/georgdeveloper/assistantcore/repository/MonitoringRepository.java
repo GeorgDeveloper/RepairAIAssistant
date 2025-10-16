@@ -47,6 +47,7 @@ public class MonitoringRepository {
                 "FROM equipment_maintenance_records " +
                 "WHERE start_bd_t1 >= DATE_SUB(NOW(), INTERVAL 24 HOUR) " +
                 "AND failure_type <> 'Другие' " +
+                "AND machine_downtime IS NOT NULL " +
                 "ORDER BY TIME_TO_SEC(machine_downtime) DESC " +
                 "LIMIT 3";
         return jdbcTemplate.queryForList(sql);
@@ -68,6 +69,7 @@ public class MonitoringRepository {
         "AND start_bd_t1 >= CONCAT(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), ' 06:00:00') " +
         "AND stop_bd_t4 <= CONCAT(CURRENT_DATE(), ' 08:00:00') " +
         "AND failure_type <> 'Другие' " +
+        "AND machine_downtime IS NOT NULL " +
         "ORDER BY TIME_TO_SEC(machine_downtime) DESC " +
         "LIMIT 3";
         // String sql = "SELECT code, machine_name, machine_downtime, cause " +

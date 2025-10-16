@@ -30,7 +30,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: dbaPass
+    password: DbaPass123!
     driver-class-name: com.mysql.cj.jdbc.Driver
   http:
     encoding:
@@ -125,15 +125,15 @@ data-sync:
   enabled: true
   schedule: "0 */3 * * * ?"  # Каждые 3 минуты
   sql_server:
-    url: jdbc:sqlserver://pindapp466-39ru:1433;databaseName=CMMS;encrypt=false;trustServerCertificate=true
-    username: sa.CMMSreader001
-    password: JDFklm512@
+    url: jdbc:sqlserver://172.21.219.149:1433;databaseName=CMMS;encrypt=false;trustServerCertificate=true
+    username: cmms_readonly
+    password: NGTrep014
     driver: com.microsoft.sqlserver.jdbc.SQLServerDriver
     timeout: 30
   mysql:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: dbaPass
+    password: DbaPass123!
     driver: com.mysql.cj.jdbc.Driver
   areas:
     - name: Plant
@@ -154,14 +154,14 @@ data-sync:
       filter_column: PlantDepartmentGeographicalCodeName
       filter_value: CuringArea
     - name: FinishingArea
-      working_time_table: working_time_of_finishing_area
+      working_time_table: working_time_of_finishig_area
       wt_column: wt_fa_min
       default_wt: 23040.0
       filter_column: PlantDepartmentGeographicalCodeName
       filter_value: FinishingArea
     - name: SemifinishingArea
       working_time_table: working_time_of_semifinishing_area
-      wt_column: wt_sfa_min
+      wt_column: wt_sa_min
       default_wt: 23040.0
       filter_column: PlantDepartmentGeographicalCodeName
       filter_value: SemifinishingArea
@@ -173,7 +173,7 @@ data-sync:
       filter_value: NewMixingArea
     - name: Modules
       working_time_table: working_time_of_modules
-      wt_column: wt_m_min
+      wt_column: wt_ma_min
       default_wt: 23040.0
       filter_column: PlantDepartmentGeographicalCodeName
       filter_value: Modules
