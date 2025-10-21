@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "workorder.enabled", havingValue = "true", matchIfMissing = false)
 public class WorkOrderService {
     
     @Autowired

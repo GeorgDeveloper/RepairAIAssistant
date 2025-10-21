@@ -9,6 +9,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/work-orders")
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "workorder.enabled", havingValue = "true", matchIfMissing = false)
 public class WorkOrderController {
     
     @Autowired

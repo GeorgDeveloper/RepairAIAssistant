@@ -38,7 +38,7 @@ public class JpaConfig {
         
         return builder
                 .dataSource(dataSource)
-                .packages("ru.georgdeveloper.assistantbaseupdate.entity")
+                .packages("ru.georgdeveloper.assistantbaseupdate.entity.mysql")
                 .persistenceUnit("mysql")
                 .properties(properties)
                 .build();
