@@ -1,12 +1,11 @@
 package ru.georgdeveloper.assistantcore.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.*;
 import ru.georgdeveloper.assistantcore.repository.MonitoringRepository;
-import ru.georgdeveloper.assistantcore.repository.BreakdownReportRepository;
-import ru.georgdeveloper.assistantcore.model.BreakdownReport;
 
 @RestController
 @RequestMapping("/dashboard")
@@ -46,7 +45,8 @@ public class DashboardController {
     private MonitoringRepository monitoringRepository;
     
     @Autowired
-    private BreakdownReportRepository breakdownReportRepository;
+    @Qualifier("sqlServerJdbcTemplate")
+    private JdbcTemplate sqlServerJdbcTemplate;
     
     @GetMapping("/breakDown")
     @ResponseBody
@@ -89,19 +89,38 @@ public class DashboardController {
     @ResponseBody
     public List<Map<String, Object>> getWorkOrders() {
         try {
-            List<BreakdownReport> reports = breakdownReportRepository.findLast15WorkOrders(PageRequest.of(0, 15));
-            System.out.println("Found " + reports.size() + " breakdown reports");
+            System.out.println("Starting getWorkOrders...");
+            
+            // Прямой запрос к SQL Server
+            String sql = "SELECT TOP 15 MachineName, TYPEWO, WOStatusLocalDescr, Duration " +
+                        "FROM REP_BreakdownReport " +
+                        "ORDER BY Date_T1 DESC";
+            
+            List<Map<String, Object>> rows = sqlServerJdbcTemplate.queryForList(sql);
+            System.out.println("Found " + rows.size() + " breakdown reports from SQL Server");
             
             List<Map<String, Object>> result = new ArrayList<>();
             
-            for (BreakdownReport report : reports) {
+            for (Map<String, Object> row : rows) {
                 Map<String, Object> workOrder = new HashMap<>();
-                workOrder.put("machineName", report.getMachineName());
-                workOrder.put("type", report.getTypeWo());
-                workOrder.put("status", report.getWoStatusLocalDescr());
-                workOrder.put("duration", formatDuration(report.getDuration()));
+                workOrder.put("machineName", row.get("MachineName"));
+                workOrder.put("type", row.get("TYPEWO"));
+                workOrder.put("status", row.get("WOStatusLocalDescr"));
+                
+                // Форматируем продолжительность
+                Object duration = row.get("Duration");
+                String formattedDuration = "0.00:00";
+                if (duration != null) {
+                    if (duration instanceof Integer) {
+                        formattedDuration = formatDuration((Integer) duration);
+                    } else if (duration instanceof String) {
+                        formattedDuration = (String) duration;
+                    }
+                }
+                workOrder.put("duration", formattedDuration);
+                
                 result.add(workOrder);
-                System.out.println("Added work order: " + report.getMachineName() + " - " + report.getWoStatusLocalDescr());
+                System.out.println("Added work order: " + row.get("MachineName") + " - " + row.get("WOStatusLocalDescr"));
             }
             
             System.out.println("Returning " + result.size() + " work orders");
