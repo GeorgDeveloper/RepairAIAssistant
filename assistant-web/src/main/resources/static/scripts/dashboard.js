@@ -190,8 +190,61 @@ const DashboardTables = {
         });
         tableHTML += '</tbody></table>';
         document.getElementById(containerId).innerHTML = tableHTML;
+    },
+    
+    createWorkOrdersTable(data, containerId) {
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            document.getElementById(containerId).innerHTML = '<p>Нет данных для отображения</p>';
+            return;
+        }
+        
+        let tableHTML = `
+            <table class="work-orders-table">
+                <thead>
+                    <tr>
+                        <th>Имя станка/машины</th>
+                        <th>Type</th>
+                        <th>Статус</th>
+                        <th>Эффективная Продолжительность</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        data.forEach(row => {
+            const statusClass = getStatusClass(row.status);
+            tableHTML += `
+                <tr>
+                    <td>${row.machineName || ''}</td>
+                    <td>${row.type || ''}</td>
+                    <td><span class="${statusClass}">${row.status || ''}</span></td>
+                    <td>${row.duration || '0.00:00'}</td>
+                </tr>
+            `;
+        });
+        
+        tableHTML += '</tbody></table>';
+        document.getElementById(containerId).innerHTML = tableHTML;
     }
 };
+
+// Функция для определения CSS класса статуса
+function getStatusClass(status) {
+    if (!status) return 'status-conditional';
+    
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('запрашиваемый') || statusLower.includes('requested')) {
+        return 'status-requested';
+    } else if (statusLower.includes('исполнении') || statusLower.includes('progress')) {
+        return 'status-in-progress';
+    } else if (statusLower.includes('условный') || statusLower.includes('conditional')) {
+        return 'status-conditional';
+    } else if (statusLower.includes('выполнено') || statusLower.includes('completed')) {
+        return 'status-completed';
+    }
+    
+    return 'status-conditional';
+}
 
 // Dashboard initialization functions
 const DashboardInit = {

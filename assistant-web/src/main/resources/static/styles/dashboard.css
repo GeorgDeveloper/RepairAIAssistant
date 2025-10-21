@@ -18,7 +18,7 @@
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     grid-gap: 16px;
     height: calc(100vh - 128px);
 }
@@ -41,6 +41,14 @@
 }
 
 .right-stack {
+    display: grid;
+    grid-gap: 16px;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+}
+
+.new-right-stack {
     display: grid;
     grid-gap: 16px;
     height: 100%;
@@ -292,4 +300,104 @@
 
 .btn-toggle-all:hover {
     background: #5a6268;
+}
+
+/* Стили для таблицы нарядов на работы */
+.work-orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    background: #fff;
+}
+
+.work-orders-table th {
+    background: #fff;
+    color: #333;
+    font-weight: 600;
+    padding: 12px 8px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.work-orders-table th::after {
+    content: '▼';
+    font-size: 10px;
+    margin-left: 4px;
+    opacity: 0.6;
+}
+
+.work-orders-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+}
+
+.work-orders-table tbody tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+
+.work-orders-table tbody tr:nth-child(odd) {
+    background-color: #fff;
+}
+
+/* Цветовая схема для статусов */
+.status-requested {
+    background-color: #ff9800 !important;
+    color: #fff !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.status-in-progress {
+    background-color: #ffeb3b !important;
+    color: #333 !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.status-conditional {
+    background-color: #9e9e9e !important;
+    color: #fff !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.status-completed {
+    background-color: #4caf50 !important;
+    color: #fff !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* Контейнер для таблицы нарядов */
+#workOrdersTable {
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+#workOrdersTable::-webkit-scrollbar {
+    width: 6px;
+}
+
+#workOrdersTable::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#workOrdersTable::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#workOrdersTable::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }

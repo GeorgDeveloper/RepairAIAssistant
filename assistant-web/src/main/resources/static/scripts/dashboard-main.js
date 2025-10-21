@@ -161,6 +161,18 @@ const MainDashboard = {
         if (currentSpan) currentSpan.textContent = today;
     },
 
+    // Загрузка и отображение нарядов на работы
+    async loadWorkOrdersTable() {
+        try {
+            const workOrders = await DashboardAPI.fetchData('/dashboard/work-orders');
+            DashboardTables.createWorkOrdersTable(workOrders, 'workOrdersTable');
+        } catch (error) {
+            console.error('Ошибка при загрузке нарядов на работы:', error);
+            const container = document.getElementById('workOrdersTable');
+            if (container) container.innerHTML = '<p>Ошибка загрузки данных нарядов</p>';
+        }
+    },
+
     // Инициализация дашборда
     async initializeDashboard() {
         await this.loadTopBreakdownsTables();
@@ -174,6 +186,9 @@ const MainDashboard = {
         // Загружаем данные ключевых линий
         await this.createKeyLinesMetricsTable();
         
+        // Загружаем таблицу нарядов на работы
+        await this.loadWorkOrdersTable();
+        
         // Обновление графиков и блиц-панели каждые 60 секунд
         DashboardInit.startOnlineChartsRefresh(60000);
         
@@ -186,6 +201,11 @@ const MainDashboard = {
         setInterval(async () => {
             await this.createKeyLinesMetricsTable();
         }, 180000); // 3 минуты = 180000 мс
+        
+        // Обновление таблицы нарядов каждые 2 минуты
+        setInterval(async () => {
+            await this.loadWorkOrdersTable();
+        }, 120000); // 2 минуты = 120000 мс
         
         // Полное обновление страницы каждый час
         DashboardInit.startPageRefresh(3600000); // 1 час = 3600000 мс
