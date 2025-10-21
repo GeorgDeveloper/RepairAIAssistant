@@ -42,7 +42,6 @@ public class DashboardController {
 
     @Autowired
     private MonitoringRepository monitoringRepository;
-    
     @GetMapping("/breakDown")
     @ResponseBody
     public List<Map<String, Object>> searchBreakDown() {
@@ -79,5 +78,4 @@ public class DashboardController {
     public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords() {
         return monitoringRepository.getEquipmentMaintenanceRecords();
     }
-    
 }
