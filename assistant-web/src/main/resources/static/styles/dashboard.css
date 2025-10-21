@@ -339,6 +339,25 @@
     color: #333;
 }
 
+/* Специальные стили для колонок */
+.work-orders-table td:nth-child(1) { /* Станок/машина */
+    max-width: 300px;
+}
+
+.work-orders-table td:nth-child(2) { /* Тип */
+    max-width: 80px;
+    text-align: center;
+}
+
+.work-orders-table td:nth-child(3) { /* Статус */
+    max-width: 120px;
+}
+
+.work-orders-table td:nth-child(4) { /* Продолжительность */
+    max-width: 100px;
+    text-align: center;
+}
+
 .work-orders-table tbody tr:nth-child(even) {
     background-color: #f8f8f8;
 }
