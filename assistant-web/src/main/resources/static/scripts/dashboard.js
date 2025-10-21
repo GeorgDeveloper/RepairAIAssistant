@@ -202,10 +202,10 @@ const DashboardTables = {
             <table class="work-orders-table">
                 <thead>
                     <tr>
-                        <th>Имя станка/машины</th>
-                        <th>Type</th>
+                        <th>Станок/машина</th>
+                        <th>Тип</th>
                         <th>Статус</th>
-                        <th>Эффективная Продолжительность</th>
+                        <th>Продолжительность</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -213,12 +213,13 @@ const DashboardTables = {
         
         data.forEach(row => {
             const statusClass = getStatusClass(row.status);
+            
             tableHTML += `
                 <tr>
                     <td>${row.machineName || ''}</td>
                     <td>${row.type || ''}</td>
                     <td><span class="${statusClass}">${row.status || ''}</span></td>
-                    <td>${row.duration || '0.00:00'}</td>
+                    <td>${row.sDuration || row.duration || '0.00:00'}</td>
                 </tr>
             `;
         });

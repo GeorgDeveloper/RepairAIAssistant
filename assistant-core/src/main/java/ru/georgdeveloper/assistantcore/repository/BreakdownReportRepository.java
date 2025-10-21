@@ -39,7 +39,4 @@ public interface BreakdownReportRepository extends JpaRepository<BreakdownReport
     @Query("SELECT b FROM BreakdownReport b ORDER BY b.duration DESC")
     List<BreakdownReport> findRecentReports(Pageable pageable);
     
-    /** Последние 15 записей для отображения нарядов на работы */
-    @Query("SELECT b FROM BreakdownReport b ORDER BY b.duration DESC")
-    List<BreakdownReport> findLast15WorkOrders(Pageable pageable);
 }

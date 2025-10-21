@@ -165,7 +165,8 @@ const MainDashboard = {
     async loadWorkOrdersTable() {
         try {
             console.log('Загружаем данные нарядов на работы...');
-            const workOrders = await DashboardAPI.fetchData('/dashboard/work-orders');
+            // Используем новый API из assistant-base_update
+            const workOrders = await DashboardAPI.fetchData('/api/work-orders/dashboard');
             console.log('Получены данные нарядов:', workOrders);
             DashboardTables.createWorkOrdersTable(workOrders, 'workOrdersTable');
         } catch (error) {

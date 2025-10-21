@@ -11,3 +11,8 @@ spring:
 core:
   service:
     url: http://localhost:${server.core.port:8080}
+
+# URL модуля обновления базы данных (assistant-base_update) для API нарядов
+base-update:
+  service:
+    url: http://localhost:${server.base-update.port:8084}
