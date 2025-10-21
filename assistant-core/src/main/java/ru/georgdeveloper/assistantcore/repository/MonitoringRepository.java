@@ -1,6 +1,7 @@
 package ru.georgdeveloper.assistantcore.repository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -11,6 +12,7 @@ import java.util.Map;
 public class MonitoringRepository {
     
     @Autowired
+    @Qualifier("sqlServerJdbcTemplate")
     private JdbcTemplate jdbcTemplate;
     
     public JdbcTemplate getJdbcTemplate() {
@@ -50,14 +52,18 @@ public class MonitoringRepository {
     }
     // Топ-5 поломок за сутки (последние 24 часа)
     public List<Map<String, Object>> getTopBreakdownsPerDay() {
-        String sql = "SELECT code, machine_name, machine_downtime, cause " +
-                "FROM equipment_maintenance_records " +
-                "WHERE start_bd_t1 >= DATE_SUB(NOW(), INTERVAL 24 HOUR) " +
-                "AND failure_type <> 'Другие' " +
-                "AND machine_downtime IS NOT NULL " +
-                "ORDER BY TIME_TO_SEC(machine_downtime) DESC " +
-                "LIMIT 3";
-        return jdbcTemplate.queryForList(sql);
+        try {
+            String sql = "SELECT TOP 3 code, machine_name, machine_downtime, cause " +
+                    "FROM equipment_maintenance_records " +
+                    "WHERE start_bd_t1 >= DATEADD(HOUR, -24, GETDATE()) " +
+                    "AND failure_type <> 'Другие' " +
+                    "AND machine_downtime IS NOT NULL " +
+                    "ORDER BY DATEDIFF(SECOND, '00:00:00', machine_downtime) DESC";
+            return jdbcTemplate.queryForList(sql);
+        } catch (Exception e) {
+            System.err.println("Ошибка при получении топ поломок за день: " + e.getMessage());
+            return new java.util.ArrayList<>();
+        }
     }
 
     // Топ-5 поломок по ключевым линиям за сутки (последние 24 часа)
@@ -100,10 +106,15 @@ public class MonitoringRepository {
     // Текущий ТОП (онлайн) по таблице top_breakdowns_current_status_online
     // Возвращаем длительность в секундах, чтобы избежать JDBC-мэппинга TIME -> java.sql.Time
     public List<Map<String, Object>> getTopBreakdownsCurrentStatusOnline() {
-        String sql = "SELECT area, machine_name, TIME_TO_SEC(machine_downtime) AS machine_downtime_seconds, cause " +
-                "FROM top_breakdowns_current_status_online " +
-                "ORDER BY TIME_TO_SEC(machine_downtime) DESC";
-        return jdbcTemplate.queryForList(sql);
+        try {
+            String sql = "SELECT area, machine_name, DATEDIFF(SECOND, '00:00:00', machine_downtime) AS machine_downtime_seconds, cause " +
+                    "FROM top_breakdowns_current_status_online " +
+                    "ORDER BY DATEDIFF(SECOND, '00:00:00', machine_downtime) DESC";
+            return jdbcTemplate.queryForList(sql);
+        } catch (Exception e) {
+            System.err.println("Ошибка при получении текущего статуса поломок: " + e.getMessage());
+            return new java.util.ArrayList<>();
+        }
     }
 
     public List<Map<String, Object>> getRegions() {

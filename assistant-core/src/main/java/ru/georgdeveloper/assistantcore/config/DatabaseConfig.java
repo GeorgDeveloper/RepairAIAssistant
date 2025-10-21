@@ -14,7 +14,6 @@ import com.zaxxer.hikari.HikariDataSource;
  * Конфигурация базы данных и JPA репозиториев
  */
 @Configuration
-@EnableJpaRepositories(basePackages = "ru.georgdeveloper.assistantcore.repository")
 @EnableTransactionManagement
 public class DatabaseConfig {
 
