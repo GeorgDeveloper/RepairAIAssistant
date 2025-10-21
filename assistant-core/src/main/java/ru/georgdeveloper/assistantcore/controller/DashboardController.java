@@ -88,19 +88,29 @@ public class DashboardController {
     @GetMapping("/work-orders")
     @ResponseBody
     public List<Map<String, Object>> getWorkOrders() {
-        List<BreakdownReport> reports = breakdownReportRepository.findLast15WorkOrders(PageRequest.of(0, 15));
-        List<Map<String, Object>> result = new ArrayList<>();
-        
-        for (BreakdownReport report : reports) {
-            Map<String, Object> workOrder = new HashMap<>();
-            workOrder.put("machineName", report.getMachineName());
-            workOrder.put("type", report.getTypeWo());
-            workOrder.put("status", report.getWoStatusLocalDescr());
-            workOrder.put("duration", formatDuration(report.getDuration()));
-            result.add(workOrder);
+        try {
+            List<BreakdownReport> reports = breakdownReportRepository.findLast15WorkOrders(PageRequest.of(0, 15));
+            System.out.println("Found " + reports.size() + " breakdown reports");
+            
+            List<Map<String, Object>> result = new ArrayList<>();
+            
+            for (BreakdownReport report : reports) {
+                Map<String, Object> workOrder = new HashMap<>();
+                workOrder.put("machineName", report.getMachineName());
+                workOrder.put("type", report.getTypeWo());
+                workOrder.put("status", report.getWoStatusLocalDescr());
+                workOrder.put("duration", formatDuration(report.getDuration()));
+                result.add(workOrder);
+                System.out.println("Added work order: " + report.getMachineName() + " - " + report.getWoStatusLocalDescr());
+            }
+            
+            System.out.println("Returning " + result.size() + " work orders");
+            return result;
+        } catch (Exception e) {
+            System.err.println("Error in getWorkOrders: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
         }
-        
-        return result;
     }
     
     private String formatDuration(Integer duration) {

@@ -9,6 +9,13 @@ import java.util.Map;
 
 @Repository
 public class MonitoringRepository {
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+    
+    public JdbcTemplate getJdbcTemplate() {
+        return jdbcTemplate;
+    }
     // Топ-5 поломок за неделю (общее)
     public List<Map<String, Object>> getTopBreakdownsPerWeek() {
         String sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
@@ -98,9 +105,6 @@ public class MonitoringRepository {
                 "ORDER BY TIME_TO_SEC(machine_downtime) DESC";
         return jdbcTemplate.queryForList(sql);
     }
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
 
     public List<Map<String, Object>> getRegions() {
         return jdbcTemplate.queryForList("SELECT id, name_region FROM region");

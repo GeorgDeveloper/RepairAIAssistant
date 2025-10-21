@@ -164,7 +164,9 @@ const MainDashboard = {
     // Загрузка и отображение нарядов на работы
     async loadWorkOrdersTable() {
         try {
+            console.log('Загружаем данные нарядов на работы...');
             const workOrders = await DashboardAPI.fetchData('/dashboard/work-orders');
+            console.log('Получены данные нарядов:', workOrders);
             DashboardTables.createWorkOrdersTable(workOrders, 'workOrdersTable');
         } catch (error) {
             console.error('Ошибка при загрузке нарядов на работы:', error);

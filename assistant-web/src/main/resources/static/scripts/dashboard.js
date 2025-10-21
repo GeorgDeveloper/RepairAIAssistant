@@ -241,6 +241,8 @@ function getStatusClass(status) {
         return 'status-conditional';
     } else if (statusLower.includes('выполнено') || statusLower.includes('completed')) {
         return 'status-completed';
+    } else if (statusLower.includes('закрыто') || statusLower.includes('closed')) {
+        return 'status-closed';
     }
     
     return 'status-conditional';
