@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.entity.WorkOrder;
-import ru.georgdeveloper.assistantbaseupdate.repository.WorkOrderRepository;
+import ru.georgdeveloper.assistantbaseupdate.repository.sqlserver.WorkOrderRepository;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "workorder.enabled", havingValue = "true", matchIfMissing = false)
 public class WorkOrderService {
     
     @Autowired

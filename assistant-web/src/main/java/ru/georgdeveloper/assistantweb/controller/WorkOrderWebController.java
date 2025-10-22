@@ -14,7 +14,7 @@ import java.util.Map;
 @RequestMapping("/api/work-orders")
 public class WorkOrderWebController {
 
-    @Value("${base-update.service.url:http://localhost:8082}")
+    @Value("${base-update.service.url:http://localhost:8084}")
     private String baseUpdateServiceUrl;
 
     private final RestTemplate restTemplate;
