@@ -36,7 +36,7 @@ public class SqlServerJpaConfig {
         
         return builder
                 .dataSource(dataSource)
-                .packages("ru.georgdeveloper.assistantbaseupdate.entity")
+                .packages("ru.georgdeveloper.assistantbaseupdate.entity.sqlserver")
                 .persistenceUnit("sqlserver")
                 .properties(properties)
                 .build();

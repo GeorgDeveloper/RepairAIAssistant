@@ -3,7 +3,7 @@ package ru.georgdeveloper.assistantbaseupdate.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-import ru.georgdeveloper.assistantbaseupdate.entity.WorkOrder;
+import ru.georgdeveloper.assistantbaseupdate.entity.sqlserver.WorkOrder;
 import ru.georgdeveloper.assistantbaseupdate.repository.sqlserver.WorkOrderRepository;
 
 import java.util.ArrayList;
