@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistanttelegram.handler.MessageHandler;
 import ru.georgdeveloper.assistanttelegram.handler.CommandHandler;
+import ru.georgdeveloper.assistanttelegram.handler.DocumentHandler;
+import ru.georgdeveloper.assistanttelegram.bot.RepairAssistantBot;
 
 
 @Service
@@ -14,6 +16,12 @@ public class TelegramBotService {
     
     @Autowired
     private CommandHandler commandHandler;
+    
+    @Autowired
+    private DocumentHandler documentHandler;
+    
+    @Autowired
+    private RepairAssistantBot bot;
     
 
     
@@ -27,6 +35,15 @@ public class TelegramBotService {
         }
         
         sendMessage(chatId, response);
+    }
+    
+    public void processDocument(String fileId, String fileName, Long chatId) {
+        String response = documentHandler.processDocument(fileId, fileName, chatId);
+        sendMessage(chatId, response);
+    }
+    
+    public RepairAssistantBot getBot() {
+        return bot;
     }
     
     private void sendMessage(Long chatId, String text) {

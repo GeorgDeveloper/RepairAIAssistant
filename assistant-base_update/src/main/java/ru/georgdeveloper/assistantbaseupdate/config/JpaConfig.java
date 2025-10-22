@@ -13,6 +13,7 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+import jakarta.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,6 +52,10 @@ public class JpaConfig {
     @Primary
     public PlatformTransactionManager mysqlTransactionManager(
             @Qualifier("mysqlEntityManagerFactory") LocalContainerEntityManagerFactoryBean entityManagerFactory) {
-        return new JpaTransactionManager(entityManagerFactory.getObject() != null ? entityManagerFactory.getObject() : null);
+        EntityManagerFactory emf = entityManagerFactory.getObject();
+        if (emf == null) {
+            throw new IllegalStateException("MySQL EntityManagerFactory is not initialized");
+        }
+        return new JpaTransactionManager(emf);
     }
 }

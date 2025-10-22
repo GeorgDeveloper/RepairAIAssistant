@@ -8,7 +8,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.config.DataSyncProperties;
-import ru.georgdeveloper.assistantbaseupdate.repository.ProductionMetricsOnlineRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -40,8 +39,6 @@ public class DataSyncService {
     @Qualifier("mysqlJdbcTemplate")
     private JdbcTemplate mysqlJdbcTemplate;
 
-    @Autowired
-    private ProductionMetricsOnlineRepository repository;
 
     /**
      * Планируемая задача синхронизации данных каждые 3 минуты

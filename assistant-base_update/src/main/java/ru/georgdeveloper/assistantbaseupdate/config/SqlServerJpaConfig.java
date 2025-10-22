@@ -10,6 +10,8 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+import jakarta.persistence.EntityManagerFactory;
+
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +49,10 @@ public class SqlServerJpaConfig {
     @Bean
     public PlatformTransactionManager sqlServerTransactionManager(
             @Qualifier("sqlServerEntityManagerFactory") LocalContainerEntityManagerFactoryBean entityManagerFactory) {
-        return new JpaTransactionManager(entityManagerFactory.getObject() != null ? entityManagerFactory.getObject() : null);
+        EntityManagerFactory emf = entityManagerFactory.getObject();
+        if (emf == null) {
+            throw new IllegalStateException("SQL Server EntityManagerFactory is null");
+        }
+        return new JpaTransactionManager(emf);
     }
 }

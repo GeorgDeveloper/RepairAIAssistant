@@ -18,11 +18,11 @@ public class WorkOrderService {
     private WorkOrderRepository workOrderRepository;
     
     /**
-     * Получение последних 15 нарядов на работы для отображения в таблице
+     * Получение последних 20 нарядов на работы для отображения в таблице
      */
     public List<Map<String, Object>> getLast15WorkOrders() {
         try {
-            List<WorkOrder> workOrders = workOrderRepository.findLast15WorkOrders(PageRequest.of(0, 15));
+            List<WorkOrder> workOrders = workOrderRepository.findLast15WorkOrders(PageRequest.of(0, 20));
             System.out.println("Found " + workOrders.size() + " work orders");
             
             List<Map<String, Object>> result = new ArrayList<>();

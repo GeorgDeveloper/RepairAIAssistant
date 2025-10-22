@@ -1,6 +1,8 @@
 package ru.georgdeveloper.assistantweb.controller;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -29,7 +31,12 @@ public class WorkOrderWebController {
     @GetMapping("/dashboard")
     @ResponseBody
     public List<Map<String, Object>> getWorkOrdersForDashboard() {
-        return restTemplate.getForObject(baseUpdateServiceUrl + "/api/work-orders/dashboard", List.class);
+        return restTemplate.exchange(
+            baseUpdateServiceUrl + "/api/work-orders/dashboard",
+            HttpMethod.GET,
+            null,
+            new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+        ).getBody();
     }
 
     /**
@@ -38,7 +45,12 @@ public class WorkOrderWebController {
     @GetMapping("/active")
     @ResponseBody
     public List<Map<String, Object>> getActiveWorkOrders() {
-        return restTemplate.getForObject(baseUpdateServiceUrl + "/api/work-orders/active", List.class);
+        return restTemplate.exchange(
+            baseUpdateServiceUrl + "/api/work-orders/active",
+            HttpMethod.GET,
+            null,
+            new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+        ).getBody();
     }
 
     /**
@@ -47,7 +59,12 @@ public class WorkOrderWebController {
     @GetMapping("/search")
     @ResponseBody
     public List<Map<String, Object>> searchWorkOrders(@RequestParam("keyword") String keyword) {
-        return restTemplate.getForObject(baseUpdateServiceUrl + "/api/work-orders/search?keyword=" + keyword, List.class);
+        return restTemplate.exchange(
+            baseUpdateServiceUrl + "/api/work-orders/search?keyword=" + keyword,
+            HttpMethod.GET,
+            null,
+            new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+        ).getBody();
     }
 
     /**
@@ -56,6 +73,11 @@ public class WorkOrderWebController {
     @GetMapping("/last-15")
     @ResponseBody
     public List<Map<String, Object>> getLast15WorkOrders() {
-        return restTemplate.getForObject(baseUpdateServiceUrl + "/api/work-orders/last-15", List.class);
+        return restTemplate.exchange(
+            baseUpdateServiceUrl + "/api/work-orders/last-15",
+            HttpMethod.GET,
+            null,
+            new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+        ).getBody();
     }
 }

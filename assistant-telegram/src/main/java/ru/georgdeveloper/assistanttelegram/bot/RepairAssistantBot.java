@@ -17,6 +17,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.georgdeveloper.assistanttelegram.config.BotProperties;
 import ru.georgdeveloper.assistanttelegram.handler.CommandHandler;
 import ru.georgdeveloper.assistanttelegram.handler.MessageHandler;
+import ru.georgdeveloper.assistanttelegram.handler.DocumentHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,12 +46,14 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
     private final BotProperties botProperties;
     private final CommandHandler commandHandler;
     private final MessageHandler messageHandler;
+    private final DocumentHandler documentHandler;
     
-    public RepairAssistantBot(BotProperties botProperties, CommandHandler commandHandler, MessageHandler messageHandler) {
+    public RepairAssistantBot(BotProperties botProperties, CommandHandler commandHandler, MessageHandler messageHandler, DocumentHandler documentHandler) {
         super(botProperties.getToken());
         this.botProperties = botProperties;
         this.commandHandler = commandHandler;
         this.messageHandler = messageHandler;
+        this.documentHandler = documentHandler;
     }
     
     /**
@@ -83,17 +86,27 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
      */
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
+        if (update.hasMessage()) {
             Long chatId = update.getMessage().getChatId();
-            String response;
-            if (commandHandler.isCommand(messageText)) {
-                response = commandHandler.processCommand(messageText, chatId);
-                sendTextMessage(chatId, response);
-            } else {
+            
+            if (update.getMessage().hasText()) {
+                String messageText = update.getMessage().getText();
+                String response;
+                if (commandHandler.isCommand(messageText)) {
+                    response = commandHandler.processCommand(messageText, chatId);
+                    sendTextMessage(chatId, response);
+                } else {
+                    sendTypingAction(chatId);
+                    response = messageHandler.processMessage(messageText, chatId, () -> sendTypingAction(chatId));
+                    sendTextMessageWithFeedback(chatId, messageText, response);
+                }
+            } else if (update.getMessage().hasDocument()) {
+                // Handle document messages
+                String fileId = update.getMessage().getDocument().getFileId();
+                String fileName = update.getMessage().getDocument().getFileName();
                 sendTypingAction(chatId);
-                response = messageHandler.processMessage(messageText, chatId, () -> sendTypingAction(chatId));
-                sendTextMessageWithFeedback(chatId, messageText, response);
+                String response = documentHandler.processDocument(fileId, fileName, chatId);
+                sendTextMessage(chatId, response);
             }
         } else if (update.hasCallbackQuery()) {
             handleCallback(update.getCallbackQuery());
