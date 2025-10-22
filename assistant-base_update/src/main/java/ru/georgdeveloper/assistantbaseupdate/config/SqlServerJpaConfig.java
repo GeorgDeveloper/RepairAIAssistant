@@ -33,6 +33,8 @@ public class SqlServerJpaConfig {
         properties.put("hibernate.dialect", "org.hibernate.dialect.SQLServerDialect");
         properties.put("hibernate.show_sql", "false");
         properties.put("hibernate.format_sql", "true");
+        properties.put("hibernate.physical_naming_strategy", "org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl");
+        properties.put("hibernate.implicit_naming_strategy", "org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl");
         
         return builder
                 .dataSource(dataSource)
