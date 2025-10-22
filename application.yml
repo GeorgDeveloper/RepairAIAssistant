@@ -153,7 +153,7 @@ data-sync:
       default_wt: 74880.0
       filter_column: PlantDepartmentGeographicalCodeName
       filter_value: CuringArea
-    - name: FinishingArea
+    - name: FinishigArea
       working_time_table: working_time_of_finishig_area
       wt_column: wt_fa_min
       default_wt: 23040.0
@@ -211,7 +211,7 @@ data-sync:
       machine_filter: "Bartell"
     - name: "TTM fisher belt cutting - 01"
       area: "FinishingArea"
-      machine_filter: "TTM"
+      machine_filter: "Module"
     - name: "VMI TPCS 1600-1000"
       area: "BuildingArea"
       machine_filter: "VMI TPCS"

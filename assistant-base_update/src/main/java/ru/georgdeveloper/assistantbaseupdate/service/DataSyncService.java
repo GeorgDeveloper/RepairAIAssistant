@@ -105,6 +105,8 @@ public class DataSyncService {
         if (workingTime == null) {
             workingTime = area.getDefaultWt();
             logger.debug("Используется значение по умолчанию для {}: {} мин", area.getName(), workingTime);
+        } else {
+            logger.debug("Получено рабочее время для {} из БД: {} мин", area.getName(), workingTime);
         }
 
         // 3. Получаем время простоя из SQL Server
@@ -279,7 +281,6 @@ public class DataSyncService {
 
         // Специальная обработка для области Modules
         if ("Modules".equals(area.getName())) {
-            sql.append("AND PlantDepartmentGeographicalCodeName = 'FinishigArea' ");
             sql.append("AND MachineName IN ('Module A-1', 'Module A-2', 'Module A-3') ");
         } else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
             // Добавляем фильтр по области, если он задан
@@ -292,6 +293,15 @@ public class DataSyncService {
             if ("Modules".equals(area.getName())) {
                 result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
                                                              startDate, endDate, startDate, endDate);
+                // Дополнительная проверка для модулей - посмотрим, есть ли вообще записи
+                String countSql = sql.toString().replace("SELECT SUM(Duration) as total_duration", "SELECT COUNT(*)");
+                try {
+                    Integer count = sqlServerJdbcTemplate.queryForObject(countSql, Integer.class, 
+                                                                        startDate, endDate, startDate, endDate);
+                    logger.debug("Количество записей для модулей в период {} - {}: {}", startDate, endDate, count);
+                } catch (Exception e) {
+                    logger.debug("Не удалось получить количество записей для модулей: {}", e.getMessage());
+                }
             } else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
                 result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
                                                              startDate, endDate, startDate, endDate, area.getFilterValue());

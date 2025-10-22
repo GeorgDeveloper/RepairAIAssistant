@@ -11,16 +11,23 @@ const MainDashboard = {
             { label: 'Сборка 1', key: 'SemifinishingArea' },
             { label: 'Сборка 2', key: 'BuildingArea' },
             { label: 'Вулканизация', key: 'CuringArea' },
-            { label: 'УЗО', key: 'FinishingArea' },
+            { label: 'УЗО', key: 'FinishigArea' },
             { label: 'Модули', key: 'Modules' },
             { label: 'Завод', key: 'Plant' }
         ];
 
         // Получаем последние значения из данных графиков по ключу area
         const getCurrentValue = (data, areaKey) => {
-            if (!data || !Array.isArray(data)) return 0;
+            if (!data || !Array.isArray(data)) {
+                console.log(`getCurrentValue: Нет данных для области ${areaKey}`);
+                return 0;
+            }
             const areaData = data.filter(item => item.area === areaKey);
-            if (areaData.length === 0) return 0;
+            console.log(`getCurrentValue: Данные для области ${areaKey}:`, areaData);
+            if (areaData.length === 0) {
+                console.log(`getCurrentValue: Нет записей для области ${areaKey}`);
+                return 0;
+            }
             // Сортируем по timestamp и берем последнее значение
             const sortedData = areaData.sort((a, b) => {
                 const timeA = a.timestamp ? new Date('1970-01-01 ' + a.timestamp) : new Date(0);
@@ -28,7 +35,9 @@ const MainDashboard = {
                 return timeA - timeB;
             });
             const last = sortedData[sortedData.length - 1];
+            console.log(`getCurrentValue: Последняя запись для области ${areaKey}:`, last);
             const val = Number(last && last.value);
+            console.log(`getCurrentValue: Значение для области ${areaKey}: ${val}`);
             return isNaN(val) ? 0 : val;
         };
 
