@@ -2,6 +2,8 @@
 const MainDashboard = {
     // Функция для создания таблицы с показателями
     createMetricsTable(bdData, availabilityData) {
+        console.log('BD Data for metrics table:', bdData);
+        console.log('Availability Data for metrics table:', availabilityData);
         const currentDate = new Date().toLocaleDateString('ru-RU');
         // Соответствие отображаемого названия области ключу area из БД
         const areasMap = [
@@ -19,7 +21,13 @@ const MainDashboard = {
             if (!data || !Array.isArray(data)) return 0;
             const areaData = data.filter(item => item.area === areaKey);
             if (areaData.length === 0) return 0;
-            const last = areaData[areaData.length - 1];
+            // Сортируем по timestamp и берем последнее значение
+            const sortedData = areaData.sort((a, b) => {
+                const timeA = a.timestamp ? new Date('1970-01-01 ' + a.timestamp) : new Date(0);
+                const timeB = b.timestamp ? new Date('1970-01-01 ' + b.timestamp) : new Date(0);
+                return timeA - timeB;
+            });
+            const last = sortedData[sortedData.length - 1];
             const val = Number(last && last.value);
             return isNaN(val) ? 0 : val;
         };

@@ -276,14 +276,20 @@ public class DataSyncService {
         sql.append("AND NOT (LEN(Comment) BETWEEN 15 AND 19 AND WOStatusLocalDescr LIKE '%Закрыто%') ");
         sql.append("AND TYPEWO NOT LIKE '%Tag%' ");
 
-        // Добавляем фильтр по области, если он задан
-        if (area.getFilterColumn() != null && area.getFilterValue() != null) {
+        // Специальная обработка для области Modules
+        if ("Modules".equals(area.getName())) {
+            sql.append("AND MachineName IN ('Module A-1', 'Module A-2', 'Module A-3') ");
+        } else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
+            // Добавляем фильтр по области, если он задан
             sql.append("AND ").append(area.getFilterColumn()).append(" = ? ");
         }
 
         try {
             Double result;
-            if (area.getFilterColumn() != null && area.getFilterValue() != null) {
+            if ("Modules".equals(area.getName())) {
+                result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
+                                                             startDate, endDate, startDate, endDate);
+            } else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
                 result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
                                                              startDate, endDate, startDate, endDate, area.getFilterValue());
             } else {
