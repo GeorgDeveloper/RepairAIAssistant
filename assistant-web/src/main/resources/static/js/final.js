@@ -22,6 +22,21 @@ $(function(){
         });
     }
 
+    function formatNumber(value, metricName) {
+        if (value == null || value === '') return '';
+        
+        // Для процентных значений форматируем с точностью до сотых
+        if (metricName.includes('%') || metricName.includes('Доступность') || metricName.includes('BD') || metricName.includes('Плановые ремонты')) {
+            var num = parseFloat(value);
+            if (!isNaN(num)) {
+                return num.toFixed(2);
+            }
+        }
+        
+        // Для остальных значений возвращаем как есть
+        return value;
+    }
+
     function renderTable(rows){
         // rows: [{metric, m1..mN}]
         var head = '<tr><th>Показатель</th>';
@@ -35,7 +50,11 @@ $(function(){
 
         var body = rows.map(function(r){
             var row = '<tr><th>'+ r.metric +'</th>';
-            for (var i=1;i<=maxCols;i++){ row += '<td>' + (r['m'+i] != null ? r['m'+i] : '') + '</td>'; }
+            for (var i=1;i<=maxCols;i++){ 
+                var value = r['m'+i];
+                var formattedValue = formatNumber(value, r.metric);
+                row += '<td>' + (formattedValue !== '' ? formattedValue : '') + '</td>'; 
+            }
             row += '</tr>';
             return row;
         }).join('');
