@@ -109,6 +109,7 @@ public class DataSyncService {
 
         // 3. Получаем время простоя из SQL Server
         Double downtime = getDowntimeFromSqlServer(area, dateRange[0], dateRange[1]);
+        logger.debug("Получено время простоя для области {}: {} мин", area.getName(), downtime);
 
         // 4. Рассчитываем инкрементальное рабочее время
         Double incrementalWorkingTime = calculateIncrementalWorkingTime(workingTime, dateRange[0]);
@@ -278,6 +279,7 @@ public class DataSyncService {
 
         // Специальная обработка для области Modules
         if ("Modules".equals(area.getName())) {
+            sql.append("AND PlantDepartmentGeographicalCodeName = 'FinishigArea' ");
             sql.append("AND MachineName IN ('Module A-1', 'Module A-2', 'Module A-3') ");
         } else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
             // Добавляем фильтр по области, если он задан
@@ -285,6 +287,7 @@ public class DataSyncService {
         }
 
         try {
+            logger.debug("SQL запрос для области {}: {}", area.getName(), sql.toString());
             Double result;
             if ("Modules".equals(area.getName())) {
                 result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
@@ -297,6 +300,7 @@ public class DataSyncService {
                                                              startDate, endDate, startDate, endDate);
             }
             
+            logger.debug("Результат SQL запроса для области {}: {} мин", area.getName(), result);
             return result != null ? result : 0.0;
         } catch (Exception e) {
             logger.error("Ошибка получения данных простоя из SQL Server для области {}: {}", 
