@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.config.DataSyncProperties;
+import ru.georgdeveloper.assistantbaseupdate.util.ShiftCalculator;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -18,10 +19,15 @@ import java.util.*;
  * 
  * Выполняет синхронизацию каждые 3 минуты согласно расписанию.
  * Логика синхронизации:
- * 1. Получение данных о времени простоя из SQL Server (REP_BreakdownReport) по конкретным машинам
- * 2. Получение рабочего времени из MySQL (working_time_of_*)
- * 3. Расчет метрик (процент простоя, доступность) для каждой ключевой линии
- * 4. Сохранение результатов в MySQL (main_lines_online)
+ * 1. Определение текущей смены (дневная: 08:00-20:00, ночная: 20:00-08:00)
+ * 2. Получение данных о времени простоя из SQL Server за текущую смену по конкретным машинам
+ * 3. Получение рабочего времени из MySQL (working_time_of_*)
+ * 4. Расчет инкрементального рабочего времени на основе времени с начала смены
+ * 5. Расчет метрик (процент простоя, доступность) для каждой ключевой линии относительно времени смены
+ * 6. Сохранение результатов в MySQL (main_lines_online)
+ * 
+ * Важно: Простой учитывается с начала текущей смены, включая перенос из предыдущей смены.
+ * Это обеспечивает корректный расчет показателей ключевых линий в реальном времени.
  */
 @Service
 public class MainLinesSyncService {
@@ -118,22 +124,11 @@ public class MainLinesSyncService {
     }
 
     /**
-     * Определяет диапазон дат для запроса (с 08:00 текущего дня до 08:00 следующего дня)
+     * Определяет диапазон дат для запроса (текущая смена)
      */
     private LocalDateTime[] calculateDateRange() {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startDate;
-
-        if (now.getHour() >= 8) {
-            // Если сейчас 08:00 или позже, начало диапазона - сегодня 08:00
-            startDate = now.withHour(8).withMinute(0).withSecond(0).withNano(0);
-        } else {
-            // Если сейчас раньше 08:00, начало диапазона - вчера 08:00
-            startDate = now.minusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0);
-        }
-
-        LocalDateTime endDate = startDate.plusDays(1);
-        return new LocalDateTime[]{startDate, endDate};
+        return ShiftCalculator.getCurrentShiftRange(now);
     }
 
     /**
@@ -178,7 +173,8 @@ public class MainLinesSyncService {
     }
 
     /**
-     * Получает время простоя из SQL Server для конкретной машины
+     * Получает время простоя из SQL Server для конкретной машины.
+     * Учитывает простой с начала текущей смены, включая перенос из предыдущей смены.
      */
     private Double getDowntimeFromSqlServerForMachine(DataSyncProperties.MainLine mainLine, 
                                                      LocalDateTime startDate, LocalDateTime endDate) {
@@ -199,6 +195,8 @@ public class MainLinesSyncService {
                                                                startDate, endDate, startDate, endDate, 
                                                                mainLine.getArea(), machineFilter);
             
+            logger.debug("Простой для ключевой линии {} за период {} - {}: {} мин", 
+                        mainLine.getName(), startDate, endDate, result);
             return result != null ? result : 0.0;
         } catch (Exception e) {
             logger.error("Ошибка получения данных простоя из SQL Server для ключевой линии {}: {}", 
@@ -208,7 +206,7 @@ public class MainLinesSyncService {
     }
 
     /**
-     * Рассчитывает инкрементальное рабочее время на основе текущего времени
+     * Рассчитывает инкрементальное рабочее время на основе времени с начала текущей смены
      */
     private Double calculateIncrementalWorkingTime(Double fullWorkingTime, LocalDateTime startDate) {
         if (fullWorkingTime == null || fullWorkingTime == 0) {
@@ -216,25 +214,7 @@ public class MainLinesSyncService {
         }
         
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime currentStart = startDate;
-        LocalDateTime currentEnd = startDate.plusDays(1);
-        
-        // Если текущее время вне диапазона 08:00-08:00, возвращаем полное значение
-        if (now.isBefore(currentStart) || now.isAfter(currentEnd)) {
-            return fullWorkingTime;
-        }
-        
-        // Вычисляем количество прошедших 3-минутных интервалов с 08:00
-        long minutesFromStart = java.time.Duration.between(currentStart, now).toMinutes();
-        long intervals = minutesFromStart / 3 + 1; // +1 чтобы начинать с 1
-        
-        // Общее количество интервалов в сутках (24 часа * 60 минут / 3 минуты = 480)
-        long totalIntervals = 480;
-        
-        // Рассчитываем инкремент на интервал
-        double increment = fullWorkingTime / totalIntervals;
-        
-        return Math.round(increment * intervals * 100.0) / 100.0;
+        return ShiftCalculator.calculateIncrementalWorkingTime(fullWorkingTime, now);
     }
     
     /**
