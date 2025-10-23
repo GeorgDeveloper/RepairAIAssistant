@@ -12,7 +12,7 @@ public class WOM_WorkOrder {
     @Column(name = "IDCode")
     private String idCode;
     
-    @Column(name = "WOCodeName")
+    @Column(name = "CodeName")
     private String woCodeName;
     
     @Column(name = "PCS_DFT_DESC")
