@@ -108,12 +108,9 @@ public class ShiftCalculator {
             return fullWorkingTime;
         }
         
-        // Рассчитываем пропорциональное рабочее время
-        double ratio = (double) minutesFromStart / totalShiftMinutes;
-        double incrementalTime = fullWorkingTime * ratio;
         
         // Округляем до 2 знаков после запятой
-        return Math.round(incrementalTime * 100.0) / 100.0;
+        return minutesFromStart;
     }
     
     /**
