@@ -199,19 +199,19 @@ public class WorkOrderService {
         
         // Электрика
         if (desc.contains("electrical") || desc.contains("электрика") || 
-            desc.contains("e/|ektpuka") || desc.contains("e/|электрика")) {
+            desc.contains("E/|EKTPuKA") || desc.contains("e/|электрика")) {
             return "electrical";
         }
         
         // Электроника
         if (desc.contains("electronic") || desc.contains("электроника") || 
-            desc.contains("e/|ektponuka") || desc.contains("e/|электроника")) {
+            desc.contains("E/|EKTPOHuKA") || desc.contains("e/|электроника")) {
             return "electronic";
         }
         
         // Механика
         if (desc.contains("mechanical") || desc.contains("механика") || 
-            desc.contains("mexanuka") || desc.contains("механика")) {
+            desc.contains("MEXAHuKA") || desc.contains("механика")) {
             return "mechanical";
         }
         
