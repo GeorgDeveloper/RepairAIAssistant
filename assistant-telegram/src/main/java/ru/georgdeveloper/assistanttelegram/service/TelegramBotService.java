@@ -23,7 +23,10 @@ public class TelegramBotService {
     @Autowired
     private RepairAssistantBot bot;
     
-
+    @Autowired
+    public void initializeDocumentHandler() {
+        documentHandler.setBot(bot);
+    }
     
     public void processUpdate(String message, Long chatId) {
         String response;

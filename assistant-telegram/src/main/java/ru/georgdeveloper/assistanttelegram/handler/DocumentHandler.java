@@ -1,13 +1,12 @@
 package ru.georgdeveloper.assistanttelegram.handler;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.georgdeveloper.assistanttelegram.service.TelegramBotService;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,11 +21,14 @@ public class DocumentHandler {
     
     private static final Logger logger = LoggerFactory.getLogger(DocumentHandler.class);
     
-    @Autowired
-    private TelegramBotService telegramBotService;
+    private TelegramLongPollingBot bot;
     
     private static final String DOWNLOAD_DIR = "downloads";
     private static final long MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    
+    public void setBot(TelegramLongPollingBot bot) {
+        this.bot = bot;
+    }
     
     public String processDocument(String fileId, String fileName, Long chatId) {
         try {
@@ -61,7 +63,7 @@ public class DocumentHandler {
             GetFile getFile = new GetFile();
             getFile.setFileId(fileId);
             
-            File file = telegramBotService.getBot().execute(getFile);
+            File file = bot.execute(getFile);
             
             if (file == null) {
                 logger.error("File not found for fileId: {}", fileId);
@@ -86,8 +88,8 @@ public class DocumentHandler {
             Path localFilePath = downloadPath.resolve(uniqueFileName);
             
             // Download file from Telegram servers
-            String fileUrl = telegramBotService.getBot().getBaseUrl() + "/file/bot" + 
-                           telegramBotService.getBot().getBotToken() + "/" + file.getFilePath();
+            String fileUrl = bot.getBaseUrl() + "/file/bot" + 
+                           bot.getBotToken() + "/" + file.getFilePath();
             
             try (InputStream inputStream = new java.net.URL(fileUrl).openStream()) {
                 Files.copy(inputStream, localFilePath, StandardCopyOption.REPLACE_EXISTING);

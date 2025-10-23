@@ -54,6 +54,8 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
         this.commandHandler = commandHandler;
         this.messageHandler = messageHandler;
         this.documentHandler = documentHandler;
+        // Set bot reference in DocumentHandler to break circular dependency
+        this.documentHandler.setBot(this);
     }
     
     /**
