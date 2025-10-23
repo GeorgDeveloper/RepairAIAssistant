@@ -115,18 +115,26 @@ public class DataSyncService {
             logger.debug("Получено рабочее время для {} из БД: {} мин", area.getName(), workingTime);
         }
 
-        // 3. Получаем время простоя из SQL Server
-        Double downtime = getDowntimeFromSqlServer(area, dateRange[0], dateRange[1]);
-        logger.debug("Получено время простоя для области {}: {} мин", area.getName(), downtime);
+        // 3. Получаем время простоя и количество записей из SQL Server
+        Double[] downtimeData = getDowntimeFromSqlServer(area, dateRange[0], dateRange[1]);
+        Double downtime = downtimeData[0];
+        Double recordCount = downtimeData[1];
+        logger.debug("Получено время простоя для области {}: {} мин, количество записей: {}", 
+                    area.getName(), downtime, recordCount);
 
-        // 4. Рассчитываем инкрементальное рабочее время
-        Double incrementalWorkingTime = calculateIncrementalWorkingTime(workingTime, dateRange[0]);
+        // 4. Рассчитываем рабочее время с учетом количества единиц оборудования
+        Double adjustedWorkingTime = calculateAdjustedWorkingTime(workingTime, recordCount);
+        logger.debug("Скорректированное рабочее время для области {}: {} мин (базовое: {}, единиц: {})", 
+                    area.getName(), adjustedWorkingTime, workingTime, recordCount);
+
+        // 5. Рассчитываем инкрементальное рабочее время
+        Double incrementalWorkingTime = calculateIncrementalWorkingTime(adjustedWorkingTime, dateRange[0]);
         
-        // 5. Рассчитываем метрики
+        // 6. Рассчитываем метрики
         Double downtimePercentage = calculateDowntimePercentage(downtime, incrementalWorkingTime);
         Double availability = calculateAvailability(downtimePercentage);
 
-        // 6. Сохраняем в MySQL
+        // 7. Сохраняем в MySQL
         saveMetricsToMysql(area.getName(), downtime, incrementalWorkingTime, downtimePercentage, availability);
 
         logger.debug("Область {} синхронизирована: downtime={}, wt={}, incremental_wt={}, percentage={}, availability={}", 
@@ -264,8 +272,9 @@ public class DataSyncService {
     /**
      * Получает время простоя из SQL Server для указанной области и диапазона дат.
      * Учитывает простой с начала текущей смены, включая перенос из предыдущей смены.
+     * Возвращает массив: [0] - сумма времени простоя, [1] - количество записей простоя
      */
-    private Double getDowntimeFromSqlServer(DataSyncProperties.Area area, LocalDateTime startDate, LocalDateTime endDate) {
+    private Double[] getDowntimeFromSqlServer(DataSyncProperties.Area area, LocalDateTime startDate, LocalDateTime endDate) {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT SUM(Duration) as total_duration ");
         sql.append("FROM REP_BreakdownReport ");
@@ -285,34 +294,45 @@ public class DataSyncService {
 
         try {
             logger.debug("SQL запрос для области {} за период {} - {}: {}", area.getName(), startDate, endDate, sql.toString());
-            Double result;
+            
+            // Получаем сумму времени простоя
+            Double downtimeSum;
             if ("Modules".equals(area.getName())) {
-                result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
-                                                             startDate, endDate, startDate, endDate);
-                // Дополнительная проверка для модулей - посмотрим, есть ли вообще записи
-                String countSql = sql.toString().replace("SELECT SUM(Duration) as total_duration", "SELECT COUNT(*)");
-                try {
-                    Integer count = sqlServerJdbcTemplate.queryForObject(countSql, Integer.class, 
-                                                                        startDate, endDate, startDate, endDate);
-                    logger.debug("Количество записей для модулей в период {} - {}: {}", startDate, endDate, count);
-                } catch (Exception e) {
-                    logger.debug("Не удалось получить количество записей для модулей: {}", e.getMessage());
-                }
+                downtimeSum = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
+                                                                  startDate, endDate, startDate, endDate);
             } else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
-                result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
-                                                             startDate, endDate, startDate, endDate, area.getFilterValue());
+                downtimeSum = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
+                                                                  startDate, endDate, startDate, endDate, area.getFilterValue());
             } else {
-                result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
-                                                             startDate, endDate, startDate, endDate);
+                downtimeSum = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
+                                                                  startDate, endDate, startDate, endDate);
             }
             
-            logger.debug("Результат SQL запроса для области {} за период {} - {}: {} мин", 
-                        area.getName(), startDate, endDate, result);
-            return result != null ? result : 0.0;
+            // Получаем количество записей простоя
+            String countSql = sql.toString().replace("SELECT SUM(Duration) as total_duration", "SELECT COUNT(*)");
+            Integer recordCount;
+            if ("Modules".equals(area.getName())) {
+                recordCount = sqlServerJdbcTemplate.queryForObject(countSql, Integer.class, 
+                                                                  startDate, endDate, startDate, endDate);
+            } else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
+                recordCount = sqlServerJdbcTemplate.queryForObject(countSql, Integer.class, 
+                                                                  startDate, endDate, startDate, endDate, area.getFilterValue());
+            } else {
+                recordCount = sqlServerJdbcTemplate.queryForObject(countSql, Integer.class, 
+                                                                  startDate, endDate, startDate, endDate);
+            }
+            
+            Double downtime = downtimeSum != null ? downtimeSum : 0.0;
+            Double count = recordCount != null ? recordCount.doubleValue() : 0.0;
+            
+            logger.debug("Результат SQL запроса для области {} за период {} - {}: downtime={} мин, count={} записей", 
+                        area.getName(), startDate, endDate, downtime, count);
+            
+            return new Double[]{downtime, count};
         } catch (Exception e) {
             logger.error("Ошибка получения данных простоя из SQL Server для области {}: {}", 
                         area.getName(), e.getMessage());
-            return 0.0;
+            return new Double[]{0.0, 0.0};
         }
     }
 
@@ -326,6 +346,28 @@ public class DataSyncService {
         
         LocalDateTime now = LocalDateTime.now();
         return ShiftCalculator.calculateIncrementalWorkingTime(fullWorkingTime, now);
+    }
+
+    /**
+     * Рассчитывает скорректированное рабочее время с учетом количества единиц оборудования
+     * Если есть записи простоя, то рабочее время умножается на количество единиц оборудования
+     */
+    private Double calculateAdjustedWorkingTime(Double baseWorkingTime, Double recordCount) {
+        if (baseWorkingTime == null || baseWorkingTime == 0) {
+            return baseWorkingTime;
+        }
+        
+        // Если нет записей простоя, возвращаем базовое рабочее время
+        if (recordCount == null || recordCount == 0) {
+            return baseWorkingTime;
+        }
+        
+        // Умножаем рабочее время на количество единиц оборудования
+        Double adjustedTime = baseWorkingTime * recordCount;
+        logger.debug("Скорректированное рабочее время: {} мин * {} единиц = {} мин", 
+                    baseWorkingTime, recordCount, adjustedTime);
+        
+        return adjustedTime;
     }
     
     /**
