@@ -195,23 +195,24 @@ public class WorkOrderService {
             return "unknown";
         }
         
-        String desc = pcsDftDesc.toLowerCase().trim();
+        String desc = pcsDftDesc.trim();
+        String descLower = desc.toLowerCase();
         
-        // Электрика
-        if (desc.contains("electrical") || desc.contains("электрика") || 
-            desc.contains("E/|EKTPuKA") || desc.contains("e/|электрика")) {
+        // Электрика - проверяем как в оригинальном виде, так и в нижнем регистре
+        if (desc.contains("E/|EKTPuKA") || descLower.contains("electrical") || 
+            descLower.contains("электрика") || descLower.contains("e/|електрuка")) {
             return "electrical";
         }
         
-        // Электроника
-        if (desc.contains("electronic") || desc.contains("электроника") || 
-            desc.contains("E/|EKTPOHuKA") || desc.contains("e/|электроника")) {
+        // Электроника - проверяем как в оригинальном виде, так и в нижнем регистре
+        if (desc.contains("E/|EKTPOHuKA") || descLower.contains("electronic") || 
+            descLower.contains("электроника") || descLower.contains("e/|електронuка")) {
             return "electronic";
         }
         
-        // Механика
-        if (desc.contains("mechanical") || desc.contains("механика") || 
-            desc.contains("MEXAHuKA") || desc.contains("механика")) {
+        // Механика - проверяем как в оригинальном виде, так и в нижнем регистре
+        if (desc.contains("MEXAHuKA") || descLower.contains("mechanical") || 
+            descLower.contains("механuка")) {
             return "mechanical";
         }
         
