@@ -5,6 +5,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.entity.sqlserver.WorkOrder;
 import ru.georgdeveloper.assistantbaseupdate.repository.sqlserver.WorkOrderRepository;
+import ru.georgdeveloper.assistantbaseupdate.repository.sqlserver.WOM_WorkOrderRepository;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,6 +18,9 @@ public class WorkOrderService {
     @Autowired
     private WorkOrderRepository workOrderRepository;
     
+    @Autowired
+    private WOM_WorkOrderRepository womWorkOrderRepository;
+    
     /**
      * Получение последних 20 нарядов на работы для отображения в таблице
      */
@@ -28,6 +32,10 @@ public class WorkOrderService {
             List<Map<String, Object>> result = new ArrayList<>();
             
             for (WorkOrder workOrder : workOrders) {
+                // Получаем причину простоя
+                String pcsDftDesc = getPcsDftDesc(workOrder.getWoCodeName());
+                String downtimeType = getDowntimeType(pcsDftDesc);
+                
                 Map<String, Object> workOrderMap = new HashMap<>();
                 workOrderMap.put("idCode", workOrder.getIdCode());
                 workOrderMap.put("woCodeName", workOrder.getWoCodeName());
@@ -55,8 +63,12 @@ public class WorkOrderService {
                 workOrderMap.put("workCenter", workOrder.getWorkCenter());
                 workOrderMap.put("customField01", workOrder.getCustomField01());
                 
+                // Добавляем информацию о причине простоя
+                workOrderMap.put("pcsDftDesc", pcsDftDesc);
+                workOrderMap.put("downtimeType", downtimeType);
+                
                 result.add(workOrderMap);
-                System.out.println("Added work order: " + workOrder.getMachineName() + " - " + workOrder.getWoStatusLocalDescr());
+                System.out.println("Added work order: " + workOrder.getMachineName() + " - " + workOrder.getWoStatusLocalDescr() + " - " + downtimeType);
             }
             
             System.out.println("Returning " + result.size() + " work orders");
@@ -79,6 +91,10 @@ public class WorkOrderService {
             List<Map<String, Object>> result = new ArrayList<>();
             
             for (WorkOrder workOrder : workOrders) {
+                // Получаем причину простоя
+                String pcsDftDesc = getPcsDftDesc(workOrder.getWoCodeName());
+                String downtimeType = getDowntimeType(pcsDftDesc);
+                
                 Map<String, Object> workOrderMap = new HashMap<>();
                 workOrderMap.put("idCode", workOrder.getIdCode());
                 workOrderMap.put("woCodeName", workOrder.getWoCodeName());
@@ -97,6 +113,10 @@ public class WorkOrderService {
                 workOrderMap.put("plantDepartmentGeographicalCodeName", workOrder.getPlantDepartmentGeographicalCodeName());
                 workOrderMap.put("workCenter", workOrder.getWorkCenter());
                 workOrderMap.put("customField01", workOrder.getCustomField01());
+                
+                // Добавляем информацию о причине простоя
+                workOrderMap.put("pcsDftDesc", pcsDftDesc);
+                workOrderMap.put("downtimeType", downtimeType);
                 
                 result.add(workOrderMap);
             }
@@ -150,6 +170,52 @@ public class WorkOrderService {
             e.printStackTrace();
             return new ArrayList<>();
         }
+    }
+    
+    /**
+     * Получение причины простоя по коду наряда
+     */
+    private String getPcsDftDesc(String woCodeName) {
+        try {
+            if (woCodeName == null || woCodeName.trim().isEmpty()) {
+                return null;
+            }
+            return womWorkOrderRepository.findPcsDftDescByWoCodeName(woCodeName);
+        } catch (Exception e) {
+            System.err.println("Error getting PCS_DFT_DESC for WOCodeName: " + woCodeName + ", error: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Определение типа причины простоя для цветовой индикации
+     */
+    private String getDowntimeType(String pcsDftDesc) {
+        if (pcsDftDesc == null || pcsDftDesc.trim().isEmpty()) {
+            return "unknown";
+        }
+        
+        String desc = pcsDftDesc.toLowerCase().trim();
+        
+        // Электрика
+        if (desc.contains("electrical") || desc.contains("электрика") || 
+            desc.contains("e/|ektpuka") || desc.contains("e/|электрика")) {
+            return "electrical";
+        }
+        
+        // Электроника
+        if (desc.contains("electronic") || desc.contains("электроника") || 
+            desc.contains("e/|ektponuka") || desc.contains("e/|электроника")) {
+            return "electronic";
+        }
+        
+        // Механика
+        if (desc.contains("mechanical") || desc.contains("механика") || 
+            desc.contains("mexanuka") || desc.contains("механика")) {
+            return "mechanical";
+        }
+        
+        return "unknown";
     }
     
     /**

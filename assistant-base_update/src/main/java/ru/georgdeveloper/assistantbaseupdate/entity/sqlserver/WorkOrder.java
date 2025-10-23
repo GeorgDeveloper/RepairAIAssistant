@@ -145,4 +145,8 @@ public class WorkOrder {
     @Column(name = "CustomField05")
     private String customField05;
     
+    // Поле для хранения причины простоя (не из БД, заполняется из WOM_WorkOrder)
+    @Transient
+    private String pcsDftDesc;
+    
 }

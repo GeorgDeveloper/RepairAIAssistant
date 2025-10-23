@@ -214,9 +214,11 @@ const DashboardTables = {
         data.forEach(row => {
             const statusClass = getStatusClass(row.status);
             const duration = this.calculateWorkOrderDuration(row);
+            const downtimeType = row.downtimeType || 'unknown';
+            const rowClass = getDowntimeTypeClass(downtimeType);
             
             tableHTML += `
-                <tr>
+                <tr class="${rowClass}">
                     <td>${row.machineName || ''}</td>
                     <td>${row.type || ''}</td>
                     <td><span class="${statusClass}">${row.status || ''}</span></td>
@@ -284,6 +286,20 @@ function getStatusClass(status) {
     }
     
     return 'status-conditional';
+}
+
+// Функция для определения CSS класса типа причины простоя
+function getDowntimeTypeClass(downtimeType) {
+    switch (downtimeType) {
+        case 'electrical':
+            return 'downtime-electrical';
+        case 'electronic':
+            return 'downtime-electronic';
+        case 'mechanical':
+            return 'downtime-mechanical';
+        default:
+            return 'downtime-unknown';
+    }
 }
 
 // Dashboard initialization functions
