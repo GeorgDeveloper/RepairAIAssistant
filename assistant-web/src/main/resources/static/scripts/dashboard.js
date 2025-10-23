@@ -273,6 +273,8 @@ function getStatusClass(status) {
         return 'status-requested';
     } else if (statusLower.includes('исполнении') || statusLower.includes('progress')) {
         return 'status-in-progress';
+    } else if (statusLower.includes('запланированно') || statusLower.includes('planned') || statusLower.includes('scheduled')) {
+        return 'status-planned';
     } else if (statusLower.includes('условный') || statusLower.includes('conditional')) {
         return 'status-conditional';
     } else if (statusLower.includes('выполнено') || statusLower.includes('completed')) {

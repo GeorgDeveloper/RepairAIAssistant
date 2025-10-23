@@ -415,6 +415,14 @@
     font-weight: 500;
 }
 
+.status-planned {
+    background-color: #81d4fa !important;
+    color: #333 !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
 /* Контейнер для таблицы нарядов */
 #workOrdersTable {
     max-height: 100%;
