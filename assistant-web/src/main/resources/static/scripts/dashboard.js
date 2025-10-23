@@ -213,20 +213,55 @@ const DashboardTables = {
         
         data.forEach(row => {
             const statusClass = getStatusClass(row.status);
+            const duration = this.calculateWorkOrderDuration(row);
             
             tableHTML += `
                 <tr>
                     <td>${row.machineName || ''}</td>
                     <td>${row.type || ''}</td>
                     <td><span class="${statusClass}">${row.status || ''}</span></td>
-                    <td>${row.sDuration || row.duration || '0.00:00'}</td>
+                    <td>${duration}</td>
                 </tr>
             `;
         });
         
         tableHTML += '</tbody></table>';
         document.getElementById(containerId).innerHTML = tableHTML;
-    }
+    },
+    
+    // Функция для расчета продолжительности наряда на работы
+    calculateWorkOrderDuration(row) {
+        const status = (row.status || '').toLowerCase();
+        const isCompleted = status.includes('выполнено') || status.includes('закрыто') || 
+                           status.includes('completed') || status.includes('closed');
+        
+        if (isCompleted) {
+            // Если статус "Выполнено" или "Закрыто", используем sDuration
+            return row.sDuration || row.duration || '0.00:00';
+        } else {
+            // Если статус не завершен, рассчитываем от sDateT1 до текущего времени
+            if (row.sDateT1) {
+                try {
+                    const startDate = new Date(row.sDateT1);
+                    const currentDate = new Date();
+                    const diffMs = currentDate - startDate;
+                    
+                    if (diffMs > 0) {
+                        const diffSeconds = Math.floor(diffMs / 1000);
+                        return DashboardUtils.formatSecondsToHHMMSS(diffSeconds);
+                    } else {
+                        return '0.00:00';
+                    }
+                } catch (error) {
+                    console.warn('Ошибка при парсинге даты sDateT1:', row.sDateT1, error);
+                    return row.sDuration || row.duration || '0.00:00';
+                }
+            } else {
+                return row.sDuration || row.duration || '0.00:00';
+            }
+        }
+    },
+    
 };
 
 // Функция для определения CSS класса статуса
