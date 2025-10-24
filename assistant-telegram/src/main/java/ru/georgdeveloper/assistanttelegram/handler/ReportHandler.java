@@ -61,16 +61,14 @@ public class ReportHandler {
         try {
             logger.info("Генерация отчета за сутки");
             
-            // Получаем данные для отчета за предыдущие сутки
-            LocalDate yesterday = LocalDate.now().minusDays(1);
-            String yesterdayStr = yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+             // Получаем данные для отчета за предыдущие сутки
+             LocalDate yesterday = LocalDate.now().minusDays(1);
             
             Map<String, Object> reportData = new HashMap<>();
             
-             // Получаем данные по участкам за предыдущие сутки
-             List<Map<String, Object>> areaData = fetchDataWithParams("/top-equipment/data", 
-                 "dateFrom", yesterdayStr, "dateTo", yesterdayStr);
-             logger.info("Получено данных по участкам: {}", areaData != null ? areaData.size() : 0);
+             // Получаем данные по участкам из current-metrics (как на веб-странице)
+             List<Map<String, Object>> areaData = null; // Будем использовать currentMetrics
+             logger.info("Данные по участкам будут взяты из current-metrics");
              
              // Получаем данные breakdown и availability за предыдущие сутки
              List<Map<String, Object>> breakDownData = fetchData("/dashboard/breakDown");
@@ -203,30 +201,44 @@ public class ReportHandler {
         report.append("📊 ОТЧЕТ ЗА СУТКИ\n");
         report.append("📅 Дата: ").append(yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))).append("\n\n");
         
-         // Показатели Breakdown по участкам за предыдущие сутки
+         // Показатели Breakdown по участкам за предыдущие сутки (из current-metrics)
          @SuppressWarnings("unchecked")
-         List<Map<String, Object>> areaData = (List<Map<String, Object>>) data.get("areaData");
-         logger.debug("Данные по участкам: {} записей", areaData != null ? areaData.size() : 0);
-         if (areaData != null && !areaData.isEmpty()) {
-             report.append("📉 ПОКАЗАТЕЛИ BREAKDOWN:\n");
+         List<Map<String, Object>> currentMetrics = (List<Map<String, Object>>) data.get("currentMetrics");
+         logger.debug("Current metrics: {} записей", currentMetrics != null ? currentMetrics.size() : 0);
+         
+         if (currentMetrics != null && !currentMetrics.isEmpty()) {
+             // Берем первую запись из current-metrics (как на веб-странице)
+             Map<String, Object> metrics = currentMetrics.get(0);
+             logger.debug("Current metrics data: {}", metrics);
              
-             // Группируем данные по участкам
+             report.append("📉 ПОКАЗАТЕЛИ BREAKDOWN ПО УЧАСТКАМ:\n");
+             
+             // Маппинг участков как на веб-странице
+             String[] areaPrefixes = {
+                 "report_new_mixing_area", "report_semifinishing_area", "report_building_area",
+                 "report_curing_area", "report_finishig_area", "report_modules", "report_plant"
+             };
+             String[] areaNames = {
+                 "NewMixingArea", "SemifinishingArea", "BuildingArea",
+                 "CuringArea", "FinishigArea", "Modules", "Plant"
+             };
+             
              Map<String, Double> areaBreakdown = new HashMap<>();
-             for (Map<String, Object> item : areaData) {
-                 String area = (String) item.get("area");
-                 Object downtime = item.get("downtime_percentage");
-                 logger.debug("Участок: area={}, downtime={}", area, downtime);
-                 if (area != null && downtime != null) {
+             for (int i = 0; i < areaPrefixes.length; i++) {
+                 String prefix = areaPrefixes[i];
+                 String areaName = areaNames[i];
+                 
+                 Object bdToday = metrics.get(prefix + "_bd_today");
+                 if (bdToday != null) {
                      try {
-                         double downtimeValue = Double.parseDouble(downtime.toString());
-                         areaBreakdown.merge(area, downtimeValue, Double::sum);
+                         double value = Double.parseDouble(bdToday.toString());
+                         areaBreakdown.put(areaName, value);
+                         logger.debug("Участок {}: BD = {}", areaName, value);
                      } catch (NumberFormatException e) {
-                         logger.warn("Некорректное значение downtime для участка {}: {}", area, downtime);
+                         logger.warn("Некорректное значение BD для участка {}: {}", areaName, bdToday);
                      }
                  }
              }
-             
-             logger.debug("Сгруппировано участков: {}", areaBreakdown.size());
              
              // Сортируем участки по убыванию BD% и показываем только топ-5
              areaBreakdown.entrySet().stream()
@@ -238,7 +250,7 @@ public class ReportHandler {
              
              report.append("\n");
          } else {
-            logger.debug("Нет данных по участкам, используем общие показатели");
+            logger.debug("Нет данных current-metrics, используем общие показатели");
             // Если нет данных по участкам, показываем общие показатели
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> breakDownData = (List<Map<String, Object>>) data.get("breakDown");
@@ -260,18 +272,6 @@ public class ReportHandler {
                 report.append("\n");
             }
         }
-        
-         // Дополнительная проверка: если данные по участкам есть, но они не отображаются
-         if (areaData != null && !areaData.isEmpty()) {
-             logger.debug("Данные по участкам получены, но не отображаются. Первая запись: {}", areaData.get(0));
-             
-             // Временное решение: показываем все данные по участкам, даже если формат неожиданный
-             report.append("📉 ДАННЫЕ ПО УЧАСТКАМ (DEBUG):\n");
-             for (Map<String, Object> item : areaData) {
-                 report.append("• ").append(item.toString()).append("\n");
-             }
-             report.append("\n");
-         }
         
         // Показатели Availability за предыдущие сутки
         @SuppressWarnings("unchecked")
@@ -351,17 +351,30 @@ public class ReportHandler {
              boolean found = false;
              for (Map<String, Object> item : pmData) {
                  String day = (String) item.get("production_day");
-                 logger.debug("PM запись: day={}, plan={}, fact={}, percentage={}", 
-                     day, item.get("pm_plan"), item.get("pm_fact"), item.get("pm_percentage"));
+                 logger.debug("PM запись: day={}, plan={}, fact={}, tag={}", 
+                     day, item.get("plan"), item.get("fact"), item.get("tag"));
                  if (yesterdayStr.equals(day)) {
-                     Object plan = item.get("pm_plan");
-                     Object fact = item.get("pm_fact");
-                     Object percentage = item.get("pm_percentage");
+                     Object plan = item.get("plan");
+                     Object fact = item.get("fact");
+                     Object tag = item.get("tag");
                      
-                     if (plan != null && fact != null && percentage != null) {
+                     if (plan != null && fact != null) {
                          report.append("• План: ").append(plan).append("\n");
                          report.append("• Факт: ").append(fact).append("\n");
-                         report.append("• Выполнение: ").append(percentage).append("%\n");
+                         if (tag != null) {
+                             report.append("• Tag: ").append(tag).append("\n");
+                         }
+                         // Вычисляем процент выполнения
+                         try {
+                             double planValue = Double.parseDouble(plan.toString());
+                             double factValue = Double.parseDouble(fact.toString());
+                             if (planValue > 0) {
+                                 double percentage = (factValue / planValue) * 100;
+                                 report.append("• Выполнение: ").append(String.format("%.1f", percentage)).append("%\n");
+                             }
+                         } catch (NumberFormatException e) {
+                             logger.warn("Ошибка при вычислении процента PM: {}", e.getMessage());
+                         }
                          found = true;
                      }
                      break;
@@ -456,16 +469,7 @@ public class ReportHandler {
              report.append("\n");
          }
         
-        // Ключевые линии
-        if (currentMainLines != null && !currentMainLines.isEmpty()) {
-            report.append("🏭 КЛЮЧЕВЫЕ ЛИНИИ:\n");
-            for (Map<String, Object> item : currentMainLines) {
-                String line = (String) item.get("line_name");
-                Object status = item.get("status");
-                report.append("• ").append(line).append(": ").append(status).append("\n");
-            }
-            report.append("\n");
-        }
+         // Ключевые линии убраны по запросу пользователя
         
          // Текущие наряды на работы
          if (activeWorkOrders != null && !activeWorkOrders.isEmpty()) {
@@ -476,9 +480,14 @@ public class ReportHandler {
                  String machine = (String) item.get("machineName");
                  String type = (String) item.get("type");
                  String status = (String) item.get("status");
+                 Object duration = item.get("duration");
                  
                  if (machine != null && type != null && status != null) {
-                     report.append("• ").append(machine).append(" - ").append(type).append(" (").append(status).append(")\n");
+                     report.append("• ").append(machine).append(" - ").append(type).append(" (").append(status).append(")");
+                     if (duration != null) {
+                         report.append(" - ").append(duration);
+                     }
+                     report.append("\n");
                      count++;
                  }
              }
