@@ -6,23 +6,21 @@ import java.time.LocalTime;
 /**
  * Утилитарный класс для расчета смен и времени с начала смены.
  * 
- * Смены:
- * - Дневная смена: 08:00 - 20:00
- * - Ночная смена: 20:00 - 08:00 (следующего дня)
+ * Смена:
+ * - 24-часовая смена: 08:00 - 08:00 (следующего дня)
  */
 public class ShiftCalculator {
     
-    private static final LocalTime DAY_SHIFT_START = LocalTime.of(8, 0);
-    private static final LocalTime NIGHT_SHIFT_START = LocalTime.of(20, 0);
+    private static final LocalTime SHIFT_START = LocalTime.of(8, 0);
     
     /**
-     * Определяет, какая смена сейчас активна
+     * Определяет, активна ли текущая смена
      * @param currentTime текущее время
-     * @return true если дневная смена (08:00-20:00), false если ночная смена (20:00-08:00)
+     * @return true если текущая смена активна (08:00-08:00)
      */
-    public static boolean isDayShift(LocalDateTime currentTime) {
-        LocalTime time = currentTime.toLocalTime();
-        return !time.isBefore(DAY_SHIFT_START) && time.isBefore(NIGHT_SHIFT_START);
+    public static boolean isCurrentShift(LocalDateTime currentTime) {
+        // Смена всегда активна, так как она 24-часовая
+        return true;
     }
     
     /**
@@ -31,18 +29,14 @@ public class ShiftCalculator {
      * @return время начала текущей смены
      */
     public static LocalDateTime getCurrentShiftStart(LocalDateTime currentTime) {
-        if (isDayShift(currentTime)) {
-            // Дневная смена: начало в 08:00 сегодня
-            return currentTime.withHour(8).withMinute(0).withSecond(0).withNano(0);
+        LocalTime time = currentTime.toLocalTime();
+        
+        if (time.isBefore(SHIFT_START)) {
+            // Если сейчас раньше 08:00, смена началась вчера в 08:00
+            return currentTime.minusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0);
         } else {
-            // Ночная смена: начало в 20:00 вчера (если сейчас до 08:00) или сегодня (если сейчас после 20:00)
-            if (currentTime.toLocalTime().isBefore(DAY_SHIFT_START)) {
-                // Сейчас ночь, смена началась вчера в 20:00
-                return currentTime.minusDays(1).withHour(20).withMinute(0).withSecond(0).withNano(0);
-            } else {
-                // Сейчас вечер, смена началась сегодня в 20:00
-                return currentTime.withHour(20).withMinute(0).withSecond(0).withNano(0);
-            }
+            // Если сейчас 08:00 или позже, смена началась сегодня в 08:00
+            return currentTime.withHour(8).withMinute(0).withSecond(0).withNano(0);
         }
     }
     
@@ -52,18 +46,14 @@ public class ShiftCalculator {
      * @return время окончания текущей смены
      */
     public static LocalDateTime getCurrentShiftEnd(LocalDateTime currentTime) {
-        if (isDayShift(currentTime)) {
-            // Дневная смена: окончание в 20:00 сегодня
-            return currentTime.withHour(20).withMinute(0).withSecond(0).withNano(0);
+        LocalTime time = currentTime.toLocalTime();
+        
+        if (time.isBefore(SHIFT_START)) {
+            // Если сейчас раньше 08:00, смена закончится сегодня в 08:00
+            return currentTime.withHour(8).withMinute(0).withSecond(0).withNano(0);
         } else {
-            // Ночная смена: окончание в 08:00 завтра
-            if (currentTime.toLocalTime().isBefore(DAY_SHIFT_START)) {
-                // Сейчас ночь, смена закончится сегодня в 08:00
-                return currentTime.withHour(8).withMinute(0).withSecond(0).withNano(0);
-            } else {
-                // Сейчас вечер, смена закончится завтра в 08:00
-                return currentTime.plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0);
-            }
+            // Если сейчас 08:00 или позже, смена закончится завтра в 08:00
+            return currentTime.plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0);
         }
     }
     
@@ -108,9 +98,11 @@ public class ShiftCalculator {
             return fullWorkingTime;
         }
         
+        // Рассчитываем инкрементальное рабочее время пропорционально прошедшему времени
+        double incrementalWorkingTime = (fullWorkingTime * minutesFromStart) / totalShiftMinutes;
         
         // Округляем до 2 знаков после запятой
-        return minutesFromStart;
+        return Math.round(incrementalWorkingTime * 100.0) / 100.0;
     }
     
     /**
