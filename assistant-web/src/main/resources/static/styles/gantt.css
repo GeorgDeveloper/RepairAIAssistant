@@ -204,8 +204,27 @@
 
 .legend {
     display: flex;
-    gap: 20px;
+    gap: 30px;
     margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.legend-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.legend-section h4 {
+    margin: 0;
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.legend-items {
+    display: flex;
+    gap: 15px;
     flex-wrap: wrap;
 }
 
@@ -219,6 +238,42 @@
     width: 20px;
     height: 20px;
     border-radius: 3px;
+}
+
+.area-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.area-control-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+}
+
+.area-control-button:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.area-control-button.collapsed {
+    background-color: #e2e3e5;
+    opacity: 0.7;
+}
+
+.area-control-icon {
+    font-size: 12px;
+    font-weight: bold;
+    color: #495057;
+    min-width: 12px;
 }
 
 .summary {

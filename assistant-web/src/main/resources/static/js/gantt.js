@@ -222,6 +222,7 @@ function generateGanttChart(data) {
     
     generateTimeHeader(dateFrom, dateTo);
     generateGanttBody(groupedData, dateFrom, dateTo);
+    generateAreaControls(groupedData);
     updateSummary(data);
 }
 
@@ -407,11 +408,16 @@ function createRepairBar(repair, machineRow, fromDate, minuteWidth) {
 }
 
 function getColorByFailureType(type) {
-    switch (type) {
+    if (!type) return '#2ecc71';
+    
+    const normalizedType = type.trim();
+    switch (normalizedType) {
         case 'Механика': return '#3498db';
         case 'Электроника': return '#e74c3c';
         case 'Электрика': return '#f39c12';
-        default: return '#2ecc71';
+        default: 
+            console.log('Неизвестный тип поломки:', type);
+            return '#2ecc71';
     }
 }
 
@@ -425,6 +431,42 @@ function getAreaDisplayName(area) {
         'Other': 'Другие участки'
     };
     return areaNames[area] || area;
+}
+
+function generateAreaControls(groupedData) {
+    const areaControls = document.getElementById('area-controls');
+    areaControls.innerHTML = '';
+    
+    const sortedAreas = Object.keys(groupedData).sort();
+    
+    sortedAreas.forEach(area => {
+        const areaData = groupedData[area];
+        const button = document.createElement('div');
+        button.className = 'area-control-button';
+        if (areaData.collapsed) {
+            button.classList.add('collapsed');
+        }
+        
+        const icon = document.createElement('span');
+        icon.className = 'area-control-icon';
+        icon.textContent = areaData.collapsed ? '▶' : '▼';
+        
+        const label = document.createElement('span');
+        label.textContent = getAreaDisplayName(area);
+        
+        button.appendChild(icon);
+        button.appendChild(label);
+        
+        button.addEventListener('click', function() {
+            toggleAreaCollapse(area);
+            // Обновляем состояние кнопки
+            const isCollapsed = areaData.collapsed;
+            button.classList.toggle('collapsed', !isCollapsed);
+            icon.textContent = isCollapsed ? '▼' : '▶';
+        });
+        
+        areaControls.appendChild(button);
+    });
 }
 
 function toggleAreaCollapse(area) {
