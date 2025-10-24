@@ -13,6 +13,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Arrays;
 
 @Component
 public class ReportHandler {
@@ -60,10 +61,17 @@ public class ReportHandler {
         try {
             logger.info("Генерация отчета за сутки");
             
-            // Получаем данные для отчета за сутки (как на index.html)
+            // Получаем данные для отчета за предыдущие сутки
+            LocalDate yesterday = LocalDate.now().minusDays(1);
+            String yesterdayStr = yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+            
             Map<String, Object> reportData = new HashMap<>();
             
-            // Получаем данные breakdown и availability
+            // Получаем данные по участкам за предыдущие сутки
+            List<Map<String, Object>> areaData = fetchDataWithParams("/top-equipment/data", 
+                "dateFrom", yesterdayStr, "dateTo", yesterdayStr);
+            
+            // Получаем данные breakdown и availability за предыдущие сутки
             List<Map<String, Object>> breakDownData = fetchData("/dashboard/breakDown");
             List<Map<String, Object>> availabilityData = fetchData("/dashboard/availability");
             List<Map<String, Object>> currentMetrics = fetchData("/dashboard/current-metrics");
@@ -71,6 +79,7 @@ public class ReportHandler {
             List<Map<String, Object>> topBreakdownsWeekKeyLines = fetchData("/dashboard/top-breakdowns-week-key-lines");
             List<Map<String, Object>> pmData = fetchData("/dashboard/pm-plan-fact-tag");
             
+            reportData.put("areaData", areaData);
             reportData.put("breakDown", breakDownData);
             reportData.put("availability", availabilityData);
             reportData.put("currentMetrics", currentMetrics);
@@ -109,6 +118,20 @@ public class ReportHandler {
             String url = webServiceUrl + endpoint;
             logger.debug("Запрос данных: {}", url);
             
+            // Специальная обработка для current-metrics, который может возвращать Map вместо List
+            if (endpoint.equals("/dashboard/current-metrics")) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+                    if (response != null) {
+                        // Преобразуем Map в List с одним элементом
+                        return Arrays.asList(response);
+                    }
+                } catch (Exception e) {
+                    logger.warn("Ошибка при получении current-metrics как Map: {}", e.getMessage());
+                }
+            }
+            
             return restTemplate.exchange(
                 url,
                 HttpMethod.GET,
@@ -122,33 +145,86 @@ public class ReportHandler {
         }
     }
     
+    private List<Map<String, Object>> fetchDataWithParams(String endpoint, String... params) {
+        try {
+            StringBuilder url = new StringBuilder(webServiceUrl + endpoint);
+            if (params.length > 0) {
+                url.append("?");
+                for (int i = 0; i < params.length; i += 2) {
+                    if (i > 0) url.append("&");
+                    url.append(params[i]).append("=").append(params[i + 1]);
+                }
+            }
+            
+            logger.debug("Запрос данных с параметрами: {}", url);
+            
+            return restTemplate.exchange(
+                url.toString(),
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+            ).getBody();
+            
+        } catch (Exception e) {
+            logger.warn("Ошибка при получении данных с параметрами {}: {}", endpoint, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+    
     private String formatDailyReport(Map<String, Object> data) {
         StringBuilder report = new StringBuilder();
+        LocalDate yesterday = LocalDate.now().minusDays(1);
         report.append("📊 ОТЧЕТ ЗА СУТКИ\n");
-        report.append("📅 Дата: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))).append("\n\n");
+        report.append("📅 Дата: ").append(yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))).append("\n\n");
         
-        // Показатели Breakdown
+        // Показатели Breakdown по участкам за предыдущие сутки
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> breakDownData = (List<Map<String, Object>>) data.get("breakDown");
-        if (breakDownData != null && !breakDownData.isEmpty()) {
+        List<Map<String, Object>> areaData = (List<Map<String, Object>>) data.get("areaData");
+        if (areaData != null && !areaData.isEmpty()) {
             report.append("📉 ПОКАЗАТЕЛИ BREAKDOWN:\n");
-            for (Map<String, Object> item : breakDownData) {
-                String day = (String) item.get("production_day");
+            
+            // Группируем данные по участкам
+            Map<String, Double> areaBreakdown = new HashMap<>();
+            for (Map<String, Object> item : areaData) {
+                String area = (String) item.get("area");
                 Object downtime = item.get("downtime_percentage");
-                report.append("• ").append(day).append(": ").append(downtime).append("%\n");
+                if (area != null && downtime != null) {
+                    try {
+                        double downtimeValue = Double.parseDouble(downtime.toString());
+                        areaBreakdown.merge(area, downtimeValue, Double::sum);
+                    } catch (NumberFormatException e) {
+                        // Игнорируем некорректные значения
+                    }
+                }
             }
+            
+            // Сортируем участки по убыванию BD%
+            areaBreakdown.entrySet().stream()
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .forEach(entry -> {
+                    report.append("• ").append(entry.getKey()).append(" - ").append(String.format("%.2f", entry.getValue())).append("%\n");
+                });
+            
             report.append("\n");
         }
         
-        // Показатели Availability
+        // Показатели Availability за предыдущие сутки
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> availabilityData = (List<Map<String, Object>>) data.get("availability");
         if (availabilityData != null && !availabilityData.isEmpty()) {
             report.append("📈 ПОКАЗАТЕЛИ ДОСТУПНОСТИ:\n");
+            String yesterdayStr = yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+            
+            // Ищем данные за вчерашний день
             for (Map<String, Object> item : availabilityData) {
                 String day = (String) item.get("production_day");
-                Object availability = item.get("availability");
-                report.append("• ").append(day).append(": ").append(availability).append("%\n");
+                if (yesterdayStr.equals(day)) {
+                    Object availability = item.get("availability");
+                    if (availability != null) {
+                        report.append("• ").append(day).append(": ").append(availability).append("%\n");
+                    }
+                    break;
+                }
             }
             report.append("\n");
         }
@@ -163,8 +239,10 @@ public class ReportHandler {
                 if (count >= 5) break; // Показываем только топ-5
                 String machine = (String) item.get("machine_name");
                 Object downtime = item.get("machine_downtime");
-                report.append("• ").append(machine).append(": ").append(downtime).append("\n");
-                count++;
+                if (machine != null && downtime != null) {
+                    report.append("• ").append(machine).append(": ").append(downtime).append("\n");
+                    count++;
+                }
             }
             report.append("\n");
         }
@@ -179,8 +257,10 @@ public class ReportHandler {
                 if (count >= 5) break; // Показываем только топ-5
                 String machine = (String) item.get("machine_name");
                 Object downtime = item.get("machine_downtime");
-                report.append("• ").append(machine).append(": ").append(downtime).append("\n");
-                count++;
+                if (machine != null && downtime != null) {
+                    report.append("• ").append(machine).append(": ").append(downtime).append("\n");
+                    count++;
+                }
             }
         }
         
@@ -193,7 +273,7 @@ public class ReportHandler {
                                      List<Map<String, Object>> activeWorkOrders) {
         StringBuilder report = new StringBuilder();
         report.append("⚡ ТЕКУЩИЙ ОТЧЕТ\n");
-        report.append("🕐 Время: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))).append("\n\n");
+        report.append("🕐 Время: ").append(java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))).append("\n\n");
         
         // Текущие показатели по участкам
         if (bdMetrics != null && !bdMetrics.isEmpty()) {

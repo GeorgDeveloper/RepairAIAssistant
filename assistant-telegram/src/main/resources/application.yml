@@ -14,7 +14,7 @@ core:
 # URL веб-сервиса (assistant-web) для получения данных dashboard
 web:
   service:
-    url: http://localhost:${server.web.port:8082}
+    url: http://localhost:8081
 
 # Telegram Bot (переменные среды перекрывают значения из корневого application.yml)
 telegram:

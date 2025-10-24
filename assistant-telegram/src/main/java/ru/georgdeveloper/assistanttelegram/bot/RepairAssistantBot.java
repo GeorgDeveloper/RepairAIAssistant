@@ -204,6 +204,16 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
         } else if (data.equals("back_to_main")) {
             sendTextMessageWithKeyboard(chatId, commandHandler.handleStart(chatId), commandHandler.getMainMenuKeyboard());
         }
+        
+        // Отвечаем на callback query, чтобы убрать индикатор загрузки
+        try {
+            org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery answerCallbackQuery = 
+                new org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery();
+            answerCallbackQuery.setCallbackQueryId(callbackQuery.getId());
+            execute(answerCallbackQuery);
+        } catch (TelegramApiException e) {
+            logger.error("Ошибка при ответе на callback query: {}", e.getMessage(), e);
+        }
     }
 
     // Временное хранилище соответствий feedbackId -> запрос/ответ
