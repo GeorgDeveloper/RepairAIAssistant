@@ -218,20 +218,27 @@ function generateGanttChart(data) {
     const dateFrom = document.getElementById('date-from').value;
     const dateTo = document.getElementById('date-to').value;
     
-    const groupedData = groupDataByMachine(data);
+    const groupedData = groupDataByAreaAndMachine(data);
     
     generateTimeHeader(dateFrom, dateTo);
     generateGanttBody(groupedData, dateFrom, dateTo);
     updateSummary(data);
 }
 
-function groupDataByMachine(data) {
+function groupDataByAreaAndMachine(data) {
     const grouped = {};
     data.forEach(item => {
-        if (!grouped[item.machine_name]) {
-            grouped[item.machine_name] = [];
+        const area = item.area || 'Other';
+        if (!grouped[area]) {
+            grouped[area] = {
+                machines: {},
+                collapsed: false
+            };
         }
-        grouped[item.machine_name].push(item);
+        if (!grouped[area].machines[item.machine_name]) {
+            grouped[area].machines[item.machine_name] = [];
+        }
+        grouped[area].machines[item.machine_name].push(item);
     });
     return grouped;
 }
@@ -299,22 +306,69 @@ function generateGanttBody(groupedData, dateFrom, dateTo) {
     const baseWidth = 60;
     const minuteWidth = (baseWidth * zoomLevel) / 60; // Ширина одной минуты
     
-    Object.keys(groupedData).sort().forEach(machine => {
-        const machineRow = createMachineRow(machine);
-        groupedData[machine].forEach(repair => {
-            createRepairBar(repair, machineRow, fromDate, minuteWidth);
+    // Сортируем участки по алфавиту
+    const sortedAreas = Object.keys(groupedData).sort();
+    
+    sortedAreas.forEach(area => {
+        const areaData = groupedData[area];
+        
+        // Создаем заголовок участка
+        const areaHeader = createAreaHeader(area, areaData);
+        ganttBody.appendChild(areaHeader);
+        
+        // Создаем строки для машин в этом участке
+        const sortedMachines = Object.keys(areaData.machines).sort();
+        sortedMachines.forEach(machine => {
+            const machineRow = createMachineRow(machine, area);
+            machineRow.style.display = areaData.collapsed ? 'none' : 'flex';
+            
+            areaData.machines[machine].forEach(repair => {
+                createRepairBar(repair, machineRow, fromDate, minuteWidth);
+            });
+            ganttBody.appendChild(machineRow);
         });
-        ganttBody.appendChild(machineRow);
     });
 }
 
-function createMachineRow(machine) {
+function createAreaHeader(area, areaData) {
+    const header = document.createElement('div');
+    header.className = 'area-header';
+    header.setAttribute('data-area', area);
+    
+    const name = document.createElement('div');
+    name.className = 'area-name';
+    
+    const toggleIcon = document.createElement('span');
+    toggleIcon.className = 'toggle-icon';
+    toggleIcon.textContent = areaData.collapsed ? '▶' : '▼';
+    toggleIcon.style.marginRight = '8px';
+    toggleIcon.style.cursor = 'pointer';
+    
+    const areaTitle = document.createElement('span');
+    areaTitle.textContent = getAreaDisplayName(area);
+    
+    name.appendChild(toggleIcon);
+    name.appendChild(areaTitle);
+    header.appendChild(name);
+    
+    // Добавляем обработчик клика для сворачивания/разворачивания
+    toggleIcon.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleAreaCollapse(area);
+    });
+    
+    return header;
+}
+
+function createMachineRow(machine, area) {
     const row = document.createElement('div');
     row.className = 'machine-row';
+    row.setAttribute('data-area', area);
     
     const name = document.createElement('div');
     name.className = 'machine-name';
     name.textContent = machine;
+    name.style.paddingLeft = '30px'; // Отступ для машин под участком
     row.appendChild(name);
     
     return row;
@@ -355,9 +409,43 @@ function createRepairBar(repair, machineRow, fromDate, minuteWidth) {
 function getColorByFailureType(type) {
     switch (type) {
         case 'Механика': return '#3498db';
-        case 'Электроника':
-        case 'Электрика': return '#e74c3c';
+        case 'Электроника': return '#e74c3c';
+        case 'Электрика': return '#f39c12';
         default: return '#2ecc71';
+    }
+}
+
+function getAreaDisplayName(area) {
+    const areaNames = {
+        'BuildingArea': 'Участок сборки',
+        'CuringArea': 'Участок вулканизации',
+        'SemifinishingArea': 'Участок полуфинишной обработки',
+        'FinishigArea': 'Участок финишной обработки',
+        'NewMixingArea': 'Участок смешивания',
+        'Other': 'Другие участки'
+    };
+    return areaNames[area] || area;
+}
+
+function toggleAreaCollapse(area) {
+    // Находим все строки машин для этого участка
+    const machineRows = document.querySelectorAll(`.machine-row[data-area="${area}"]`);
+    const areaHeader = document.querySelector(`.area-header[data-area="${area}"]`);
+    const toggleIcon = areaHeader.querySelector('.toggle-icon');
+    
+    // Переключаем состояние
+    const isCollapsed = machineRows[0] && machineRows[0].style.display === 'none';
+    
+    machineRows.forEach(row => {
+        row.style.display = isCollapsed ? 'flex' : 'none';
+    });
+    
+    toggleIcon.textContent = isCollapsed ? '▼' : '▶';
+    
+    // Обновляем состояние в данных
+    if (currentData.length > 0) {
+        const groupedData = groupDataByAreaAndMachine(currentData);
+        groupedData[area].collapsed = !isCollapsed;
     }
 }
 

@@ -123,6 +123,33 @@
     position: relative;
 }
 
+.area-header {
+    display: flex;
+    border-bottom: 2px solid #333;
+    position: relative;
+    height: 40px;
+    background-color: #e8f4f8;
+    font-weight: bold;
+}
+
+.area-header:hover {
+    background-color: #d1e7dd;
+}
+
+.area-name {
+    min-width: 250px;
+    max-width: 250px;
+    padding: 10px;
+    font-weight: 600;
+    border-right: 1px solid #ddd;
+    position: sticky;
+    left: 0;
+    background-color: inherit;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+}
+
 .machine-row {
     display: flex;
     border-bottom: 1px solid #ddd;
@@ -161,6 +188,18 @@
     z-index: 100;
     pointer-events: none;
     max-width: 300px;
+}
+
+.toggle-icon {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    transition: transform 0.2s ease;
+}
+
+.toggle-icon:hover {
+    color: #007bff;
+    transform: scale(1.1);
 }
 
 .legend {

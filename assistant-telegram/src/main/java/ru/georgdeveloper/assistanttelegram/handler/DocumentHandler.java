@@ -7,6 +7,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import ru.georgdeveloper.assistanttelegram.config.BotProperties;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,9 +23,14 @@ public class DocumentHandler {
     private static final Logger logger = LoggerFactory.getLogger(DocumentHandler.class);
     
     private TelegramLongPollingBot bot;
+    private final BotProperties botProperties;
     
     private static final String DOWNLOAD_DIR = "downloads";
     private static final long MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    
+    public DocumentHandler(BotProperties botProperties) {
+        this.botProperties = botProperties;
+    }
     
     public void setBot(TelegramLongPollingBot bot) {
         this.bot = bot;
@@ -89,7 +95,7 @@ public class DocumentHandler {
             
             // Download file from Telegram servers
             String fileUrl = bot.getBaseUrl() + "/file/bot" + 
-                           bot.getBotToken() + "/" + file.getFilePath();
+                           botProperties.getToken() + "/" + file.getFilePath();
             
             try (InputStream inputStream = new java.net.URL(fileUrl).openStream()) {
                 Files.copy(inputStream, localFilePath, StandardCopyOption.REPLACE_EXISTING);
