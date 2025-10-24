@@ -67,17 +67,29 @@ public class ReportHandler {
             
             Map<String, Object> reportData = new HashMap<>();
             
-            // Получаем данные по участкам за предыдущие сутки
-            List<Map<String, Object>> areaData = fetchDataWithParams("/top-equipment/data", 
-                "dateFrom", yesterdayStr, "dateTo", yesterdayStr);
-            
-            // Получаем данные breakdown и availability за предыдущие сутки
-            List<Map<String, Object>> breakDownData = fetchData("/dashboard/breakDown");
-            List<Map<String, Object>> availabilityData = fetchData("/dashboard/availability");
-            List<Map<String, Object>> currentMetrics = fetchData("/dashboard/current-metrics");
-            List<Map<String, Object>> topBreakdownsWeek = fetchData("/dashboard/top-breakdowns-week");
-            List<Map<String, Object>> topBreakdownsWeekKeyLines = fetchData("/dashboard/top-breakdowns-week-key-lines");
-            List<Map<String, Object>> pmData = fetchData("/dashboard/pm-plan-fact-tag");
+             // Получаем данные по участкам за предыдущие сутки
+             List<Map<String, Object>> areaData = fetchDataWithParams("/top-equipment/data", 
+                 "dateFrom", yesterdayStr, "dateTo", yesterdayStr);
+             logger.info("Получено данных по участкам: {}", areaData != null ? areaData.size() : 0);
+             
+             // Получаем данные breakdown и availability за предыдущие сутки
+             List<Map<String, Object>> breakDownData = fetchData("/dashboard/breakDown");
+             logger.info("Получено данных breakdown: {}", breakDownData != null ? breakDownData.size() : 0);
+             
+             List<Map<String, Object>> availabilityData = fetchData("/dashboard/availability");
+             logger.info("Получено данных availability: {}", availabilityData != null ? availabilityData.size() : 0);
+             
+             List<Map<String, Object>> currentMetrics = fetchData("/dashboard/current-metrics");
+             logger.info("Получено данных current-metrics: {}", currentMetrics != null ? currentMetrics.size() : 0);
+             
+             List<Map<String, Object>> topBreakdownsWeek = fetchData("/dashboard/top-breakdowns-week");
+             logger.info("Получено данных top-breakdowns-week: {}", topBreakdownsWeek != null ? topBreakdownsWeek.size() : 0);
+             
+             List<Map<String, Object>> topBreakdownsWeekKeyLines = fetchData("/dashboard/top-breakdowns-week-key-lines");
+             logger.info("Получено данных top-breakdowns-week-key-lines: {}", topBreakdownsWeekKeyLines != null ? topBreakdownsWeekKeyLines.size() : 0);
+             
+             List<Map<String, Object>> pmData = fetchData("/dashboard/pm-plan-fact-tag");
+             logger.info("Получено данных pm-plan-fact-tag: {}", pmData != null ? pmData.size() : 0);
             
             reportData.put("areaData", areaData);
             reportData.put("breakDown", breakDownData);
@@ -191,37 +203,42 @@ public class ReportHandler {
         report.append("📊 ОТЧЕТ ЗА СУТКИ\n");
         report.append("📅 Дата: ").append(yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))).append("\n\n");
         
-        // Показатели Breakdown по участкам за предыдущие сутки
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> areaData = (List<Map<String, Object>>) data.get("areaData");
-        if (areaData != null && !areaData.isEmpty()) {
-            report.append("📉 ПОКАЗАТЕЛИ BREAKDOWN:\n");
-            
-            // Группируем данные по участкам
-            Map<String, Double> areaBreakdown = new HashMap<>();
-            for (Map<String, Object> item : areaData) {
-                String area = (String) item.get("area");
-                Object downtime = item.get("downtime_percentage");
-                if (area != null && downtime != null) {
-                    try {
-                        double downtimeValue = Double.parseDouble(downtime.toString());
-                        areaBreakdown.merge(area, downtimeValue, Double::sum);
-                    } catch (NumberFormatException e) {
-                        // Игнорируем некорректные значения
-                    }
-                }
-            }
-            
-            // Сортируем участки по убыванию BD% и показываем только топ-5
-            areaBreakdown.entrySet().stream()
-                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                .limit(5)
-                .forEach(entry -> {
-                    report.append("• ").append(entry.getKey()).append(" - ").append(String.format("%.2f", entry.getValue())).append("%\n");
-                });
-            
-            report.append("\n");
-        } else {
+         // Показатели Breakdown по участкам за предыдущие сутки
+         @SuppressWarnings("unchecked")
+         List<Map<String, Object>> areaData = (List<Map<String, Object>>) data.get("areaData");
+         logger.debug("Данные по участкам: {} записей", areaData != null ? areaData.size() : 0);
+         if (areaData != null && !areaData.isEmpty()) {
+             report.append("📉 ПОКАЗАТЕЛИ BREAKDOWN:\n");
+             
+             // Группируем данные по участкам
+             Map<String, Double> areaBreakdown = new HashMap<>();
+             for (Map<String, Object> item : areaData) {
+                 String area = (String) item.get("area");
+                 Object downtime = item.get("downtime_percentage");
+                 logger.debug("Участок: area={}, downtime={}", area, downtime);
+                 if (area != null && downtime != null) {
+                     try {
+                         double downtimeValue = Double.parseDouble(downtime.toString());
+                         areaBreakdown.merge(area, downtimeValue, Double::sum);
+                     } catch (NumberFormatException e) {
+                         logger.warn("Некорректное значение downtime для участка {}: {}", area, downtime);
+                     }
+                 }
+             }
+             
+             logger.debug("Сгруппировано участков: {}", areaBreakdown.size());
+             
+             // Сортируем участки по убыванию BD% и показываем только топ-5
+             areaBreakdown.entrySet().stream()
+                 .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                 .limit(5)
+                 .forEach(entry -> {
+                     report.append("• ").append(entry.getKey()).append(" - ").append(String.format("%.2f", entry.getValue())).append("%\n");
+                 });
+             
+             report.append("\n");
+         } else {
+            logger.debug("Нет данных по участкам, используем общие показатели");
             // Если нет данных по участкам, показываем общие показатели
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> breakDownData = (List<Map<String, Object>>) data.get("breakDown");
@@ -244,6 +261,18 @@ public class ReportHandler {
             }
         }
         
+         // Дополнительная проверка: если данные по участкам есть, но они не отображаются
+         if (areaData != null && !areaData.isEmpty()) {
+             logger.debug("Данные по участкам получены, но не отображаются. Первая запись: {}", areaData.get(0));
+             
+             // Временное решение: показываем все данные по участкам, даже если формат неожиданный
+             report.append("📉 ДАННЫЕ ПО УЧАСТКАМ (DEBUG):\n");
+             for (Map<String, Object> item : areaData) {
+                 report.append("• ").append(item.toString()).append("\n");
+             }
+             report.append("\n");
+         }
+        
         // Показатели Availability за предыдущие сутки
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> availabilityData = (List<Map<String, Object>>) data.get("availability");
@@ -265,66 +294,85 @@ public class ReportHandler {
             report.append("\n");
         }
         
-        // Топ поломок за неделю
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> topBreakdowns = (List<Map<String, Object>>) data.get("topBreakdownsWeek");
-        if (topBreakdowns != null && !topBreakdowns.isEmpty()) {
-            report.append("🔧 ТОП ПОЛОМОК ЗА НЕДЕЛЮ:\n");
-            int count = 0;
-            for (Map<String, Object> item : topBreakdowns) {
-                if (count >= 5) break; // Показываем только топ-5
-                String machine = (String) item.get("machine_name");
-                Object downtime = item.get("machine_downtime");
-                if (machine != null && downtime != null) {
-                    report.append("• ").append(machine).append(": ").append(downtime).append("\n");
-                    count++;
-                }
-            }
-            report.append("\n");
-        }
+         // Топ поломок за неделю
+         @SuppressWarnings("unchecked")
+         List<Map<String, Object>> topBreakdowns = (List<Map<String, Object>>) data.get("topBreakdownsWeek");
+         logger.debug("Топ поломок за неделю: {} записей", topBreakdowns != null ? topBreakdowns.size() : 0);
+         if (topBreakdowns != null && !topBreakdowns.isEmpty()) {
+             report.append("🔧 ТОП ПОЛОМОК ЗА НЕДЕЛЮ:\n");
+             int count = 0;
+             for (Map<String, Object> item : topBreakdowns) {
+                 if (count >= 5) break; // Показываем только топ-5
+                 String machine = (String) item.get("machine_name");
+                 Object downtime = item.get("machine_downtime");
+                 logger.debug("Поломка: machine={}, downtime={}", machine, downtime);
+                 if (machine != null && downtime != null) {
+                     report.append("• ").append(machine).append(": ").append(downtime).append("\n");
+                     count++;
+                 }
+             }
+             report.append("\n");
+         } else {
+             logger.debug("Нет данных о топ поломках за неделю");
+         }
         
-        // Ключевые линии
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> keyLines = (List<Map<String, Object>>) data.get("topBreakdownsWeekKeyLines");
-        if (keyLines != null && !keyLines.isEmpty()) {
-            report.append("🏭 КЛЮЧЕВЫЕ ЛИНИИ (НЕДЕЛЯ):\n");
-            int count = 0;
-            for (Map<String, Object> item : keyLines) {
-                if (count >= 5) break; // Показываем только топ-5
-                String machine = (String) item.get("machine_name");
-                Object downtime = item.get("machine_downtime");
-                if (machine != null && downtime != null) {
-                    report.append("• ").append(machine).append(": ").append(downtime).append("\n");
-                    count++;
-                }
-            }
-            report.append("\n");
-        }
+         // Ключевые линии
+         @SuppressWarnings("unchecked")
+         List<Map<String, Object>> keyLines = (List<Map<String, Object>>) data.get("topBreakdownsWeekKeyLines");
+         logger.debug("Ключевые линии: {} записей", keyLines != null ? keyLines.size() : 0);
+         if (keyLines != null && !keyLines.isEmpty()) {
+             report.append("🏭 КЛЮЧЕВЫЕ ЛИНИИ (НЕДЕЛЯ):\n");
+             int count = 0;
+             for (Map<String, Object> item : keyLines) {
+                 if (count >= 5) break; // Показываем только топ-5
+                 String machine = (String) item.get("machine_name");
+                 Object downtime = item.get("machine_downtime");
+                 logger.debug("Ключевая линия: machine={}, downtime={}", machine, downtime);
+                 if (machine != null && downtime != null) {
+                     report.append("• ").append(machine).append(": ").append(downtime).append("\n");
+                     count++;
+                 }
+             }
+             report.append("\n");
+         } else {
+             logger.debug("Нет данных о ключевых линиях");
+         }
         
-        // Показатели PM (планово-предупредительного обслуживания)
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> pmData = (List<Map<String, Object>>) data.get("pmData");
-        if (pmData != null && !pmData.isEmpty()) {
-            report.append("🔧 ВЫПОЛНЕНИЕ PM:\n");
-            String yesterdayStr = yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-            
-            // Ищем данные за вчерашний день
-            for (Map<String, Object> item : pmData) {
-                String day = (String) item.get("production_day");
-                if (yesterdayStr.equals(day)) {
-                    Object plan = item.get("pm_plan");
-                    Object fact = item.get("pm_fact");
-                    Object percentage = item.get("pm_percentage");
-                    
-                    if (plan != null && fact != null && percentage != null) {
-                        report.append("• План: ").append(plan).append("\n");
-                        report.append("• Факт: ").append(fact).append("\n");
-                        report.append("• Выполнение: ").append(percentage).append("%\n");
-                    }
-                    break;
-                }
-            }
-        }
+         // Показатели PM (планово-предупредительного обслуживания)
+         @SuppressWarnings("unchecked")
+         List<Map<String, Object>> pmData = (List<Map<String, Object>>) data.get("pmData");
+         logger.debug("PM данные: {} записей", pmData != null ? pmData.size() : 0);
+         if (pmData != null && !pmData.isEmpty()) {
+             report.append("🔧 ВЫПОЛНЕНИЕ PM:\n");
+             String yesterdayStr = yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+             logger.debug("Ищем PM данные за дату: {}", yesterdayStr);
+             
+             // Ищем данные за вчерашний день
+             boolean found = false;
+             for (Map<String, Object> item : pmData) {
+                 String day = (String) item.get("production_day");
+                 logger.debug("PM запись: day={}, plan={}, fact={}, percentage={}", 
+                     day, item.get("pm_plan"), item.get("pm_fact"), item.get("pm_percentage"));
+                 if (yesterdayStr.equals(day)) {
+                     Object plan = item.get("pm_plan");
+                     Object fact = item.get("pm_fact");
+                     Object percentage = item.get("pm_percentage");
+                     
+                     if (plan != null && fact != null && percentage != null) {
+                         report.append("• План: ").append(plan).append("\n");
+                         report.append("• Факт: ").append(fact).append("\n");
+                         report.append("• Выполнение: ").append(percentage).append("%\n");
+                         found = true;
+                     }
+                     break;
+                 }
+             }
+             if (!found) {
+                 logger.debug("Не найдены PM данные за дату {}", yesterdayStr);
+             }
+         } else {
+             logger.debug("Нет данных о PM");
+         }
         
         String reportText = report.toString();
         
@@ -344,29 +392,69 @@ public class ReportHandler {
         report.append("⚡ ТЕКУЩИЙ ОТЧЕТ\n");
         report.append("🕐 Время: ").append(java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))).append("\n\n");
         
-        // Текущие показатели по участкам
-        if (bdMetrics != null && !bdMetrics.isEmpty()) {
-            report.append("📊 ТЕКУЩИЕ ПОКАЗАТЕЛИ ПО УЧАСТКАМ:\n");
-            for (Map<String, Object> item : bdMetrics) {
-                String area = (String) item.get("area");
-                String timestamp = (String) item.get("timestamp");
-                Object value = item.get("value");
-                report.append("• ").append(area).append(" (").append(timestamp).append("): ").append(value).append("%\n");
-            }
-            report.append("\n");
-        }
+         // Текущие показатели по участкам (только последние записи)
+         if (bdMetrics != null && !bdMetrics.isEmpty()) {
+             report.append("📊 ТЕКУЩИЕ ПОКАЗАТЕЛИ ПО УЧАСТКАМ:\n");
+             
+             // Группируем по участкам и берем только последние записи
+             Map<String, Map<String, Object>> latestByArea = new HashMap<>();
+             for (Map<String, Object> item : bdMetrics) {
+                 String area = (String) item.get("area");
+                 String timestamp = (String) item.get("timestamp");
+                 Object value = item.get("value");
+                 
+                 if (area != null && timestamp != null && value != null) {
+                     // Если это первая запись для участка или более новая
+                     if (!latestByArea.containsKey(area) || 
+                         timestamp.compareTo((String) latestByArea.get(area).get("timestamp")) > 0) {
+                         latestByArea.put(area, item);
+                     }
+                 }
+             }
+             
+             // Выводим только последние записи по каждому участку
+             latestByArea.values().stream()
+                 .sorted((a, b) -> ((String) a.get("area")).compareTo((String) b.get("area")))
+                 .forEach(item -> {
+                     String area = (String) item.get("area");
+                     Object value = item.get("value");
+                     report.append("• ").append(area).append(": ").append(value).append("%\n");
+                 });
+             
+             report.append("\n");
+         }
         
-        // Доступность по участкам
-        if (availabilityMetrics != null && !availabilityMetrics.isEmpty()) {
-            report.append("📈 ДОСТУПНОСТЬ ПО УЧАСТКАМ:\n");
-            for (Map<String, Object> item : availabilityMetrics) {
-                String area = (String) item.get("area");
-                String timestamp = (String) item.get("timestamp");
-                Object value = item.get("value");
-                report.append("• ").append(area).append(" (").append(timestamp).append("): ").append(value).append("%\n");
-            }
-            report.append("\n");
-        }
+         // Доступность по участкам (только последние записи)
+         if (availabilityMetrics != null && !availabilityMetrics.isEmpty()) {
+             report.append("📈 ДОСТУПНОСТЬ ПО УЧАСТКАМ:\n");
+             
+             // Группируем по участкам и берем только последние записи
+             Map<String, Map<String, Object>> latestAvailabilityByArea = new HashMap<>();
+             for (Map<String, Object> item : availabilityMetrics) {
+                 String area = (String) item.get("area");
+                 String timestamp = (String) item.get("timestamp");
+                 Object value = item.get("value");
+                 
+                 if (area != null && timestamp != null && value != null) {
+                     // Если это первая запись для участка или более новая
+                     if (!latestAvailabilityByArea.containsKey(area) || 
+                         timestamp.compareTo((String) latestAvailabilityByArea.get(area).get("timestamp")) > 0) {
+                         latestAvailabilityByArea.put(area, item);
+                     }
+                 }
+             }
+             
+             // Выводим только последние записи по каждому участку
+             latestAvailabilityByArea.values().stream()
+                 .sorted((a, b) -> ((String) a.get("area")).compareTo((String) b.get("area")))
+                 .forEach(item -> {
+                     String area = (String) item.get("area");
+                     Object value = item.get("value");
+                     report.append("• ").append(area).append(": ").append(value).append("%\n");
+                 });
+             
+             report.append("\n");
+         }
         
         // Ключевые линии
         if (currentMainLines != null && !currentMainLines.isEmpty()) {
@@ -379,19 +467,29 @@ public class ReportHandler {
             report.append("\n");
         }
         
-        // Активные работы
-        if (activeWorkOrders != null && !activeWorkOrders.isEmpty()) {
-            report.append("🔧 АКТИВНЫЕ РАБОТЫ:\n");
-            int count = 0;
-            for (Map<String, Object> item : activeWorkOrders) {
-                if (count >= 10) break; // Показываем только первые 10
-                String machine = (String) item.get("machineName");
-                String type = (String) item.get("type");
-                String status = (String) item.get("status");
-                report.append("• ").append(machine).append(" - ").append(type).append(" (").append(status).append(")\n");
-                count++;
-            }
-        }
+         // Текущие наряды на работы
+         if (activeWorkOrders != null && !activeWorkOrders.isEmpty()) {
+             report.append("🔧 ТЕКУЩИЕ НАРЯДЫ НА РАБОТЫ:\n");
+             int count = 0;
+             for (Map<String, Object> item : activeWorkOrders) {
+                 if (count >= 10) break; // Показываем только первые 10
+                 String machine = (String) item.get("machineName");
+                 String type = (String) item.get("type");
+                 String status = (String) item.get("status");
+                 
+                 if (machine != null && type != null && status != null) {
+                     report.append("• ").append(machine).append(" - ").append(type).append(" (").append(status).append(")\n");
+                     count++;
+                 }
+             }
+             
+             if (count == 0) {
+                 report.append("Нет активных нарядов на работы\n");
+             }
+         } else {
+             report.append("🔧 ТЕКУЩИЕ НАРЯДЫ НА РАБОТЫ:\n");
+             report.append("Нет активных нарядов на работы\n");
+         }
         
         String reportText = report.toString();
         
