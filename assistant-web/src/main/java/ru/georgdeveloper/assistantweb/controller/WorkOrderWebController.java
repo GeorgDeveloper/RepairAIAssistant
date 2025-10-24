@@ -1,11 +1,15 @@
 package ru.georgdeveloper.assistantweb.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -15,6 +19,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/work-orders")
 public class WorkOrderWebController {
+
+    private static final Logger logger = LoggerFactory.getLogger(WorkOrderWebController.class);
 
     @Value("${base-update.service.url:http://localhost:8084}")
     private String baseUpdateServiceUrl;
@@ -31,12 +37,23 @@ public class WorkOrderWebController {
     @GetMapping("/dashboard")
     @ResponseBody
     public List<Map<String, Object>> getWorkOrdersForDashboard() {
-        return restTemplate.exchange(
-            baseUpdateServiceUrl + "/api/work-orders/dashboard",
-            HttpMethod.GET,
-            null,
-            new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-        ).getBody();
+        try {
+            logger.debug("Запрос нарядов на работы к сервису: {}", baseUpdateServiceUrl + "/api/work-orders/dashboard");
+            return restTemplate.exchange(
+                baseUpdateServiceUrl + "/api/work-orders/dashboard",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+            ).getBody();
+        } catch (RestClientException e) {
+            logger.error("Ошибка подключения к сервису нарядов на работы ({}): {}", 
+                        baseUpdateServiceUrl, e.getMessage());
+            // Возвращаем пустой список вместо ошибки
+            return new ArrayList<>();
+        } catch (Exception e) {
+            logger.error("Неожиданная ошибка при получении нарядов на работы: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -45,12 +62,22 @@ public class WorkOrderWebController {
     @GetMapping("/active")
     @ResponseBody
     public List<Map<String, Object>> getActiveWorkOrders() {
-        return restTemplate.exchange(
-            baseUpdateServiceUrl + "/api/work-orders/active",
-            HttpMethod.GET,
-            null,
-            new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-        ).getBody();
+        try {
+            logger.debug("Запрос активных нарядов к сервису: {}", baseUpdateServiceUrl + "/api/work-orders/active");
+            return restTemplate.exchange(
+                baseUpdateServiceUrl + "/api/work-orders/active",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+            ).getBody();
+        } catch (RestClientException e) {
+            logger.error("Ошибка подключения к сервису нарядов на работы ({}): {}", 
+                        baseUpdateServiceUrl, e.getMessage());
+            return new ArrayList<>();
+        } catch (Exception e) {
+            logger.error("Неожиданная ошибка при получении активных нарядов: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -59,12 +86,22 @@ public class WorkOrderWebController {
     @GetMapping("/search")
     @ResponseBody
     public List<Map<String, Object>> searchWorkOrders(@RequestParam("keyword") String keyword) {
-        return restTemplate.exchange(
-            baseUpdateServiceUrl + "/api/work-orders/search?keyword=" + keyword,
-            HttpMethod.GET,
-            null,
-            new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-        ).getBody();
+        try {
+            logger.debug("Поиск нарядов по ключевому слову '{}' к сервису: {}", keyword, baseUpdateServiceUrl + "/api/work-orders/search");
+            return restTemplate.exchange(
+                baseUpdateServiceUrl + "/api/work-orders/search?keyword=" + keyword,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+            ).getBody();
+        } catch (RestClientException e) {
+            logger.error("Ошибка подключения к сервису нарядов на работы ({}): {}", 
+                        baseUpdateServiceUrl, e.getMessage());
+            return new ArrayList<>();
+        } catch (Exception e) {
+            logger.error("Неожиданная ошибка при поиске нарядов: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -73,11 +110,21 @@ public class WorkOrderWebController {
     @GetMapping("/last-15")
     @ResponseBody
     public List<Map<String, Object>> getLast15WorkOrders() {
-        return restTemplate.exchange(
-            baseUpdateServiceUrl + "/api/work-orders/last-15",
-            HttpMethod.GET,
-            null,
-            new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-        ).getBody();
+        try {
+            logger.debug("Запрос последних 15 нарядов к сервису: {}", baseUpdateServiceUrl + "/api/work-orders/last-15");
+            return restTemplate.exchange(
+                baseUpdateServiceUrl + "/api/work-orders/last-15",
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+            ).getBody();
+        } catch (RestClientException e) {
+            logger.error("Ошибка подключения к сервису нарядов на работы ({}): {}", 
+                        baseUpdateServiceUrl, e.getMessage());
+            return new ArrayList<>();
+        } catch (Exception e) {
+            logger.error("Неожиданная ошибка при получении последних 15 нарядов: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 }
