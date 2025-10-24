@@ -25,6 +25,9 @@ public class WorkOrderWebController {
     @Value("${base-update.service.url:http://localhost:8084}")
     private String baseUpdateServiceUrl;
 
+    @Value("${core.service.url:http://localhost:8080}")
+    private String coreServiceUrl;
+
     private final RestTemplate restTemplate;
 
     public WorkOrderWebController(RestTemplate restTemplate) {
@@ -88,17 +91,16 @@ public class WorkOrderWebController {
     public List<Map<String, Object>> getBreakdownDetails(@RequestParam("date") String date,
                                                          @RequestParam("area") String area) {
         try {
-            logger.debug("Запрос детализации нарядов к сервису: {} для даты: {}, области: {}", 
-                        baseUpdateServiceUrl, date, area);
+            logger.debug("Запрос детализации нарядов к core сервису для даты: {}, области: {}", date, area);
             return restTemplate.exchange(
-                baseUpdateServiceUrl + "/api/work-orders/breakdown-details?date=" + date + "&area=" + area,
+                coreServiceUrl + "/top-equipment/breakdown-details?date=" + date + "&area=" + area,
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<List<Map<String, Object>>>() {}
             ).getBody();
         } catch (RestClientException e) {
-            logger.error("Ошибка подключения к сервису нарядов на работы ({}): {}", 
-                        baseUpdateServiceUrl, e.getMessage());
+            logger.error("Ошибка подключения к core сервису ({}): {}", 
+                        coreServiceUrl, e.getMessage());
             return new ArrayList<>();
         } catch (Exception e) {
             logger.error("Неожиданная ошибка при получении детализации нарядов: {}", e.getMessage(), e);

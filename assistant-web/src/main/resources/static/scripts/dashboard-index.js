@@ -439,45 +439,45 @@ async function showBreakdownDetails(date, area, metric) {
             <table class="breakdown-details-table">
                 <thead>
                     <tr>
-                        <th>Наряд</th>
+                        <th>Код события</th>
                         <th>Машина</th>
-                        <th>Сборка</th>
-                        <th>Тип</th>
+                        <th>Узел/механизм</th>
+                        <th>Тип поломки</th>
                         <th>Статус</th>
-                        <th>Длительность</th>
+                        <th>Время простоя</th>
                         <th>Время начала</th>
                         <th>Время окончания</th>
-                        <th>Причина простоя</th>
+                        <th>Причина</th>
                         <th>Комментарий</th>
                     </tr>
                 </thead>
                 <tbody>`;
         
-        breakdownData.forEach(workOrder => {
-            const duration = workOrder.duration || '0.00:00';
-            const startTime = workOrder.sDateT1 || 'N/A';
-            const endTime = workOrder.sDateT4 || 'N/A';
-            const comment = workOrder.comment || workOrder.initialComment || 'N/A';
-            const downtimeType = workOrder.downtimeType || 'unknown';
-            const pcsDftDesc = workOrder.pcsDftDesc || 'N/A';
+        breakdownData.forEach(record => {
+            const duration = record.machine_downtime || 'N/A';
+            const startTime = record.start_bd_t1 || 'N/A';
+            const endTime = record.stop_bd_t4 || 'N/A';
+            const comment = record.comments || 'N/A';
+            const cause = record.cause || 'N/A';
+            const failureType = record.failure_type || 'N/A';
             
-            // Add color coding based on downtime type
+            // Add color coding based on failure type
             let rowClass = '';
-            if (downtimeType === 'electrical') rowClass = 'electrical-downtime';
-            else if (downtimeType === 'electronic') rowClass = 'electronic-downtime';
-            else if (downtimeType === 'mechanical') rowClass = 'mechanical-downtime';
+            if (failureType && failureType.toLowerCase().includes('электрик')) rowClass = 'electrical-downtime';
+            else if (failureType && failureType.toLowerCase().includes('электрон')) rowClass = 'electronic-downtime';
+            else if (failureType && failureType.toLowerCase().includes('механ')) rowClass = 'mechanical-downtime';
             
             tableHTML += `
                 <tr class="${rowClass}">
-                    <td>${workOrder.woCodeName || 'N/A'}</td>
-                    <td>${workOrder.machineName || 'N/A'}</td>
-                    <td>${workOrder.assembly || 'N/A'}</td>
-                    <td>${workOrder.type || 'N/A'}</td>
-                    <td>${workOrder.status || 'N/A'}</td>
+                    <td>${record.code || 'N/A'}</td>
+                    <td>${record.machine_name || 'N/A'}</td>
+                    <td>${record.mechanism_node || 'N/A'}</td>
+                    <td>${failureType}</td>
+                    <td>${record.status || 'N/A'}</td>
                     <td>${duration}</td>
                     <td>${startTime}</td>
                     <td>${endTime}</td>
-                    <td>${pcsDftDesc}</td>
+                    <td>${cause}</td>
                     <td class="comment-cell">${comment}</td>
                 </tr>`;
         });

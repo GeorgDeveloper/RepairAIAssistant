@@ -167,6 +167,34 @@ public class TopEquipmentRepository {
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }
 
+    /**
+     * Получение детализации нарядов для конкретной даты и области
+     */
+    public List<Map<String, Object>> getBreakdownDetailsForDateAndArea(String date, String area) {
+        StringBuilder sql = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        
+        sql.append("SELECT code, machine_name, mechanism_node, failure_type, status, ")
+           .append("machine_downtime, start_bd_t1, stop_bd_t4, cause, comments ")
+           .append("FROM equipment_maintenance_records WHERE 1=1 ");
+        
+        // Фильтр по дате
+        if (date != null && !date.isEmpty()) {
+            sql.append("AND DATE(start_bd_t1) = STR_TO_DATE(?, '%d.%m.%Y') ");
+            params.add(date);
+        }
+        
+        // Фильтр по области
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            sql.append("AND area = ? ");
+            params.add(area);
+        }
+        
+        sql.append("ORDER BY start_bd_t1 DESC");
+        
+        return jdbcTemplate.queryForList(sql.toString(), params.toArray());
+    }
+
     public List<Map<String, Object>> getWeeks() {
         String sql = "SELECT DISTINCT WEEK(start_bd_t1, 1) AS week_number " +
                 "FROM equipment_maintenance_records WHERE start_bd_t1 IS NOT NULL " +
