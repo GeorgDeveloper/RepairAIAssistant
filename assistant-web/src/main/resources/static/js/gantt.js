@@ -433,10 +433,9 @@ function getAreaDisplayName(area) {
     const areaNames = {
         'BuildingArea': 'Участок сборки',
         'CuringArea': 'Участок вулканизации',
-        'SemifinishingArea': 'Участок полуфинишной обработки',
-        'FinishigArea': 'Участок финишной обработки',
-        'NewMixingArea': 'Участок смешивания',
-        'Other': 'Другие участки'
+        'SemifinishingArea': 'Участок полуфабрикатов',
+        'FinishigArea': 'Участок заключительных операций',
+        'NewMixingArea': 'Участок смешения'
     };
     return areaNames[area] || area;
 }
