@@ -1,17 +1,11 @@
 package ru.georgdeveloper.assistantbaseupdate.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.config.DataSyncProperties;
-import ru.georgdeveloper.assistantbaseupdate.util.ShiftCalculator;
+import ru.georgdeveloper.assistantbaseupdate.util.TimeUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -19,39 +13,20 @@ import java.util.*;
  * 
  * Выполняет синхронизацию каждые 3 минуты согласно расписанию.
  * Логика синхронизации:
- * 1. Определение текущей смены (дневная: 08:00-20:00, ночная: 20:00-08:00)
- * 2. Получение данных о времени простоя из SQL Server за текущую смену
- * 3. Получение рабочего времени из MySQL (working_time_of_*)
- * 4. Расчет инкрементального рабочего времени на основе времени с начала смены
- * 5. Расчет метрик (процент простоя, доступность) относительно времени смены
- * 6. Сохранение результатов в MySQL (production_metrics_online)
- * 
- * Важно: Простой учитывается с начала текущей смены, включая перенос из предыдущей смены.
- * Это обеспечивает корректный расчет показателей в реальном времени.
+ * 1. Получение данных о времени простоя из SQL Server (REP_BreakdownReport)
+ * 2. Получение рабочего времени из MySQL (working_time_of_*)
+ * 3. Расчет метрик (процент простоя, доступность)
+ * 4. Сохранение результатов в MySQL (production_metrics_online)
  */
 @Service
-public class DataSyncService {
-
-    private static final Logger logger = LoggerFactory.getLogger(DataSyncService.class);
-
-    @Autowired
-    private DataSyncProperties dataSyncProperties;
-
-    @Autowired
-    @Qualifier("sqlServerJdbcTemplate")
-    private JdbcTemplate sqlServerJdbcTemplate;
-
-    @Autowired
-    @Qualifier("mysqlJdbcTemplate")
-    private JdbcTemplate mysqlJdbcTemplate;
-
+public class DataSyncService extends BaseSyncService {
 
     /**
      * Планируемая задача синхронизации данных каждые 3 минуты
      */
     @Scheduled(cron = "${data-sync.schedule:0 */3 * * * ?}")
     public void syncData() {
-        if (!dataSyncProperties.isEnabled()) {
+        if (!isSyncEnabled()) {
             logger.debug("Синхронизация данных отключена в конфигурации");
             return;
         }
@@ -104,31 +79,23 @@ public class DataSyncService {
 
         // 1. Определяем диапазон дат (с 08:00 текущего дня до 08:00 следующего дня)
         LocalDateTime[] dateRange = calculateDateRange();
-        String searchDate = dateRange[0].format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+        String searchDate = formatDateForSearch(dateRange[0]);
 
         // 2. Получаем рабочее время из MySQL
         Double workingTime = getWorkingTime(area, searchDate);
         if (workingTime == null) {
             workingTime = area.getDefaultWt();
             logger.debug("Используется значение по умолчанию для {}: {} мин", area.getName(), workingTime);
-        } else {
-            logger.debug("Получено рабочее время для {} из БД: {} мин", area.getName(), workingTime);
         }
 
-        // 3. Получаем время простоя и количество записей из SQL Server
-        Double[] downtimeData = getDowntimeFromSqlServer(area, dateRange[0], dateRange[1]);
-        Double downtime = downtimeData[0];
-        Double recordCount = downtimeData[1];
-        logger.debug("Получено время простоя для области {}: {} мин, количество записей: {}", 
-                    area.getName(), downtime, recordCount);
+        // 3. Получаем время простоя из SQL Server
+        Double downtime = getDowntimeFromSqlServer(area, dateRange[0], dateRange[1]);
 
-        // 4. Рассчитываем рабочее время с учетом количества единиц оборудования
-        Double adjustedWorkingTime = calculateAdjustedWorkingTime(workingTime, recordCount);
-        logger.debug("Скорректированное рабочее время для области {}: {} мин (базовое: {}, единиц: {})", 
-                    area.getName(), adjustedWorkingTime, workingTime, recordCount);
-
+        // 4. Рассчитываем новое рабочее время по формуле: new_working_time = (working_time/(24*60))*3
+        Double newWorkingTime = calculateNewWorkingTime(workingTime);
+        
         // 5. Рассчитываем инкрементальное рабочее время
-        Double incrementalWorkingTime = calculateIncrementalWorkingTime(adjustedWorkingTime, dateRange[0]);
+        Double incrementalWorkingTime = calculateIncrementalWorkingTime(newWorkingTime, dateRange[0]);
         
         // 6. Рассчитываем метрики
         Double downtimePercentage = calculateDowntimePercentage(downtime, incrementalWorkingTime);
@@ -137,8 +104,8 @@ public class DataSyncService {
         // 7. Сохраняем в MySQL
         saveMetricsToMysql(area.getName(), downtime, incrementalWorkingTime, downtimePercentage, availability);
 
-        logger.debug("Область {} синхронизирована: downtime={}, wt={}, incremental_wt={}, percentage={}, availability={}", 
-                   area.getName(), downtime, workingTime, incrementalWorkingTime, downtimePercentage, availability);
+        logger.debug("Область {} синхронизирована: downtime={}, wt={}, new_wt={}, incremental_wt={}, percentage={}, availability={}", 
+                   area.getName(), downtime, workingTime, newWorkingTime, incrementalWorkingTime, downtimePercentage, availability);
     }
 
     /**
@@ -237,44 +204,15 @@ public class DataSyncService {
     }
 
     private String minutesToTime(double totalMinutes) {
-        int hours = (int) Math.floor(totalMinutes / 60.0);
-        int minutes = (int) Math.floor(totalMinutes % 60.0);
-        int seconds = (int) Math.floor((totalMinutes * 60.0) % 60.0);
-        return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds);
+        return TimeUtils.minutesToTime(totalMinutes);
     }
 
-    /**
-     * Определяет диапазон дат для запроса (текущая смена)
-     */
-    private LocalDateTime[] calculateDateRange() {
-        LocalDateTime now = LocalDateTime.now();
-        return ShiftCalculator.getCurrentShiftRange(now);
-    }
+
 
     /**
-     * Получает рабочее время из MySQL для указанной области и даты
+     * Получает время простоя из SQL Server для указанной области и диапазона дат
      */
-    private Double getWorkingTime(DataSyncProperties.Area area, String searchDate) {
-        String sql = String.format("SELECT %s FROM %s WHERE date = ?", 
-                                  area.getWtColumn(), area.getWorkingTimeTable());
-        
-        try {
-            Double result = mysqlJdbcTemplate.queryForObject(sql, Double.class, searchDate);
-            logger.debug("Найдено рабочее время для {} на дату {}: {} мин", 
-                        area.getName(), searchDate, result);
-            return result;
-        } catch (Exception e) {
-            logger.debug("Данные для области {} на дату {} не найдены", area.getName(), searchDate);
-            return null;
-        }
-    }
-
-    /**
-     * Получает время простоя из SQL Server для указанной области и диапазона дат.
-     * Учитывает простой с начала текущей смены, включая перенос из предыдущей смены.
-     * Возвращает массив: [0] - сумма времени простоя, [1] - количество записей простоя
-     */
-    private Double[] getDowntimeFromSqlServer(DataSyncProperties.Area area, LocalDateTime startDate, LocalDateTime endDate) {
+    private Double getDowntimeFromSqlServer(DataSyncProperties.Area area, LocalDateTime startDate, LocalDateTime endDate) {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT SUM(Duration) as total_duration ");
         sql.append("FROM REP_BreakdownReport ");
@@ -284,114 +222,31 @@ public class DataSyncService {
         sql.append("AND NOT (LEN(Comment) BETWEEN 15 AND 19 AND WOStatusLocalDescr LIKE '%Закрыто%') ");
         sql.append("AND TYPEWO NOT LIKE '%Tag%' ");
 
-        // Специальная обработка для области Modules
-        if ("Modules".equals(area.getName())) {
-            sql.append("AND MachineName IN ('Module A-1', 'Module A-2', 'Module A-3') ");
-        } else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
-            // Добавляем фильтр по области, если он задан
+        // Добавляем фильтр по области, если он задан
+        if (area.getFilterColumn() != null && area.getFilterValue() != null) {
             sql.append("AND ").append(area.getFilterColumn()).append(" = ? ");
         }
 
         try {
-            logger.debug("SQL запрос для области {} за период {} - {}: {}", area.getName(), startDate, endDate, sql.toString());
-            
-            // Получаем сумму времени простоя
-            Double downtimeSum;
-            if ("Modules".equals(area.getName())) {
-                downtimeSum = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
-                                                                  startDate, endDate, startDate, endDate);
-            } else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
-                downtimeSum = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
-                                                                  startDate, endDate, startDate, endDate, area.getFilterValue());
+            Double result;
+            if (area.getFilterColumn() != null && area.getFilterValue() != null) {
+                result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
+                                                             startDate, endDate, startDate, endDate, area.getFilterValue());
             } else {
-                downtimeSum = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
-                                                                  startDate, endDate, startDate, endDate);
+                result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
+                                                             startDate, endDate, startDate, endDate);
             }
             
-            // Получаем количество записей простоя
-            String countSql = sql.toString().replace("SELECT SUM(Duration) as total_duration", "SELECT COUNT(*)");
-            Integer recordCount;
-            if ("Modules".equals(area.getName())) {
-                recordCount = sqlServerJdbcTemplate.queryForObject(countSql, Integer.class, 
-                                                                  startDate, endDate, startDate, endDate);
-            } else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
-                recordCount = sqlServerJdbcTemplate.queryForObject(countSql, Integer.class, 
-                                                                  startDate, endDate, startDate, endDate, area.getFilterValue());
-            } else {
-                recordCount = sqlServerJdbcTemplate.queryForObject(countSql, Integer.class, 
-                                                                  startDate, endDate, startDate, endDate);
-            }
-            
-            Double downtime = downtimeSum != null ? downtimeSum : 0.0;
-            Double count = recordCount != null ? recordCount.doubleValue() : 0.0;
-            
-            logger.debug("Результат SQL запроса для области {} за период {} - {}: downtime={} мин, count={} записей", 
-                        area.getName(), startDate, endDate, downtime, count);
-            
-            return new Double[]{downtime, count};
+            return result != null ? result : 0.0;
         } catch (Exception e) {
             logger.error("Ошибка получения данных простоя из SQL Server для области {}: {}", 
                         area.getName(), e.getMessage());
-            return new Double[]{0.0, 0.0};
-        }
-    }
-
-    /**
-     * Рассчитывает инкрементальное рабочее время на основе времени с начала текущей смены
-     */
-    private Double calculateIncrementalWorkingTime(Double fullWorkingTime, LocalDateTime startDate) {
-        if (fullWorkingTime == null || fullWorkingTime == 0) {
-            return fullWorkingTime;
-        }
-        
-        LocalDateTime now = LocalDateTime.now();
-        return ShiftCalculator.calculateIncrementalWorkingTime(fullWorkingTime, now);
-    }
-
-    /**
-     * Рассчитывает скорректированное рабочее время с учетом количества единиц оборудования
-     * Если есть записи простоя, то рабочее время умножается на количество единиц оборудования
-     */
-    private Double calculateAdjustedWorkingTime(Double baseWorkingTime, Double recordCount) {
-        if (baseWorkingTime == null || baseWorkingTime == 0) {
-            return baseWorkingTime;
-        }
-        
-        // Если нет записей простоя, возвращаем базовое рабочее время
-        if (recordCount == null || recordCount == 0) {
-            return baseWorkingTime;
-        }
-        
-        // Умножаем рабочее время на количество единиц оборудования
-        Double adjustedTime = baseWorkingTime * recordCount;
-        logger.debug("Скорректированное рабочее время: {} мин * {} единиц = {} мин", 
-                    baseWorkingTime, recordCount, adjustedTime);
-        
-        return adjustedTime;
-    }
-    
-    /**
-     * Рассчитывает процент простоя
-     */
-    private Double calculateDowntimePercentage(Double downtime, Double workingTime) {
-        if (downtime == null || downtime == 0) {
             return 0.0;
         }
-        if (workingTime == null || workingTime == 0) {
-            return null; // NULL для MySQL
-        }
-        return Math.round((downtime / workingTime) * 100 * 100.0) / 100.0; // Округление до 2 знаков
     }
 
-    /**
-     * Рассчитывает доступность оборудования
-     */
-    private Double calculateAvailability(Double downtimePercentage) {
-        if (downtimePercentage == null) {
-            return null; // NULL для MySQL
-        }
-        return Math.round((100 - downtimePercentage) * 100.0) / 100.0; // Округление до 2 знаков
-    }
+
+    
 
     /**
      * Сохраняет метрики в MySQL

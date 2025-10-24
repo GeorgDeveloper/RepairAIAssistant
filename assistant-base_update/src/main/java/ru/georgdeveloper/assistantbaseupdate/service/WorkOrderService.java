@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.entity.sqlserver.WorkOrder;
 import ru.georgdeveloper.assistantbaseupdate.repository.sqlserver.WorkOrderRepository;
 import ru.georgdeveloper.assistantbaseupdate.repository.sqlserver.WOM_WorkOrderRepository;
+import ru.georgdeveloper.assistantbaseupdate.util.DowntimeTypeClassifier;
+import ru.georgdeveloper.assistantbaseupdate.util.TimeUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +36,7 @@ public class WorkOrderService {
             for (WorkOrder workOrder : workOrders) {
                 // Получаем причину простоя
                 String pcsDftDesc = getPcsDftDesc(workOrder.getWoCodeName());
-                String downtimeType = getDowntimeType(pcsDftDesc);
+                String downtimeType = DowntimeTypeClassifier.getDowntimeType(pcsDftDesc);
                 
                 Map<String, Object> workOrderMap = new HashMap<>();
                 workOrderMap.put("idCode", workOrder.getIdCode());
@@ -44,7 +46,7 @@ public class WorkOrderService {
                 workOrderMap.put("subAssembly", workOrder.getSubAssembly());
                 workOrderMap.put("type", workOrder.getTypeWo());
                 workOrderMap.put("status", workOrder.getWoStatusLocalDescr());
-                workOrderMap.put("duration", formatDuration(workOrder.getDuration()));
+                workOrderMap.put("duration", TimeUtils.formatDuration(workOrder.getDuration()));
                 workOrderMap.put("sDuration", workOrder.getSDuration());
                 workOrderMap.put("dateT1", workOrder.getDateT1());
                 workOrderMap.put("sDateT1", workOrder.getSDateT1());
@@ -93,7 +95,7 @@ public class WorkOrderService {
             for (WorkOrder workOrder : workOrders) {
                 // Получаем причину простоя
                 String pcsDftDesc = getPcsDftDesc(workOrder.getWoCodeName());
-                String downtimeType = getDowntimeType(pcsDftDesc);
+                String downtimeType = DowntimeTypeClassifier.getDowntimeType(pcsDftDesc);
                 
                 Map<String, Object> workOrderMap = new HashMap<>();
                 workOrderMap.put("idCode", workOrder.getIdCode());
@@ -103,7 +105,7 @@ public class WorkOrderService {
                 workOrderMap.put("subAssembly", workOrder.getSubAssembly());
                 workOrderMap.put("type", workOrder.getTypeWo());
                 workOrderMap.put("status", workOrder.getWoStatusLocalDescr());
-                workOrderMap.put("duration", formatDuration(workOrder.getDuration()));
+                workOrderMap.put("duration", TimeUtils.formatDuration(workOrder.getDuration()));
                 workOrderMap.put("sDuration", workOrder.getSDuration());
                 workOrderMap.put("dateT1", workOrder.getDateT1());
                 workOrderMap.put("sDateT1", workOrder.getSDateT1());
@@ -148,7 +150,7 @@ public class WorkOrderService {
                 workOrderMap.put("subAssembly", workOrder.getSubAssembly());
                 workOrderMap.put("type", workOrder.getTypeWo());
                 workOrderMap.put("status", workOrder.getWoStatusLocalDescr());
-                workOrderMap.put("duration", formatDuration(workOrder.getDuration()));
+                workOrderMap.put("duration", TimeUtils.formatDuration(workOrder.getDuration()));
                 workOrderMap.put("sDuration", workOrder.getSDuration());
                 workOrderMap.put("dateT1", workOrder.getDateT1());
                 workOrderMap.put("sDateT1", workOrder.getSDateT1());
@@ -187,46 +189,4 @@ public class WorkOrderService {
         }
     }
     
-    /**
-     * Определение типа причины простоя для цветовой индикации
-     */
-    private String getDowntimeType(String pcsDftDesc) {
-        if (pcsDftDesc == null || pcsDftDesc.trim().isEmpty()) {
-            return "unknown";
-        }
-        
-        String desc = pcsDftDesc.trim();
-        String descLower = desc.toLowerCase();
-        
-        // Электрика - проверяем как в оригинальном виде, так и в нижнем регистре
-        if (desc.contains("E/|EKTPuKA") || descLower.contains("electrical") || 
-            descLower.contains("электрика") || descLower.contains("e/|електрuка")) {
-            return "electrical";
-        }
-        
-        // Электроника - проверяем как в оригинальном виде, так и в нижнем регистре
-        if (desc.contains("E/|EKTPOHuKA") || descLower.contains("electronic") || 
-            descLower.contains("электроника") || descLower.contains("e/|електронuка")) {
-            return "electronic";
-        }
-        
-        // Механика - проверяем как в оригинальном виде, так и в нижнем регистре
-        if (desc.contains("MEXAHuKA") || descLower.contains("mechanical") || 
-            descLower.contains("механuка")) {
-            return "mechanical";
-        }
-        
-        return "unknown";
-    }
-    
-    /**
-     * Форматирование длительности в читаемый вид
-     */
-    private String formatDuration(Integer duration) {
-        if (duration == null) return "0.00:00";
-        int hours = duration / 3600;
-        int minutes = (duration % 3600) / 60;
-        int seconds = duration % 60;
-        return String.format("%d.%02d:%02d", hours, minutes, seconds);
-    }
 }

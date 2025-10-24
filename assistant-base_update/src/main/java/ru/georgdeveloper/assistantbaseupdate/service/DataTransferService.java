@@ -7,11 +7,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.georgdeveloper.assistantbaseupdate.util.RetryExecutor;
+import ru.georgdeveloper.assistantbaseupdate.util.TimeUtils;
 
 import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
@@ -133,18 +134,18 @@ public class DataTransferService {
                 Map<String, Object> row = rows.get(i);
                 
                 // Преобразование времени из строкового формата
-                Time machineDowntime = parseSqlTime((String) row.get("SDuration"));
-                Time ttr = parseSqlTime((String) row.get("STTR"));
-                Time t2MinusT1 = parseSqlTime((String) row.get("SLogisticTimeMin"));
+                Time machineDowntime = TimeUtils.parseSqlTime((String) row.get("SDuration"));
+                Time ttr = TimeUtils.parseSqlTime((String) row.get("STTR"));
+                Time t2MinusT1 = TimeUtils.parseSqlTime((String) row.get("SLogisticTimeMin"));
                 
                 // Подготовка данных для вставки
                 Object[] data = {
-                    getStringValue(row.get("MachineName")),
-                    getStringValue(row.get("Assembly")),
-                    getStringValue(row.get("SubAssembly")),
-                    getStringValue(row.get("InitialComment")),
-                    getStringValue(row.get("WOCodeName")),
-                    getStringValue(row.get("TYPEWO")),
+                    TimeUtils.getStringValue(row.get("MachineName")),
+                    TimeUtils.getStringValue(row.get("Assembly")),
+                    TimeUtils.getStringValue(row.get("SubAssembly")),
+                    TimeUtils.getStringValue(row.get("InitialComment")),
+                    TimeUtils.getStringValue(row.get("WOCodeName")),
+                    TimeUtils.getStringValue(row.get("TYPEWO")),
                     row.get("Date_T1"),
                     row.get("Date_T2"),
                     row.get("Date_T3"),
@@ -152,10 +153,10 @@ public class DataTransferService {
                     machineDowntime,
                     ttr,
                     t2MinusT1,
-                    getStringValue(row.get("WOStatusLocalDescr")),
-                    getStringValue(row.get("Maintainers")),
-                    getStringValue(row.get("comment")),
-                    getStringValue(row.get("PlantDepartmentGeographicalCodeName")),
+                    TimeUtils.getStringValue(row.get("WOStatusLocalDescr")),
+                    TimeUtils.getStringValue(row.get("Maintainers")),
+                    TimeUtils.getStringValue(row.get("comment")),
+                    TimeUtils.getStringValue(row.get("PlantDepartmentGeographicalCodeName")),
                     LocalDateTime.now()
                 };
                 
@@ -176,74 +177,7 @@ public class DataTransferService {
         return successCount;
     }
 
-    /**
-     * Парсинг времени из SQL Server формата
-     */
-    private Time parseSqlTime(String timeStr) {
-        if (timeStr == null || timeStr.trim().isEmpty()) {
-            return null;
-        }
-        
-        try {
-            timeStr = timeStr.trim();
-            
-            if (timeStr.contains(":")) {
-                String[] parts = timeStr.split(":");
-                
-                if (parts.length == 2) {
-                    // Формат "часы:минуты"
-                    int hours = Integer.parseInt(parts[0]);
-                    int minutes = Integer.parseInt(parts[1]);
-                    return Time.valueOf(LocalTime.of(hours, minutes, 0));
-                } else if (parts.length == 3) {
-                    // Формат "часы:минуты:секунды"
-                    int hours = Integer.parseInt(parts[0]);
-                    int minutes = Integer.parseInt(parts[1]);
-                    String secondsPart = parts[2];
-                    int seconds = secondsPart.contains(".") ? 
-                        (int) Double.parseDouble(secondsPart) : 
-                        Integer.parseInt(secondsPart);
-                    return Time.valueOf(LocalTime.of(hours, minutes, seconds));
-                }
-            } else if (timeStr.matches("\\d+")) {
-                // Время в минутах
-                int totalMinutes = Integer.parseInt(timeStr);
-                int hours = totalMinutes / 60;
-                int minutes = totalMinutes % 60;
-                return Time.valueOf(LocalTime.of(hours, minutes, 0));
-            }
-            
-        } catch (Exception e) {
-            logger.warn("Ошибка преобразования времени '{}': {}", timeStr, e.getMessage());
-        }
-        
-        return null;
-    }
 
-    private int executeWithRetry(java.util.function.Supplier<Integer> operation, String operationName) {
-        int maxRetries = 3;
-        int retryDelay = 1000; // 1 секунда
-        
-        for (int attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                return operation.get();
-            } catch (org.springframework.dao.CannotAcquireLockException e) {
-                if (attempt == maxRetries) {
-                    logger.error("Критическая ошибка при {}: исчерпаны все попытки ({})", operationName, maxRetries);
-                    throw e;
-                }
-                logger.warn("Deadlock при {} (попытка {}/{}), повтор через {} мс", operationName, attempt, maxRetries, retryDelay);
-                try {
-                    Thread.sleep(retryDelay);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException("Прервано во время ожидания повтора", ie);
-                }
-                retryDelay *= 2; // Экспоненциальная задержка
-            }
-        }
-        return 0; // Никогда не достигается
-    }
 
     /**
      * Обработка всех дополнительных полей
@@ -276,7 +210,7 @@ public class DataTransferService {
                   AND comments LIKE '%Cause:%'
                 """;
             
-            int causeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateCause), "извлечение cause");
+            int causeCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateCause), "извлечение cause", logger);
             logger.info("Извлечение cause из comments: обработано {} записей", causeCount);
             
             // 2. Очистка символов в cause
@@ -286,7 +220,7 @@ public class DataTransferService {
                 WHERE cause IS NOT NULL AND cause != ''
                 """;
             
-            int cleanCount = executeWithRetry(() -> mysqlJdbcTemplate.update(cleanCause), "очистка символов в cause");
+            int cleanCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(cleanCause), "очистка символов в cause", logger);
             logger.info("Очистка символов в cause: обработано {} записей", cleanCount);
             
             // 3. Удаление пробелов в cause
@@ -296,7 +230,7 @@ public class DataTransferService {
                 WHERE cause IS NOT NULL AND cause != ''
                 """;
             
-            int trimCount = executeWithRetry(() -> mysqlJdbcTemplate.update(trimCause), "удаление пробелов в cause");
+            int trimCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(trimCause), "удаление пробелов в cause", logger);
             logger.info("Удаление пробелов в cause: обработано {} записей", trimCount);
             
             // 4. Заполнение поля staff
@@ -319,7 +253,7 @@ public class DataTransferService {
                   AND comments LIKE '%[%]%'
                 """;
             
-            int staffCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateStaff), "заполнение поля staff");
+            int staffCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateStaff), "заполнение поля staff", logger);
             logger.info("Заполнение поля staff: обработано {} записей", staffCount);
             
             // 5. Заполнение поля date
@@ -330,7 +264,7 @@ public class DataTransferService {
                   AND start_bd_t1 IS NOT NULL
                 """;
             
-            int dateCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateDate), "заполнение поля date");
+            int dateCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateDate), "заполнение поля date", logger);
             logger.info("Заполнение поля date: обработано {} записей", dateCount);
             
             // 6. Заполнение поля week_number
@@ -341,7 +275,7 @@ public class DataTransferService {
                   AND date IS NOT NULL AND date != ''
                 """;
             
-            int weekCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateWeek), "заполнение поля week_number");
+            int weekCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateWeek), "заполнение поля week_number", logger);
             logger.info("Заполнение поля week_number: обработано {} записей", weekCount);
             
             // 7. Заполнение поля month_name
@@ -366,7 +300,7 @@ public class DataTransferService {
                   AND date IS NOT NULL AND date != ''
                 """;
             
-            int monthCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateMonth), "заполнение поля month_name");
+            int monthCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateMonth), "заполнение поля month_name", logger);
             logger.info("Заполнение поля month_name: обработано {} записей", monthCount);
             
             // 8. Заполнение поля shift
@@ -383,7 +317,7 @@ public class DataTransferService {
                   AND start_bd_t1 IS NOT NULL
                 """;
             
-            int shiftCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateShift), "заполнение поля shift");
+            int shiftCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateShift), "заполнение поля shift", logger);
             logger.info("Заполнение поля shift: обработано {} записей", shiftCount);
             
             // 9. Обновление failure_type из staff_technical
@@ -394,7 +328,7 @@ public class DataTransferService {
                 WHERE (rp.failure_type IS NULL OR rp.failure_type = '')
                 """;
             
-            int failureTypeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateFailureType), "заполнение поля failure_type");
+            int failureTypeCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateFailureType), "заполнение поля failure_type", logger);
             logger.info("Заполнение поля failure_type: обработано {} записей", failureTypeCount);
             
             // 10. Обновление crew_de_facto из staff_technical
@@ -405,7 +339,7 @@ public class DataTransferService {
                 WHERE (rp.crew_de_facto IS NULL OR rp.crew_de_facto = '')
                 """;
             
-            int crewDeFactoCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateCrewDeFacto), "заполнение поля crew_de_facto");
+            int crewDeFactoCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateCrewDeFacto), "заполнение поля crew_de_facto", logger);
             logger.info("Заполнение поля crew_de_facto: обработано {} записей", crewDeFactoCount);
             
             // 11. Обновление crew из график_работы_104
@@ -420,7 +354,7 @@ public class DataTransferService {
                   AND emr.shift IS NOT NULL
                 """;
             
-            int crewCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateCrew), "заполнение поля crew");
+            int crewCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateCrew), "заполнение поля crew", logger);
             logger.info("Заполнение поля crew: обработано {} записей", crewCount);
             
             // 12. Заполнение production_day
@@ -466,7 +400,7 @@ public class DataTransferService {
                 WHERE (production_day IS NULL OR production_day = '')
                 """;
             
-            int productionDayCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateProductionDay), "заполнение поля production_day");
+            int productionDayCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateProductionDay), "заполнение поля production_day", logger);
             logger.info("Заполнение поля production_day: обработано {} записей", productionDayCount);
             
             // 13. Обновление failure_type для специфичных причин
@@ -478,7 +412,7 @@ public class DataTransferService {
                    OR cause LIKE '%Простой по вине с. качества%'
                 """;
             
-            int specificFailureTypeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateSpecificFailureType), "заполнение поля failure_type (specific)");
+            int specificFailureTypeCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(updateSpecificFailureType), "заполнение поля failure_type (specific)", logger);
             logger.info("Обновление failure_type для специфичных причин: обработано {} записей", specificFailureTypeCount);
             
             logger.info("Обработка всех дополнительных полей завершена успешно");
@@ -510,7 +444,7 @@ public class DataTransferService {
                     OR status LIKE '%В исполнении%'
                 """;
             
-            int deletedCount = executeWithRetry(() -> mysqlJdbcTemplate.update(deleteQuery), "удаление отфильтрованных записей");
+            int deletedCount = RetryExecutor.executeWithRetry(() -> mysqlJdbcTemplate.update(deleteQuery), "удаление отфильтрованных записей", logger);
             logger.info("Удалено отфильтрованных записей: {}", deletedCount);
             
             return deletedCount;
@@ -521,10 +455,4 @@ public class DataTransferService {
         }
     }
 
-    /**
-     * Получение строкового значения с проверкой на null
-     */
-    private String getStringValue(Object value) {
-        return value != null ? value.toString() : "";
-    }
 }
