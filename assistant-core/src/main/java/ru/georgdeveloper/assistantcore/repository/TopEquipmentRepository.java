@@ -186,8 +186,14 @@ public class TopEquipmentRepository {
         
         // Фильтр по области
         if (area != null && !area.isEmpty() && !area.equals("all")) {
-            sql.append("AND area = ? ");
-            params.add(area);
+            if ("Modules".equals(area)) {
+                // Для области "Модули" ищем по маске "Module" в machine_name
+                sql.append("AND machine_name LIKE '%Module%' ");
+            } else {
+                // Для остальных областей используем поле area
+                sql.append("AND area = ? ");
+                params.add(area);
+            }
         }
         
         sql.append("ORDER BY start_bd_t1 DESC");
