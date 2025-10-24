@@ -136,6 +136,15 @@
     background-color: #d1e7dd;
 }
 
+.area-header.collapsed {
+    background-color: #f8d7da;
+    border-bottom: 2px solid #dc3545;
+}
+
+.area-header.collapsed:hover {
+    background-color: #f5c6cb;
+}
+
 .area-name {
     min-width: 250px;
     max-width: 250px;
@@ -242,8 +251,9 @@
 
 .area-controls {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .area-control-button {

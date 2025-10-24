@@ -341,6 +341,10 @@
     border-radius: 8px;
 }
 
+.box-histotri-date {
+    max-width: 800px;
+}
+
 .close {
     color: #aaa;
     float: right;

@@ -334,6 +334,9 @@ function generateGanttBody(groupedData, dateFrom, dateTo) {
 function createAreaHeader(area, areaData) {
     const header = document.createElement('div');
     header.className = 'area-header';
+    if (areaData.collapsed) {
+        header.classList.add('collapsed');
+    }
     header.setAttribute('data-area', area);
     
     const name = document.createElement('div');
@@ -351,6 +354,11 @@ function createAreaHeader(area, areaData) {
     name.appendChild(toggleIcon);
     name.appendChild(areaTitle);
     header.appendChild(name);
+    
+    // Если участок свернут, добавляем поломки в заголовок
+    if (areaData.collapsed) {
+        addCollapsedAreaBars(header, areaData, area);
+    }
     
     // Добавляем обработчик клика для сворачивания/разворачивания
     toggleIcon.addEventListener('click', function(e) {
@@ -433,6 +441,27 @@ function getAreaDisplayName(area) {
     return areaNames[area] || area;
 }
 
+function addCollapsedAreaBars(header, areaData, area) {
+    const dateFrom = document.getElementById('date-from').value;
+    const dateTo = document.getElementById('date-to').value;
+    const fromDate = new Date(dateFrom);
+    const toDate = new Date(dateTo);
+    const totalMinutes = (toDate - fromDate) / (1000 * 60);
+    const baseWidth = 60;
+    const minuteWidth = (baseWidth * zoomLevel) / 60;
+    
+    // Собираем все поломки участка
+    const allRepairs = [];
+    Object.values(areaData.machines).forEach(machineRepairs => {
+        allRepairs.push(...machineRepairs);
+    });
+    
+    // Создаем полоски для каждой поломки
+    allRepairs.forEach(repair => {
+        createRepairBar(repair, header, fromDate, minuteWidth);
+    });
+}
+
 function generateAreaControls(groupedData) {
     const areaControls = document.getElementById('area-controls');
     areaControls.innerHTML = '';
@@ -483,6 +512,21 @@ function toggleAreaCollapse(area) {
     });
     
     toggleIcon.textContent = isCollapsed ? '▼' : '▶';
+    
+    // Обновляем стиль заголовка
+    if (isCollapsed) {
+        areaHeader.classList.remove('collapsed');
+        // Удаляем полоски поломок из заголовка
+        const existingBars = areaHeader.querySelectorAll('.repair-bar');
+        existingBars.forEach(bar => bar.remove());
+    } else {
+        areaHeader.classList.add('collapsed');
+        // Добавляем полоски поломок в заголовок
+        if (currentData.length > 0) {
+            const groupedData = groupDataByAreaAndMachine(currentData);
+            addCollapsedAreaBars(areaHeader, groupedData[area], area);
+        }
+    }
     
     // Обновляем состояние в данных
     if (currentData.length > 0) {
