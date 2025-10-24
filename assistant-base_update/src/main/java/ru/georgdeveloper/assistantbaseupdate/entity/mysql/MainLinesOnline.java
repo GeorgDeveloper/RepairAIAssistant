@@ -1,4 +1,4 @@
-package ru.georgdeveloper.assistantbaseupdate.entity;
+package ru.georgdeveloper.assistantbaseupdate.entity.mysql;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;

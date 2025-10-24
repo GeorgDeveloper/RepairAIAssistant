@@ -8,8 +8,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.config.DataSyncProperties;
-import ru.georgdeveloper.assistantbaseupdate.repository.ProductionMetricsOnlineRepository;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -39,9 +37,6 @@ public class DataSyncService {
     @Autowired
     @Qualifier("mysqlJdbcTemplate")
     private JdbcTemplate mysqlJdbcTemplate;
-
-    @Autowired
-    private ProductionMetricsOnlineRepository repository;
 
     /**
      * Планируемая задача синхронизации данных каждые 3 минуты
@@ -113,14 +108,14 @@ public class DataSyncService {
         // 3. Получаем время простоя из SQL Server
         Double downtime = getDowntimeFromSqlServer(area, dateRange[0], dateRange[1]);
 
-        // 4. Рассчитываем инкрементальное рабочее время
+        // 4. Рассчитываем инкрементальное рабочее время на основе количества прошедших 3-минутных интервалов
         Double incrementalWorkingTime = calculateIncrementalWorkingTime(workingTime, dateRange[0]);
         
-        // 5. Рассчитываем метрики
+        // 6. Рассчитываем метрики
         Double downtimePercentage = calculateDowntimePercentage(downtime, incrementalWorkingTime);
         Double availability = calculateAvailability(downtimePercentage);
 
-        // 6. Сохраняем в MySQL
+        // 7. Сохраняем в MySQL
         saveMetricsToMysql(area.getName(), downtime, incrementalWorkingTime, downtimePercentage, availability);
 
         logger.debug("Область {} синхронизирована: downtime={}, wt={}, incremental_wt={}, percentage={}, availability={}", 
@@ -302,12 +297,18 @@ public class DataSyncService {
         }
     }
 
+
     /**
-     * Рассчитывает инкрементальное рабочее время на основе текущего времени
+     * Рассчитывает инкрементальное рабочее время на основе количества прошедших 3-минутных интервалов с начала смены
+     * 
+     * Логика:
+     * 1. Берем исходное working_time из БД
+     * 2. Делим на 480 интервалов (24 часа * 60 минут / 3 минуты = 480)
+     * 3. Умножаем на количество прошедших интервалов с начала смены
      */
-    private Double calculateIncrementalWorkingTime(Double fullWorkingTime, LocalDateTime startDate) {
-        if (fullWorkingTime == null || fullWorkingTime == 0) {
-            return fullWorkingTime;
+    private Double calculateIncrementalWorkingTime(Double workingTime, LocalDateTime startDate) {
+        if (workingTime == null || workingTime == 0) {
+            return workingTime;
         }
         
         LocalDateTime now = LocalDateTime.now();
@@ -316,20 +317,26 @@ public class DataSyncService {
         
         // Если текущее время вне диапазона 08:00-08:00, возвращаем полное значение
         if (now.isBefore(currentStart) || now.isAfter(currentEnd)) {
-            return fullWorkingTime;
+            return workingTime;
         }
         
         // Вычисляем количество прошедших 3-минутных интервалов с 08:00
         long minutesFromStart = java.time.Duration.between(currentStart, now).toMinutes();
-        long intervals = minutesFromStart / 3 + 1; // +1 чтобы начинать с 1
+        long intervalsPassed = minutesFromStart / 3; // Количество прошедших интервалов
         
         // Общее количество интервалов в сутках (24 часа * 60 минут / 3 минуты = 480)
         long totalIntervals = 480;
         
-        // Рассчитываем инкремент на интервал
-        double increment = fullWorkingTime / totalIntervals;
+        // Рассчитываем значение на один интервал
+        double valuePerInterval = workingTime / totalIntervals;
         
-        return Math.round(increment * intervals * 100.0) / 100.0;
+        // Рассчитываем текущее рабочее время: значение_на_интервал * количество_прошедших_интервалов
+        double currentWorkingTime = valuePerInterval * intervalsPassed;
+        
+        logger.debug("Расчет рабочего времени: исходное={} мин, интервалов прошло={}, значение на интервал={}, текущее={}", 
+                    workingTime, intervalsPassed, valuePerInterval, currentWorkingTime);
+        
+        return Math.round(currentWorkingTime * 100.0) / 100.0; // Округление до 2 знаков
     }
     
     /**

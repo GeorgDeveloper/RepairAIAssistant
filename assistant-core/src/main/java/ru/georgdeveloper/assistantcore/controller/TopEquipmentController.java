@@ -70,4 +70,10 @@ public class TopEquipmentController {
                                                         @RequestParam(required = false) String area) {
         return repository.getEquipmentEvents(machine, cause, mechanism, dateFrom, dateTo, week, area);
     }
+
+    @GetMapping("/breakdown-details")
+    public List<Map<String, Object>> getBreakdownDetailsForDateAndArea(@RequestParam("date") String date,
+                                                                       @RequestParam("area") String area) {
+        return repository.getBreakdownDetailsForDateAndArea(date, area);
+    }
 }

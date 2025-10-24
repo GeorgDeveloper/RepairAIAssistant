@@ -2,9 +2,8 @@ package ru.georgdeveloper.assistantcore.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import java.util.*;
 import ru.georgdeveloper.assistantcore.repository.MonitoringRepository;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/dashboard")
@@ -42,6 +41,7 @@ public class DashboardController {
 
     @Autowired
     private MonitoringRepository monitoringRepository;
+    
     @GetMapping("/breakDown")
     @ResponseBody
     public List<Map<String, Object>> searchBreakDown() {

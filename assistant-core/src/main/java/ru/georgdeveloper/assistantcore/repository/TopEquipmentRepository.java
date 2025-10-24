@@ -1,7 +1,6 @@
 package ru.georgdeveloper.assistantcore.repository;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -13,7 +12,6 @@ import java.util.Map;
 public class TopEquipmentRepository {
 
     @Autowired
-    @Qualifier("sqlServerJdbcTemplate")
     private JdbcTemplate jdbcTemplate;
 
     public List<Map<String, Object>> getTopEquipment(String dateFrom,
@@ -166,6 +164,40 @@ public class TopEquipmentRepository {
             params.add(area);
         }
         sql.append("ORDER BY start_bd_t1 DESC LIMIT 500");
+        return jdbcTemplate.queryForList(sql.toString(), params.toArray());
+    }
+
+    /**
+     * Получение детализации нарядов для конкретной даты и области
+     */
+    public List<Map<String, Object>> getBreakdownDetailsForDateAndArea(String date, String area) {
+        StringBuilder sql = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        
+        sql.append("SELECT code, machine_name, mechanism_node, failure_type, status, ")
+           .append("machine_downtime, start_bd_t1, stop_bd_t4, cause, comments ")
+           .append("FROM equipment_maintenance_records WHERE 1=1 ");
+        
+        // Фильтр по дате
+        if (date != null && !date.isEmpty()) {
+            sql.append("AND DATE(start_bd_t1) = STR_TO_DATE(?, '%d.%m.%Y') ");
+            params.add(date);
+        }
+        
+        // Фильтр по области
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            if ("Modules".equals(area)) {
+                // Для области "Модули" ищем по маске "Module" в machine_name
+                sql.append("AND machine_name LIKE '%Module%' ");
+            } else {
+                // Для остальных областей используем поле area
+                sql.append("AND area = ? ");
+                params.add(area);
+            }
+        }
+        
+        sql.append("ORDER BY start_bd_t1 DESC");
+        
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }
 

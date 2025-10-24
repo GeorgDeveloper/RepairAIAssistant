@@ -11,6 +11,11 @@ core:
   service:
     url: http://localhost:${server.core.port:8080}/api
 
+# URL веб-сервиса (assistant-web) для получения данных dashboard
+web:
+  service:
+    url: http://localhost:${server.web.port:8082}
+
 # Telegram Bot (переменные среды перекрывают значения из корневого application.yml)
 telegram:
   bot:
