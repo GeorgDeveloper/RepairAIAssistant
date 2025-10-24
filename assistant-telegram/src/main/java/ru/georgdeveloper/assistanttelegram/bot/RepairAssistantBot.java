@@ -161,6 +161,15 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
         String data = callbackQuery.getData();
         Long chatId = callbackQuery.getMessage().getChatId();
         
+        // Защита от дублирования сообщений
+        long currentTime = System.currentTimeMillis();
+        Long lastTime = lastCallbackTime.get(chatId);
+        if (lastTime != null && (currentTime - lastTime) < CALLBACK_COOLDOWN) {
+            logger.debug("Игнорируем дублирующий callback для чата {}", chatId);
+            return;
+        }
+        lastCallbackTime.put(chatId, currentTime);
+        
         if (data.startsWith("feedback_correct::")) {
             String feedbackId = data.substring("feedback_correct::".length());
             FeedbackPair pair = FeedbackMemory.get(feedbackId);
@@ -196,11 +205,11 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
         } else if (data.equals("daily_report")) {
             sendTypingAction(chatId);
             String report = reportHandler.generateDailyReport();
-            sendTextMessage(chatId, report);
+            sendTextMessageWithKeyboard(chatId, report, reportHandler.getBackToReportsKeyboard());
         } else if (data.equals("current_report")) {
             sendTypingAction(chatId);
             String report = reportHandler.generateCurrentReport();
-            sendTextMessage(chatId, report);
+            sendTextMessageWithKeyboard(chatId, report, reportHandler.getBackToReportsKeyboard());
         } else if (data.equals("back_to_main")) {
             sendTextMessageWithKeyboard(chatId, commandHandler.handleStart(chatId), commandHandler.getMainMenuKeyboard());
         }
@@ -218,6 +227,11 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
 
     // Временное хранилище соответствий feedbackId -> запрос/ответ
     private static final Map<String, FeedbackPair> FeedbackMemory = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    // Защита от дублирования сообщений
+    private static final Map<Long, Long> lastCallbackTime = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long CALLBACK_COOLDOWN = 2000; // 2 секунды
+    
     private static class FeedbackPair {
         final String userQuery;
         final String answer;
@@ -266,6 +280,12 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
      * @param text Текст сообщения для отправки
      */
     private void sendTextMessage(Long chatId, String text) {
+        // Разбиваем длинные сообщения на части
+        if (text.length() > 4000) {
+            sendLongMessage(chatId, text);
+            return;
+        }
+        
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText(text);
@@ -276,6 +296,35 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             // Логирование ошибок для отладки
             logger.error("Ошибка отправки сообщения в Telegram: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Отправляет длинное сообщение частями
+     */
+    private void sendLongMessage(Long chatId, String text) {
+        int maxLength = 4000;
+        int start = 0;
+        
+        while (start < text.length()) {
+            int end = Math.min(start + maxLength, text.length());
+            String part = text.substring(start, end);
+            
+            SendMessage message = new SendMessage();
+            message.setChatId(chatId.toString());
+            message.setText(part);
+            
+            try {
+                execute(message);
+                Thread.sleep(100); // Небольшая задержка между сообщениями
+            } catch (TelegramApiException e) {
+                logger.error("Ошибка отправки части сообщения: {}", e.getMessage(), e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            
+            start = end;
         }
     }
     

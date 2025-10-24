@@ -113,6 +113,20 @@ public class ReportHandler {
         }
     }
     
+    public InlineKeyboardMarkup getBackToReportsKeyboard() {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+
+        InlineKeyboardButton backButton = new InlineKeyboardButton("⬅️ Назад к отчетам");
+        backButton.setCallbackData("request_report");
+
+        List<List<InlineKeyboardButton>> keyboard = Arrays.asList(
+            Arrays.asList(backButton)
+        );
+
+        markup.setKeyboard(keyboard);
+        return markup;
+    }
+    
     private List<Map<String, Object>> fetchData(String endpoint) {
         try {
             String url = webServiceUrl + endpoint;
@@ -198,14 +212,36 @@ public class ReportHandler {
                 }
             }
             
-            // Сортируем участки по убыванию BD%
+            // Сортируем участки по убыванию BD% и показываем только топ-5
             areaBreakdown.entrySet().stream()
                 .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .limit(5)
                 .forEach(entry -> {
                     report.append("• ").append(entry.getKey()).append(" - ").append(String.format("%.2f", entry.getValue())).append("%\n");
                 });
             
             report.append("\n");
+        } else {
+            // Если нет данных по участкам, показываем общие показатели
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> breakDownData = (List<Map<String, Object>>) data.get("breakDown");
+            if (breakDownData != null && !breakDownData.isEmpty()) {
+                report.append("📉 ПОКАЗАТЕЛИ BREAKDOWN:\n");
+                String yesterdayStr = yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+                
+                // Ищем данные за вчерашний день
+                for (Map<String, Object> item : breakDownData) {
+                    String day = (String) item.get("production_day");
+                    if (yesterdayStr.equals(day)) {
+                        Object downtime = item.get("downtime_percentage");
+                        if (downtime != null) {
+                            report.append("• ").append(day).append(": ").append(downtime).append("%\n");
+                        }
+                        break;
+                    }
+                }
+                report.append("\n");
+            }
         }
         
         // Показатели Availability за предыдущие сутки
@@ -262,9 +298,42 @@ public class ReportHandler {
                     count++;
                 }
             }
+            report.append("\n");
         }
         
-        return report.toString();
+        // Показатели PM (планово-предупредительного обслуживания)
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> pmData = (List<Map<String, Object>>) data.get("pmData");
+        if (pmData != null && !pmData.isEmpty()) {
+            report.append("🔧 ВЫПОЛНЕНИЕ PM:\n");
+            String yesterdayStr = yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+            
+            // Ищем данные за вчерашний день
+            for (Map<String, Object> item : pmData) {
+                String day = (String) item.get("production_day");
+                if (yesterdayStr.equals(day)) {
+                    Object plan = item.get("pm_plan");
+                    Object fact = item.get("pm_fact");
+                    Object percentage = item.get("pm_percentage");
+                    
+                    if (plan != null && fact != null && percentage != null) {
+                        report.append("• План: ").append(plan).append("\n");
+                        report.append("• Факт: ").append(fact).append("\n");
+                        report.append("• Выполнение: ").append(percentage).append("%\n");
+                    }
+                    break;
+                }
+            }
+        }
+        
+        String reportText = report.toString();
+        
+        // Ограничиваем длину сообщения (Telegram лимит 4096 символов)
+        if (reportText.length() > 4000) {
+            reportText = reportText.substring(0, 4000) + "\n\n... (сообщение обрезано)";
+        }
+        
+        return reportText;
     }
     
     private String formatCurrentReport(List<Map<String, Object>> bdMetrics, 
@@ -324,6 +393,13 @@ public class ReportHandler {
             }
         }
         
-        return report.toString();
+        String reportText = report.toString();
+        
+        // Ограничиваем длину сообщения (Telegram лимит 4096 символов)
+        if (reportText.length() > 4000) {
+            reportText = reportText.substring(0, 4000) + "\n\n... (сообщение обрезано)";
+        }
+        
+        return reportText;
     }
 }
