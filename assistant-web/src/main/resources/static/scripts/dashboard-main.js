@@ -30,8 +30,8 @@ const MainDashboard = {
             }
             // Сортируем по timestamp и берем последнее значение
             const sortedData = areaData.sort((a, b) => {
-                const timeA = a.timestamp ? new Date('1970-01-01 ' + a.timestamp) : new Date(0);
-                const timeB = b.timestamp ? new Date('1970-01-01 ' + b.timestamp) : new Date(0);
+                const timeA = a.timestamp ? new Date(a.timestamp) : new Date(0);
+                const timeB = b.timestamp ? new Date(b.timestamp) : new Date(0);
                 return timeA - timeB;
             });
             const last = sortedData[sortedData.length - 1];
@@ -220,6 +220,24 @@ const MainDashboard = {
         // Обновление таблицы ключевых линий каждые 3 минуты
         setInterval(async () => {
             await this.createKeyLinesMetricsTable();
+        }, 180000); // 3 минуты = 180000 мс
+        
+        // Обновление таблицы показателей участков (BD и Availability) каждые 3 минуты
+        setInterval(async () => {
+            try {
+                console.log('Начинаем обновление таблицы показателей участков...');
+                const { bdData, availabilityData } = await DashboardCharts.loadOnlineCharts();
+                console.log('Получены данные BD:', bdData);
+                console.log('Получены данные Availability:', availabilityData);
+                if (bdData || availabilityData) {
+                    this.createMetricsTable(bdData, availabilityData);
+                    console.log('Таблица показателей участков обновлена успешно');
+                } else {
+                    console.log('Нет данных для обновления таблицы показателей участков');
+                }
+            } catch (error) {
+                console.error('Ошибка при обновлении таблицы показателей участков:', error);
+            }
         }, 180000); // 3 минуты = 180000 мс
         
         // Обновление таблицы нарядов каждые 2 минуты

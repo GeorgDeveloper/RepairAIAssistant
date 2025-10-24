@@ -16,7 +16,7 @@ public class OnlineMetricsService {
      * Возвращает метрики BD (downtime_percentage) за последние 24 часа по всем областям
      */
     public List<Map<String, Object>> getBdMetrics() {
-        String sql = "SELECT area, DATE_FORMAT(last_update, '%H:%i') as timestamp, downtime_percentage as value " +
+        String sql = "SELECT area, last_update as timestamp, downtime_percentage as value " +
                      "FROM production_metrics_online " +
                      "WHERE last_update >= DATE_SUB(NOW(), INTERVAL 24 HOUR) " +
                      "ORDER BY last_update";
@@ -27,7 +27,7 @@ public class OnlineMetricsService {
      * Возвращает метрики Availability за последние 24 часа по всем областям
      */
     public List<Map<String, Object>> getAvailabilityMetrics() {
-        String sql = "SELECT area, DATE_FORMAT(last_update, '%H:%i') as timestamp, availability as value " +
+        String sql = "SELECT area, last_update as timestamp, availability as value " +
                      "FROM production_metrics_online " +
                      "WHERE last_update >= DATE_SUB(NOW(), INTERVAL 24 HOUR) " +
                      "ORDER BY last_update";
