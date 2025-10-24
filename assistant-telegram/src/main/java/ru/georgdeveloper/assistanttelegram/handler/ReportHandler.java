@@ -24,9 +24,26 @@ public class ReportHandler {
     private String webServiceUrl;
     
     private final RestTemplate restTemplate;
-    
+
     public ReportHandler(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
+    }
+
+    /**
+     * Определяет цветовой индикатор для показателя
+     * @param value значение показателя
+     * @param isBreakdown true для breakdown (чем меньше, тем лучше), false для availability (чем больше, тем лучше)
+     * @param targetValue целевое значение
+     * @return эмодзи индикатор
+     */
+    private String getColorIndicator(double value, boolean isBreakdown, double targetValue) {
+        if (isBreakdown) {
+            // Для breakdown: красный если больше целевого значения
+            return value > targetValue ? "🔴" : "🟢";
+        } else {
+            // Для availability: красный если меньше целевого значения
+            return value < targetValue ? "🔴" : "🟢";
+        }
     }
     
     public String getReportMenuMessage() {
@@ -62,7 +79,6 @@ public class ReportHandler {
             logger.info("Генерация отчета за сутки");
             
              // Получаем данные для отчета за предыдущие сутки
-             LocalDate yesterday = LocalDate.now().minusDays(1);
             
             Map<String, Object> reportData = new HashMap<>();
             
@@ -245,7 +261,9 @@ public class ReportHandler {
                  .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
                  .limit(5)
                  .forEach(entry -> {
-                     report.append("• ").append(entry.getKey()).append(" - ").append(String.format("%.2f", entry.getValue())).append("%\n");
+                     double value = entry.getValue();
+                     String colorIndicator = getColorIndicator(value, true, 2.0); // Целевое значение BD: 2%
+                     report.append("• ").append(colorIndicator).append(" ").append(entry.getKey()).append(" - ").append(String.format("%.2f", value)).append("%\n");
                  });
              
              report.append("\n");
@@ -264,7 +282,13 @@ public class ReportHandler {
                     if (yesterdayStr.equals(day)) {
                         Object downtime = item.get("downtime_percentage");
                         if (downtime != null) {
-                            report.append("• ").append(day).append(": ").append(downtime).append("%\n");
+                            try {
+                                double value = Double.parseDouble(downtime.toString());
+                                String colorIndicator = getColorIndicator(value, true, 2.0); // Целевое значение BD: 2%
+                                report.append("• ").append(colorIndicator).append(" ").append(day).append(": ").append(downtime).append("%\n");
+                            } catch (NumberFormatException e) {
+                                report.append("• ").append(day).append(": ").append(downtime).append("%\n");
+                            }
                         }
                         break;
                     }
@@ -273,115 +297,120 @@ public class ReportHandler {
             }
         }
         
-        // Показатели Availability за предыдущие сутки
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> availabilityData = (List<Map<String, Object>>) data.get("availability");
-        if (availabilityData != null && !availabilityData.isEmpty()) {
-            report.append("📈 ПОКАЗАТЕЛИ ДОСТУПНОСТИ:\n");
-            String yesterdayStr = yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-            
-            // Ищем данные за вчерашний день
-            for (Map<String, Object> item : availabilityData) {
-                String day = (String) item.get("production_day");
-                if (yesterdayStr.equals(day)) {
-                    Object availability = item.get("availability");
-                    if (availability != null) {
-                        report.append("• ").append(day).append(": ").append(availability).append("%\n");
-                    }
-                    break;
-                }
-            }
-            report.append("\n");
-        }
-        
-         // Топ поломок за неделю
-         @SuppressWarnings("unchecked")
-         List<Map<String, Object>> topBreakdowns = (List<Map<String, Object>>) data.get("topBreakdownsWeek");
-         logger.debug("Топ поломок за неделю: {} записей", topBreakdowns != null ? topBreakdowns.size() : 0);
-         if (topBreakdowns != null && !topBreakdowns.isEmpty()) {
-             report.append("🔧 ТОП ПОЛОМОК ЗА НЕДЕЛЮ:\n");
-             int count = 0;
-             for (Map<String, Object> item : topBreakdowns) {
-                 if (count >= 5) break; // Показываем только топ-5
-                 String machine = (String) item.get("machine_name");
-                 Object downtime = item.get("machine_downtime");
-                 logger.debug("Поломка: machine={}, downtime={}", machine, downtime);
-                 if (machine != null && downtime != null) {
-                     report.append("• ").append(machine).append(": ").append(downtime).append("\n");
-                     count++;
+         // Показатели Availability по участкам за предыдущие сутки (из current-metrics)
+         if (currentMetrics != null && !currentMetrics.isEmpty()) {
+             Map<String, Object> metrics = currentMetrics.get(0);
+             
+             report.append("📈 ПОКАЗАТЕЛИ ДОСТУПНОСТИ ПО УЧАСТКАМ:\n");
+             
+             // Маппинг участков как на веб-странице
+             String[] areaPrefixes = {
+                 "report_new_mixing_area", "report_semifinishing_area", "report_building_area",
+                 "report_curing_area", "report_finishig_area", "report_modules", "report_plant"
+             };
+             String[] areaNames = {
+                 "NewMixingArea", "SemifinishingArea", "BuildingArea",
+                 "CuringArea", "FinishigArea", "Modules", "Plant"
+             };
+             
+             Map<String, Double> areaAvailability = new HashMap<>();
+             for (int i = 0; i < areaPrefixes.length; i++) {
+                 String prefix = areaPrefixes[i];
+                 String areaName = areaNames[i];
+                 
+                 Object availabilityToday = metrics.get(prefix + "_availability_today");
+                 if (availabilityToday != null) {
+                     try {
+                         double value = Double.parseDouble(availabilityToday.toString());
+                         areaAvailability.put(areaName, value);
+                         logger.debug("Участок {}: Availability = {}", areaName, value);
+                     } catch (NumberFormatException e) {
+                         logger.warn("Некорректное значение Availability для участка {}: {}", areaName, availabilityToday);
+                     }
                  }
              }
+             
+             // Сортируем участки по убыванию Availability и показываем только топ-5
+             areaAvailability.entrySet().stream()
+                 .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                 .limit(5)
+                 .forEach(entry -> {
+                     double value = entry.getValue();
+                     String colorIndicator = getColorIndicator(value, false, 97.0); // Целевое значение Availability: 97%
+                     report.append("• ").append(colorIndicator).append(" ").append(entry.getKey()).append(" - ").append(String.format("%.2f", value)).append("%\n");
+                 });
+             
              report.append("\n");
          } else {
-             logger.debug("Нет данных о топ поломках за неделю");
-         }
-        
-         // Ключевые линии
-         @SuppressWarnings("unchecked")
-         List<Map<String, Object>> keyLines = (List<Map<String, Object>>) data.get("topBreakdownsWeekKeyLines");
-         logger.debug("Ключевые линии: {} записей", keyLines != null ? keyLines.size() : 0);
-         if (keyLines != null && !keyLines.isEmpty()) {
-             report.append("🏭 КЛЮЧЕВЫЕ ЛИНИИ (НЕДЕЛЯ):\n");
-             int count = 0;
-             for (Map<String, Object> item : keyLines) {
-                 if (count >= 5) break; // Показываем только топ-5
-                 String machine = (String) item.get("machine_name");
-                 Object downtime = item.get("machine_downtime");
-                 logger.debug("Ключевая линия: machine={}, downtime={}", machine, downtime);
-                 if (machine != null && downtime != null) {
-                     report.append("• ").append(machine).append(": ").append(downtime).append("\n");
-                     count++;
+             // Fallback на общие показатели
+             @SuppressWarnings("unchecked")
+             List<Map<String, Object>> availabilityData = (List<Map<String, Object>>) data.get("availability");
+             if (availabilityData != null && !availabilityData.isEmpty()) {
+                 report.append("📈 ПОКАЗАТЕЛИ ДОСТУПНОСТИ:\n");
+                 String yesterdayStr = yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+                 
+                 // Ищем данные за вчерашний день
+                 for (Map<String, Object> item : availabilityData) {
+                     String day = (String) item.get("production_day");
+                     if (yesterdayStr.equals(day)) {
+                         Object availability = item.get("availability");
+                         if (availability != null) {
+                             try {
+                                 double value = Double.parseDouble(availability.toString());
+                                 String colorIndicator = getColorIndicator(value, false, 97.0); // Целевое значение Availability: 97%
+                                 report.append("• ").append(colorIndicator).append(" ").append(day).append(": ").append(availability).append("%\n");
+                             } catch (NumberFormatException e) {
+                                 report.append("• ").append(day).append(": ").append(availability).append("%\n");
+                             }
+                         }
+                         break;
+                     }
                  }
+                 report.append("\n");
              }
-             report.append("\n");
-         } else {
-             logger.debug("Нет данных о ключевых линиях");
          }
         
-         // Показатели PM (планово-предупредительного обслуживания)
+         // Разделы "Топ поломок за неделю" и "Ключевые линии" удалены по запросу пользователя
+        
+         // Показатели PM (планово-предупредительного обслуживания) - общее за месяц
          @SuppressWarnings("unchecked")
          List<Map<String, Object>> pmData = (List<Map<String, Object>>) data.get("pmData");
          logger.debug("PM данные: {} записей", pmData != null ? pmData.size() : 0);
          if (pmData != null && !pmData.isEmpty()) {
-             report.append("🔧 ВЫПОЛНЕНИЕ PM:\n");
-             String yesterdayStr = yesterday.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-             logger.debug("Ищем PM данные за дату: {}", yesterdayStr);
+             report.append("🔧 ВЫПОЛНЕНИЕ PM (ТЕКУЩИЙ МЕСЯЦ):\n");
              
-             // Ищем данные за вчерашний день
-             boolean found = false;
+             // Суммируем данные за весь месяц
+             double totalPlan = 0;
+             double totalFact = 0;
+             double totalTag = 0;
+             
              for (Map<String, Object> item : pmData) {
-                 String day = (String) item.get("production_day");
-                 logger.debug("PM запись: day={}, plan={}, fact={}, tag={}", 
-                     day, item.get("plan"), item.get("fact"), item.get("tag"));
-                 if (yesterdayStr.equals(day)) {
-                     Object plan = item.get("plan");
-                     Object fact = item.get("fact");
-                     Object tag = item.get("tag");
-                     
-                     if (plan != null && fact != null) {
-                         report.append("• План: ").append(plan).append("\n");
-                         report.append("• Факт: ").append(fact).append("\n");
-                         if (tag != null) {
-                             report.append("• Tag: ").append(tag).append("\n");
-                         }
-                         // Вычисляем процент выполнения
-                         try {
-                             double planValue = Double.parseDouble(plan.toString());
-                             double factValue = Double.parseDouble(fact.toString());
-                             if (planValue > 0) {
-                                 double percentage = (factValue / planValue) * 100;
-                                 report.append("• Выполнение: ").append(String.format("%.1f", percentage)).append("%\n");
-                             }
-                         } catch (NumberFormatException e) {
-                             logger.warn("Ошибка при вычислении процента PM: {}", e.getMessage());
-                         }
-                         found = true;
-                     }
-                     break;
+                 Object plan = item.get("plan");
+                 Object fact = item.get("fact");
+                 Object tag = item.get("tag");
+                 
+                 logger.debug("PM запись: plan={}, fact={}, tag={}", plan, fact, tag);
+                 
+                 try {
+                     if (plan != null) totalPlan += Double.parseDouble(plan.toString());
+                     if (fact != null) totalFact += Double.parseDouble(fact.toString());
+                     if (tag != null) totalTag += Double.parseDouble(tag.toString());
+                 } catch (NumberFormatException e) {
+                     logger.warn("Ошибка при парсинге PM данных: {}", e.getMessage());
                  }
              }
-             if (!found) {
-                 logger.debug("Не найдены PM данные за дату {}", yesterdayStr);
+             
+             report.append("• План: ").append(String.format("%.0f", totalPlan)).append("\n");
+             report.append("• Факт: ").append(String.format("%.0f", totalFact)).append("\n");
+             report.append("• Tag: ").append(String.format("%.0f", totalTag)).append("\n");
+             
+             // Вычисляем процент выполнения
+             if (totalPlan > 0) {
+                 double percentage = (totalFact / totalPlan) * 100;
+                 String colorIndicator = getColorIndicator(percentage, false, 80.0); // Целевое значение PM: 80%
+                 report.append("• Выполнение: ").append(colorIndicator).append(" ").append(String.format("%.1f", percentage)).append("%\n");
+             } else {
+                 report.append("• Выполнение: 🔴 0.0%\n");
              }
          } else {
              logger.debug("Нет данных о PM");
@@ -425,14 +454,20 @@ public class ReportHandler {
                  }
              }
              
-             // Выводим только последние записи по каждому участку
-             latestByArea.values().stream()
-                 .sorted((a, b) -> ((String) a.get("area")).compareTo((String) b.get("area")))
-                 .forEach(item -> {
-                     String area = (String) item.get("area");
-                     Object value = item.get("value");
-                     report.append("• ").append(area).append(": ").append(value).append("%\n");
-                 });
+                   // Выводим только последние записи по каждому участку
+                   latestByArea.values().stream()
+                       .sorted((a, b) -> ((String) a.get("area")).compareTo((String) b.get("area")))
+                       .forEach(item -> {
+                           String area = (String) item.get("area");
+                           Object value = item.get("value");
+                           try {
+                               double numValue = Double.parseDouble(value.toString());
+                               String colorIndicator = getColorIndicator(numValue, true, 2.0); // Целевое значение BD: 2%
+                               report.append("• ").append(colorIndicator).append(" ").append(area).append(": ").append(value).append("%\n");
+                           } catch (NumberFormatException e) {
+                               report.append("• ").append(area).append(": ").append(value).append("%\n");
+                           }
+                       });
              
              report.append("\n");
          }
@@ -457,14 +492,20 @@ public class ReportHandler {
                  }
              }
              
-             // Выводим только последние записи по каждому участку
-             latestAvailabilityByArea.values().stream()
-                 .sorted((a, b) -> ((String) a.get("area")).compareTo((String) b.get("area")))
-                 .forEach(item -> {
-                     String area = (String) item.get("area");
-                     Object value = item.get("value");
-                     report.append("• ").append(area).append(": ").append(value).append("%\n");
-                 });
+                   // Выводим только последние записи по каждому участку
+                   latestAvailabilityByArea.values().stream()
+                       .sorted((a, b) -> ((String) a.get("area")).compareTo((String) b.get("area")))
+                       .forEach(item -> {
+                           String area = (String) item.get("area");
+                           Object value = item.get("value");
+                           try {
+                               double numValue = Double.parseDouble(value.toString());
+                               String colorIndicator = getColorIndicator(numValue, false, 97.0); // Целевое значение Availability: 97%
+                               report.append("• ").append(colorIndicator).append(" ").append(area).append(": ").append(value).append("%\n");
+                           } catch (NumberFormatException e) {
+                               report.append("• ").append(area).append(": ").append(value).append("%\n");
+                           }
+                       });
              
              report.append("\n");
          }
