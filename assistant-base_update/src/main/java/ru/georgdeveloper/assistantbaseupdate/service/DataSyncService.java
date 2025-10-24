@@ -1,11 +1,15 @@
 package ru.georgdeveloper.assistantbaseupdate.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.config.DataSyncProperties;
-import ru.georgdeveloper.assistantbaseupdate.util.TimeUtils;
-
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -19,14 +23,27 @@ import java.util.*;
  * 4. Сохранение результатов в MySQL (production_metrics_online)
  */
 @Service
-public class DataSyncService extends BaseSyncService {
+public class DataSyncService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DataSyncService.class);
+
+    @Autowired
+    private DataSyncProperties dataSyncProperties;
+
+    @Autowired
+    @Qualifier("sqlServerJdbcTemplate")
+    private JdbcTemplate sqlServerJdbcTemplate;
+
+    @Autowired
+    @Qualifier("mysqlJdbcTemplate")
+    private JdbcTemplate mysqlJdbcTemplate;
 
     /**
      * Планируемая задача синхронизации данных каждые 3 минуты
      */
     @Scheduled(cron = "${data-sync.schedule:0 */3 * * * ?}")
     public void syncData() {
-        if (!isSyncEnabled()) {
+        if (!dataSyncProperties.isEnabled()) {
             logger.debug("Синхронизация данных отключена в конфигурации");
             return;
         }
@@ -79,7 +96,7 @@ public class DataSyncService extends BaseSyncService {
 
         // 1. Определяем диапазон дат (с 08:00 текущего дня до 08:00 следующего дня)
         LocalDateTime[] dateRange = calculateDateRange();
-        String searchDate = formatDateForSearch(dateRange[0]);
+        String searchDate = dateRange[0].format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
 
         // 2. Получаем рабочее время из MySQL
         Double workingTime = getWorkingTime(area, searchDate);
@@ -91,11 +108,8 @@ public class DataSyncService extends BaseSyncService {
         // 3. Получаем время простоя из SQL Server
         Double downtime = getDowntimeFromSqlServer(area, dateRange[0], dateRange[1]);
 
-        // 4. Рассчитываем новое рабочее время по формуле: new_working_time = (working_time/(24*60))*3
-        Double newWorkingTime = calculateNewWorkingTime(workingTime);
-        
-        // 5. Рассчитываем инкрементальное рабочее время
-        Double incrementalWorkingTime = calculateIncrementalWorkingTime(newWorkingTime, dateRange[0]);
+        // 4. Рассчитываем инкрементальное рабочее время на основе количества прошедших 3-минутных интервалов
+        Double incrementalWorkingTime = calculateIncrementalWorkingTime(workingTime, dateRange[0]);
         
         // 6. Рассчитываем метрики
         Double downtimePercentage = calculateDowntimePercentage(downtime, incrementalWorkingTime);
@@ -104,8 +118,8 @@ public class DataSyncService extends BaseSyncService {
         // 7. Сохраняем в MySQL
         saveMetricsToMysql(area.getName(), downtime, incrementalWorkingTime, downtimePercentage, availability);
 
-        logger.debug("Область {} синхронизирована: downtime={}, wt={}, new_wt={}, incremental_wt={}, percentage={}, availability={}", 
-                   area.getName(), downtime, workingTime, newWorkingTime, incrementalWorkingTime, downtimePercentage, availability);
+        logger.debug("Область {} синхронизирована: downtime={}, wt={}, incremental_wt={}, percentage={}, availability={}", 
+                   area.getName(), downtime, workingTime, incrementalWorkingTime, downtimePercentage, availability);
     }
 
     /**
@@ -204,10 +218,48 @@ public class DataSyncService extends BaseSyncService {
     }
 
     private String minutesToTime(double totalMinutes) {
-        return TimeUtils.minutesToTime(totalMinutes);
+        int hours = (int) Math.floor(totalMinutes / 60.0);
+        int minutes = (int) Math.floor(totalMinutes % 60.0);
+        int seconds = (int) Math.floor((totalMinutes * 60.0) % 60.0);
+        return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds);
     }
 
+    /**
+     * Определяет диапазон дат для запроса (с 08:00 текущего дня до 08:00 следующего дня)
+     */
+    private LocalDateTime[] calculateDateRange() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startDate;
 
+        if (now.getHour() >= 8) {
+            // Если сейчас 08:00 или позже, начало диапазона - сегодня 08:00
+            startDate = now.withHour(8).withMinute(0).withSecond(0).withNano(0);
+        } else {
+            // Если сейчас раньше 08:00, начало диапазона - вчера 08:00
+            startDate = now.minusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0);
+        }
+
+        LocalDateTime endDate = startDate.plusDays(1);
+        return new LocalDateTime[]{startDate, endDate};
+    }
+
+    /**
+     * Получает рабочее время из MySQL для указанной области и даты
+     */
+    private Double getWorkingTime(DataSyncProperties.Area area, String searchDate) {
+        String sql = String.format("SELECT %s FROM %s WHERE date = ?", 
+                                  area.getWtColumn(), area.getWorkingTimeTable());
+        
+        try {
+            Double result = mysqlJdbcTemplate.queryForObject(sql, Double.class, searchDate);
+            logger.debug("Найдено рабочее время для {} на дату {}: {} мин", 
+                        area.getName(), searchDate, result);
+            return result;
+        } catch (Exception e) {
+            logger.debug("Данные для области {} на дату {} не найдены", area.getName(), searchDate);
+            return null;
+        }
+    }
 
     /**
      * Получает время простоя из SQL Server для указанной области и диапазона дат
@@ -246,7 +298,69 @@ public class DataSyncService extends BaseSyncService {
     }
 
 
+    /**
+     * Рассчитывает инкрементальное рабочее время на основе количества прошедших 3-минутных интервалов с начала смены
+     * 
+     * Логика:
+     * 1. Берем исходное working_time из БД
+     * 2. Делим на 480 интервалов (24 часа * 60 минут / 3 минуты = 480)
+     * 3. Умножаем на количество прошедших интервалов с начала смены
+     */
+    private Double calculateIncrementalWorkingTime(Double workingTime, LocalDateTime startDate) {
+        if (workingTime == null || workingTime == 0) {
+            return workingTime;
+        }
+        
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime currentStart = startDate;
+        LocalDateTime currentEnd = startDate.plusDays(1);
+        
+        // Если текущее время вне диапазона 08:00-08:00, возвращаем полное значение
+        if (now.isBefore(currentStart) || now.isAfter(currentEnd)) {
+            return workingTime;
+        }
+        
+        // Вычисляем количество прошедших 3-минутных интервалов с 08:00
+        long minutesFromStart = java.time.Duration.between(currentStart, now).toMinutes();
+        long intervalsPassed = minutesFromStart / 3; // Количество прошедших интервалов
+        
+        // Общее количество интервалов в сутках (24 часа * 60 минут / 3 минуты = 480)
+        long totalIntervals = 480;
+        
+        // Рассчитываем значение на один интервал
+        double valuePerInterval = workingTime / totalIntervals;
+        
+        // Рассчитываем текущее рабочее время: значение_на_интервал * количество_прошедших_интервалов
+        double currentWorkingTime = valuePerInterval * intervalsPassed;
+        
+        logger.debug("Расчет рабочего времени: исходное={} мин, интервалов прошло={}, значение на интервал={}, текущее={}", 
+                    workingTime, intervalsPassed, valuePerInterval, currentWorkingTime);
+        
+        return Math.round(currentWorkingTime * 100.0) / 100.0; // Округление до 2 знаков
+    }
     
+    /**
+     * Рассчитывает процент простоя
+     */
+    private Double calculateDowntimePercentage(Double downtime, Double workingTime) {
+        if (downtime == null || downtime == 0) {
+            return 0.0;
+        }
+        if (workingTime == null || workingTime == 0) {
+            return null; // NULL для MySQL
+        }
+        return Math.round((downtime / workingTime) * 100 * 100.0) / 100.0; // Округление до 2 знаков
+    }
+
+    /**
+     * Рассчитывает доступность оборудования
+     */
+    private Double calculateAvailability(Double downtimePercentage) {
+        if (downtimePercentage == null) {
+            return null; // NULL для MySQL
+        }
+        return Math.round((100 - downtimePercentage) * 100.0) / 100.0; // Округление до 2 знаков
+    }
 
     /**
      * Сохраняет метрики в MySQL
