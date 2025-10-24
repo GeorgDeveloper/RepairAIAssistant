@@ -220,6 +220,63 @@ public class WorkOrderService {
     }
     
     /**
+     * Получение детализации нарядов для конкретной даты и области
+     */
+    public List<Map<String, Object>> getBreakdownDetailsForDateAndArea(String date, String area) {
+        try {
+            List<WorkOrder> workOrders = workOrderRepository.findBreakdownDetailsForDateAndArea(date, area);
+            System.out.println("Found " + workOrders.size() + " breakdown details for date: " + date + ", area: " + area);
+            
+            List<Map<String, Object>> result = new ArrayList<>();
+            
+            for (WorkOrder workOrder : workOrders) {
+                // Получаем причину простоя
+                String pcsDftDesc = getPcsDftDesc(workOrder.getWoCodeName());
+                String downtimeType = getDowntimeType(pcsDftDesc);
+                
+                Map<String, Object> workOrderMap = new HashMap<>();
+                workOrderMap.put("idCode", workOrder.getIdCode());
+                workOrderMap.put("woCodeName", workOrder.getWoCodeName());
+                workOrderMap.put("machineName", workOrder.getMachineName());
+                workOrderMap.put("assembly", workOrder.getAssembly());
+                workOrderMap.put("subAssembly", workOrder.getSubAssembly());
+                workOrderMap.put("type", workOrder.getTypeWo());
+                workOrderMap.put("status", workOrder.getWoStatusLocalDescr());
+                workOrderMap.put("duration", formatDuration(workOrder.getDuration()));
+                workOrderMap.put("sDuration", workOrder.getSDuration());
+                workOrderMap.put("dateT1", workOrder.getDateT1());
+                workOrderMap.put("sDateT1", workOrder.getSDateT1());
+                workOrderMap.put("dateT4", workOrder.getDateT4());
+                workOrderMap.put("sDateT4", workOrder.getSDateT4());
+                workOrderMap.put("maintainers", workOrder.getMaintainers());
+                workOrderMap.put("comment", workOrder.getComment());
+                workOrderMap.put("initialComment", workOrder.getInitialComment());
+                workOrderMap.put("plantDepartmentGeographicalCodeName", workOrder.getPlantDepartmentGeographicalCodeName());
+                workOrderMap.put("woBreakDownTime", workOrder.getWoBreakDownTime());
+                workOrderMap.put("sWoBreakDownTime", workOrder.getSWoBreakDownTime());
+                workOrderMap.put("logisticTime", workOrder.getLogisticTime());
+                workOrderMap.put("sLogisticTime", workOrder.getSLogisticTime());
+                workOrderMap.put("ttr", workOrder.getTtr());
+                workOrderMap.put("sTtr", workOrder.getSTtr());
+                workOrderMap.put("workCenter", workOrder.getWorkCenter());
+                workOrderMap.put("customField01", workOrder.getCustomField01());
+                
+                // Добавляем информацию о причине простоя
+                workOrderMap.put("pcsDftDesc", pcsDftDesc);
+                workOrderMap.put("downtimeType", downtimeType);
+                
+                result.add(workOrderMap);
+            }
+            
+            return result;
+        } catch (Exception e) {
+            System.err.println("Error in getBreakdownDetailsForDateAndArea: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+    
+    /**
      * Форматирование длительности в читаемый вид
      */
     private String formatDuration(Integer duration) {

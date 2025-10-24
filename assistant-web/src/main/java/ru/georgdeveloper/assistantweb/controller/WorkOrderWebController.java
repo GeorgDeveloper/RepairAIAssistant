@@ -81,6 +81,32 @@ public class WorkOrderWebController {
     }
 
     /**
+     * Получение детализации нарядов для конкретной даты и области
+     */
+    @GetMapping("/breakdown-details")
+    @ResponseBody
+    public List<Map<String, Object>> getBreakdownDetails(@RequestParam("date") String date,
+                                                         @RequestParam("area") String area) {
+        try {
+            logger.debug("Запрос детализации нарядов к сервису: {} для даты: {}, области: {}", 
+                        baseUpdateServiceUrl, date, area);
+            return restTemplate.exchange(
+                baseUpdateServiceUrl + "/api/work-orders/breakdown-details?date=" + date + "&area=" + area,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+            ).getBody();
+        } catch (RestClientException e) {
+            logger.error("Ошибка подключения к сервису нарядов на работы ({}): {}", 
+                        baseUpdateServiceUrl, e.getMessage());
+            return new ArrayList<>();
+        } catch (Exception e) {
+            logger.error("Неожиданная ошибка при получении детализации нарядов: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
      * Поиск нарядов по ключевому слову
      */
     @GetMapping("/search")

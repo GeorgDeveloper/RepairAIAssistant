@@ -330,7 +330,11 @@ IndexDashboard.showIndicatorTable = async function(date) {
                     <td>BD</td>
                     <td>2%</td>
                     <td class="${getClass(bdMonth, 2)}">${formatValue(bdMonth)}</td>
-                    <td class="${getClass(bdToday, 2)}">${formatValue(bdToday)}</td>
+                    <td class="${getClass(bdToday, 2)} clickable-cell" 
+                        data-date="${date}" 
+                        data-area="${section.name}" 
+                        data-metric="BD" 
+                        title="Кликните для просмотра детализации">${formatValue(bdToday)}</td>
                 </tr>
                 <tr>
                     <td>Доступность</td>
@@ -342,6 +346,9 @@ IndexDashboard.showIndicatorTable = async function(date) {
         
         tableHTML += '</tbody></table>';
         document.getElementById('indicatorTableContainer').innerHTML = tableHTML;
+        
+        // Add click event listeners to clickable cells
+        addClickListenersToIndicatorTable();
         
         // Show the modal
         console.log('Showing modal');
@@ -373,23 +380,140 @@ IndexDashboard.addChartClickListeners = function() {
     }
 };
 
+// Function to add click listeners to indicator table cells
+function addClickListenersToIndicatorTable() {
+    const clickableCells = document.querySelectorAll('.clickable-cell');
+    clickableCells.forEach(cell => {
+        cell.addEventListener('click', function() {
+            const date = this.getAttribute('data-date');
+            const area = this.getAttribute('data-area');
+            const metric = this.getAttribute('data-metric');
+            
+            console.log('Cell clicked:', { date, area, metric });
+            showBreakdownDetails(date, area, metric);
+        });
+    });
+}
+
+// Function to map Russian area names to English area codes
+function mapAreaNameToCode(areaName) {
+    const areaMapping = {
+        'Резиносмешение': 'NewMixingArea',
+        'Сборка 1': 'SemifinishingArea', 
+        'Сборка 2': 'BuildingArea',
+        'Вулканизация': 'CuringArea',
+        'УЗО': 'FinishigArea',
+        'Модули': 'Modules',
+        'Завод': 'Plant'
+    };
+    return areaMapping[areaName] || areaName;
+}
+
+// Function to show breakdown details modal
+async function showBreakdownDetails(date, area, metric) {
+    try {
+        console.log('Fetching breakdown details for:', { date, area, metric });
+        
+        // Map area name to code
+        const areaCode = mapAreaNameToCode(area);
+        console.log('Mapped area:', area, '->', areaCode);
+        
+        // Set modal header info
+        document.getElementById('breakdownDate').textContent = date;
+        document.getElementById('breakdownArea').textContent = area;
+        
+        // Show loading state
+        document.getElementById('breakdownDetailsContainer').innerHTML = '<p>Загрузка данных...</p>';
+        document.getElementById('breakdownDetailsModal').style.display = 'flex';
+        
+        // Fetch breakdown details
+        const breakdownData = await DashboardAPI.fetchData(`/api/work-orders/breakdown-details?date=${date}&area=${areaCode}`);
+        
+        if (!breakdownData || breakdownData.length === 0) {
+            document.getElementById('breakdownDetailsContainer').innerHTML = '<p>Нет данных о нарядах для указанной даты и области</p>';
+            return;
+        }
+        
+        // Create breakdown details table
+        let tableHTML = `
+            <table class="breakdown-details-table">
+                <thead>
+                    <tr>
+                        <th>Наряд</th>
+                        <th>Машина</th>
+                        <th>Сборка</th>
+                        <th>Тип</th>
+                        <th>Статус</th>
+                        <th>Длительность</th>
+                        <th>Время начала</th>
+                        <th>Время окончания</th>
+                        <th>Причина простоя</th>
+                        <th>Комментарий</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+        
+        breakdownData.forEach(workOrder => {
+            const duration = workOrder.duration || '0.00:00';
+            const startTime = workOrder.sDateT1 || 'N/A';
+            const endTime = workOrder.sDateT4 || 'N/A';
+            const comment = workOrder.comment || workOrder.initialComment || 'N/A';
+            const downtimeType = workOrder.downtimeType || 'unknown';
+            const pcsDftDesc = workOrder.pcsDftDesc || 'N/A';
+            
+            // Add color coding based on downtime type
+            let rowClass = '';
+            if (downtimeType === 'electrical') rowClass = 'electrical-downtime';
+            else if (downtimeType === 'electronic') rowClass = 'electronic-downtime';
+            else if (downtimeType === 'mechanical') rowClass = 'mechanical-downtime';
+            
+            tableHTML += `
+                <tr class="${rowClass}">
+                    <td>${workOrder.woCodeName || 'N/A'}</td>
+                    <td>${workOrder.machineName || 'N/A'}</td>
+                    <td>${workOrder.assembly || 'N/A'}</td>
+                    <td>${workOrder.type || 'N/A'}</td>
+                    <td>${workOrder.status || 'N/A'}</td>
+                    <td>${duration}</td>
+                    <td>${startTime}</td>
+                    <td>${endTime}</td>
+                    <td>${pcsDftDesc}</td>
+                    <td class="comment-cell">${comment}</td>
+                </tr>`;
+        });
+        
+        tableHTML += '</tbody></table>';
+        document.getElementById('breakdownDetailsContainer').innerHTML = tableHTML;
+        
+    } catch (error) {
+        console.error('Ошибка при получении детализации нарядов:', error);
+        document.getElementById('breakdownDetailsContainer').innerHTML = '<p>Ошибка при загрузке данных</p>';
+    }
+}
+
 // Add event listener to close modal when clicking on the close button
 document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('indicatorModal');
-    const closeBtn = document.querySelector('.modal .close');
+    const indicatorModal = document.getElementById('indicatorModal');
+    const breakdownModal = document.getElementById('breakdownDetailsModal');
+    const closeBtns = document.querySelectorAll('.modal .close');
     
-    if (closeBtn) {
+    closeBtns.forEach(closeBtn => {
         closeBtn.addEventListener('click', function() {
             console.log('Close button clicked');
+            const modal = this.closest('.modal');
             modal.style.display = 'none';
         });
-    }
+    });
     
     // Close modal when clicking outside of it
     window.addEventListener('click', function(event) {
-        if (event.target === modal) {
-            console.log('Clicked outside modal');
-            modal.style.display = 'none';
+        if (event.target === indicatorModal) {
+            console.log('Clicked outside indicator modal');
+            indicatorModal.style.display = 'none';
+        }
+        if (event.target === breakdownModal) {
+            console.log('Clicked outside breakdown modal');
+            breakdownModal.style.display = 'none';
         }
     });
 });
