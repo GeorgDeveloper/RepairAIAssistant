@@ -1,4 +1,12 @@
 $(function(){
+    var monthsLimit = 12; // Значение по умолчанию
+
+    function loadConfig(){
+        $.getJSON('/final/config', function(config){
+            monthsLimit = config.monthsLimit || 12;
+        });
+    }
+
     function loadFilters(){
         $.getJSON('/final/years', function(years){
             var yopts = years.map(function(y){ return '<option value="'+ y.year +'">'+ y.year +'</option>'; }).join('');
@@ -26,7 +34,7 @@ $(function(){
         if (value == null || value === '') return '';
         
         // Для процентных значений форматируем с точностью до сотых
-        if (metricName.includes('%') || metricName.includes('Доступность') || metricName.includes('BD') || metricName.includes('Плановые ремонты')) {
+        if (metricName.includes('%') || metricName.includes('Доступность') || metricName.includes('BD') || metricName.includes('Факт выполнения ппр')) {
             var num = parseFloat(value);
             if (!isNaN(num)) {
                 return num.toFixed(2);
@@ -80,7 +88,7 @@ $(function(){
         var years = Array.isArray(yearsVal) ? yearsVal : (yearsVal? [yearsVal] : []);
         var months = Array.isArray(monthsVal) ? monthsVal : (monthsVal? [monthsVal] : []);
         var parts = [];
-        parts.push('limit=6');
+        parts.push('limit=' + monthsLimit);
         var yq = serializeMulti('year', years);
         var mq = serializeMulti('month', months);
         if (yq) parts.push(yq);
@@ -95,6 +103,7 @@ $(function(){
     $('#yearSelect').on('change', function(){ refreshMonths(); });
     $('#applyBtn').on('click', function(){ loadData(); });
 
+    loadConfig();
     loadFilters();
     loadData();
 });

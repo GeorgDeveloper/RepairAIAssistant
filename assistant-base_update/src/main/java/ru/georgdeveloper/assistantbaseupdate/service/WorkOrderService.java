@@ -8,9 +8,11 @@ import ru.georgdeveloper.assistantbaseupdate.repository.sqlserver.WorkOrderRepos
 import ru.georgdeveloper.assistantbaseupdate.repository.sqlserver.WOM_WorkOrderRepository;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class WorkOrderService {
@@ -23,15 +25,36 @@ public class WorkOrderService {
     
     /**
      * Получение последних 20 нарядов на работы для отображения в таблице
+     * Сортировка по приоритету статусов: Запрашиваемый -> В исполнении -> Условный -> Выполнено -> Закрыто
      */
     public List<Map<String, Object>> getLast15WorkOrders() {
         try {
-            List<WorkOrder> workOrders = workOrderRepository.findLast15WorkOrders(PageRequest.of(0, 20));
+            // Получаем 50 последних нарядов для сортировки
+            List<WorkOrder> workOrders = workOrderRepository.findLast15WorkOrders(PageRequest.of(0, 50));
             System.out.println("Found " + workOrders.size() + " work orders");
+            
+            // Определяем приоритет статусов
+            Map<String, Integer> statusPriority = new HashMap<>();
+            statusPriority.put("Запрашиваемый", 1);
+            statusPriority.put("В исполнении", 2);
+            statusPriority.put("Условный", 3);
+            statusPriority.put("Выполнено", 4);
+            statusPriority.put("Закрыто", 5);
+            
+            // Сортируем по приоритету статуса, затем берем первые 20
+            List<WorkOrder> sortedWorkOrders = workOrders.stream()
+                    .sorted(Comparator.comparing((WorkOrder wo) -> {
+                        String status = wo.getWoStatusLocalDescr();
+                        return statusPriority.getOrDefault(status != null ? status : "", 999);
+                    }))
+                    .limit(20)
+                    .collect(Collectors.toList());
+            
+            // System.out.println("After sorting, selected " + sortedWorkOrders.size() + " work orders");
             
             List<Map<String, Object>> result = new ArrayList<>();
             
-            for (WorkOrder workOrder : workOrders) {
+            for (WorkOrder workOrder : sortedWorkOrders) {
                 // Получаем причину простоя
                 String pcsDftDesc = getPcsDftDesc(workOrder.getWoCodeName());
                 String downtimeType = getDowntimeType(pcsDftDesc);
