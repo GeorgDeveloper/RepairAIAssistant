@@ -96,7 +96,7 @@ $(function(){
         var url = '/final/data' + (parts.length? ('?'+ parts.join('&')) : '');
         $.getJSON(url, function(rows){
             renderTable(rows);
-            updateHeadMonths(rows);
+            // updateHeadMonths(rows);
         });
     }
 

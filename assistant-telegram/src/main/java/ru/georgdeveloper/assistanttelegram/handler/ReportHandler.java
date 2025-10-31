@@ -185,32 +185,6 @@ public class ReportHandler {
         }
     }
     
-    private List<Map<String, Object>> fetchDataWithParams(String endpoint, String... params) {
-        try {
-            StringBuilder url = new StringBuilder(webServiceUrl + endpoint);
-            if (params.length > 0) {
-                url.append("?");
-                for (int i = 0; i < params.length; i += 2) {
-                    if (i > 0) url.append("&");
-                    url.append(params[i]).append("=").append(params[i + 1]);
-                }
-            }
-            
-            logger.debug("Запрос данных с параметрами: {}", url);
-            
-            return restTemplate.exchange(
-                url.toString(),
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-            ).getBody();
-            
-        } catch (Exception e) {
-            logger.warn("Ошибка при получении данных с параметрами {}: {}", endpoint, e.getMessage());
-            return new ArrayList<>();
-        }
-    }
-    
     private String formatDailyReport(Map<String, Object> data) {
         StringBuilder report = new StringBuilder();
         LocalDate yesterday = LocalDate.now().minusDays(1);
