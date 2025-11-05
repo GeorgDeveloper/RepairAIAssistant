@@ -480,16 +480,20 @@ function createCustomLegend(datasets, rawData) {
     const legendContainer = document.getElementById('customLegend');
     legendContainer.innerHTML = '';
     
-    // Создаем объект для хранения данных по каждому типу поломки
-    const failureTypeData = {};
+    // Создаем объект для хранения данных по каждому dataset (с учетом года в режиме сравнения)
+    const datasetData = {};
     
     // Собираем данные из rawData для отображения в легенде
     rawData.forEach(item => {
         const type = item.failure_type?.trim();
         if (!type) return;
         
-        if (!failureTypeData[type]) {
-            failureTypeData[type] = {
+        // Формируем ключ для dataset: если есть год, используем формат "тип (год)", иначе просто "тип"
+        const year = item.year ? parseInt(item.year) : null;
+        const datasetKey = year ? `${type} (${year})` : type;
+        
+        if (!datasetData[datasetKey]) {
+            datasetData[datasetKey] = {
                 totalDowntime: 0,
                 totalCount: 0
             };
@@ -498,8 +502,8 @@ function createCustomLegend(datasets, rawData) {
         const downtimeSeconds = item.total_downtime_seconds ? parseFloat(item.total_downtime_seconds) : 0;
         const count = item.failure_count ? parseInt(item.failure_count) : 0;
         
-        failureTypeData[type].totalDowntime += downtimeSeconds;
-        failureTypeData[type].totalCount += count;
+        datasetData[datasetKey].totalDowntime += downtimeSeconds;
+        datasetData[datasetKey].totalCount += count;
     });
     
     datasets.forEach(dataset => {
@@ -511,7 +515,7 @@ function createCustomLegend(datasets, rawData) {
         colorBox.style.cssText = `width: 20px; height: 3px; background-color: ${dataset.borderColor}; margin-right: 8px; border-radius: 2px;`;
         
         const label = document.createElement('span');
-        const typeData = failureTypeData[dataset.label] || { totalDowntime: 0, totalCount: 0 };
+        const typeData = datasetData[dataset.label] || { totalDowntime: 0, totalCount: 0 };
         const downtimeText = formatTimeFromSeconds(typeData.totalDowntime);
         label.textContent = `${dataset.label} (${downtimeText}, ${typeData.totalCount} случаев)`;
         label.style.fontSize = '12px';
@@ -585,12 +589,61 @@ function toggleChartType() {
 }
 
 function generateLabels(data, params) {
+    // Проверяем, есть ли данные с годом для сравнения
+    const hasYearData = data.length > 0 && data[0].year != null;
+    const hasMultipleYears = params.year && params.year.length > 1 && !params.year.includes('all');
+    const hasMultipleMonths = params.month && params.month.length > 1 && !params.month.includes('all');
+    const hasMonthSelected = params.month && params.month.length > 0 && !params.month.includes('all');
+    const hasYearSelected = params.year && params.year.length > 0 && !params.year.includes('all');
+    
+    // Если выбраны месяцы и годы для сравнения (несколько месяцев ИЛИ несколько годов)
+    if (hasMonthSelected && hasYearSelected && (hasMultipleMonths || hasMultipleYears)) {
+        // Проверяем, есть ли данные с month и year для сравнения
+        const hasMonthInData = data.length > 0 && data[0].month != null;
+        
+        if (hasMonthInData && hasYearData) {
+            // Сравнение месяцев по годам или годов по месяцам
+            // Используем только названия месяцев, без года - данные для разных годов будут рядом
+            const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+            const months = [...new Set(data.map(item => parseInt(item.month)))].sort((a, b) => a - b);
+            
+            // Создаем метки только по месяцам: "янв", "фев", "мар"...
+            const labels = months.map(month => monthAbbr[month - 1]);
+            return labels;
+        }
+    }
+    
     // Если выбран год и не выбран месяц, группируем по месяцам
-    if (params.year && params.year.length > 0 && !params.year.includes('all') &&
-        (!params.month || params.month.includes('all'))) {
-        const uniqueMonths = [...new Set(data.map(item => parseInt(item.period_label)))].sort((a, b) => a - b);
-        const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-        return uniqueMonths.map(month => monthAbbr[month - 1]);
+    if (hasYearSelected && (!hasMonthSelected || params.month.includes('all'))) {
+        if (hasMultipleYears && hasYearData) {
+            // Сравнение нескольких годов по месяцам
+            // Используем только названия месяцев, без года - данные для разных годов будут рядом
+            const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+            const months = [...new Set(data.map(item => parseInt(item.period_label)))].sort((a, b) => a - b);
+            
+            // Создаем метки только по месяцам: "янв", "фев", "мар"...
+            const labels = months.map(month => monthAbbr[month - 1]);
+            return labels;
+        } else {
+            // Один год - обычные метки месяцев
+            const uniqueMonths = [...new Set(data.map(item => parseInt(item.period_label)))].sort((a, b) => a - b);
+            const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+            return uniqueMonths.map(month => monthAbbr[month - 1]);
+        }
+    }
+    
+    // Если выбраны месяцы (для сравнения или одного месяца), но нет года в данных
+    if (hasMonthSelected && !hasYearData) {
+        // Используем period_label как есть (это недели)
+        const uniqueLabels = [...new Set(data.map(item => item.period_label))].sort((a, b) => {
+            const aNum = parseInt(a);
+            const bNum = parseInt(b);
+            if (!isNaN(aNum) && !isNaN(bNum)) {
+                return aNum - bNum;
+            }
+            return a > b ? 1 : -1;
+        });
+        return uniqueLabels;
     }
     
     // По умолчанию используем period_label как есть
@@ -612,45 +665,122 @@ function generateDowntimeDatasets(data, labels) {
         '#417505', '#7B68EE', '#FF6347', '#32CD32', '#FFD700', '#FF69B4', '#00CED1', '#FF4500'
     ];
     
-    return uniqueTypes.map((type, index) => {
-        const chartData = labels.map((label, labelIndex) => {
-            // Определяем номер месяца для поиска
-            let monthNumber = null;
-            if (label.length <= 3 && ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'].includes(label)) {
-                const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-                monthNumber = monthAbbr.indexOf(label) + 1;
-            }
+    // Проверяем, есть ли данные с годом и месяцем для сравнения
+    const hasYearData = data.length > 0 && data[0].year != null;
+    const hasMonthData = data.length > 0 && data[0].month != null;
+    const hasMultipleYears = data.some(item => item.year != null) && 
+                           [...new Set(data.map(item => item.year).filter(y => y != null))].length > 1;
+    const hasMultipleMonths = data.some(item => item.month != null) && 
+                           [...new Set(data.map(item => item.month).filter(m => m != null))].length > 1;
+    
+    // Режим сравнения: если есть несколько годов ИЛИ несколько месяцев с данными
+    if (hasYearData && (hasMultipleYears || (hasMonthData && hasMultipleMonths))) {
+        // Режим сравнения: создаем dataset для каждого типа поломки + года
+        // Используем расширенную палитру цветов для уникальности
+        const yearColors = [
+            '#4A90E2', '#F5A623', '#7ED321', '#BD10E0', '#50E3C2', '#B8E986', '#9013FE', '#D0021B',
+            '#417505', '#7B68EE', '#FF6347', '#32CD32', '#FFD700', '#FF69B4', '#00CED1', '#FF4500',
+            '#8E44AD', '#E67E22', '#1ABC9C', '#3498DB', '#9B59B6', '#F39C12', '#16A085', '#2980B9',
+            '#C0392B', '#D35400', '#27AE60', '#2ECC71', '#E74C3C', '#95A5A6', '#34495E', '#7F8C8D'
+        ];
+        const datasets = [];
+        let colorIndex = 0;
+        
+        uniqueTypes.forEach(type => {
+            const yearValues = data.map(item => item.year ? parseInt(item.year) : null).filter(y => y != null && !isNaN(y));
+            const years = [...new Set(yearValues)].sort();
             
-            const items = data.filter(item => {
-                const itemType = item.failure_type?.trim();
-                const itemPeriod = parseInt(item.period_label);
+            years.forEach(year => {
+                const chartData = labels.map(label => {
+                    // Преобразуем label в строку для безопасности
+                    const labelStr = String(label);
+                    // Теперь label - это просто название месяца: "янв", "фев" и т.д.
+                    const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+                    const monthNum = monthAbbr.indexOf(labelStr) + 1;
+                    
+                    if (monthNum > 0) {
+                        const items = data.filter(item => {
+                            const itemType = item.failure_type?.trim();
+                            const itemYear = item.year ? parseInt(item.year) : null;
+                            // Если есть поле month в данных, используем его, иначе period_label
+                            const itemMonth = item.month ? parseInt(item.month) : parseInt(item.period_label);
+                            return itemType === type && itemYear === year && itemMonth === monthNum;
+                        });
+                        
+                        return items.reduce((sum, item) => sum + (parseFloat(item.total_downtime_seconds) || 0), 0);
+                    }
+                    return 0;
+                });
                 
-                if (itemType !== type) return false;
-                
-                if (monthNumber !== null) {
-                    return itemPeriod === monthNumber;
-                } else {
-                    return item.period_label == label;
-                }
+                datasets.push({
+                    label: `${type} (${year})`,
+                    data: chartData,
+                    borderColor: yearColors[colorIndex % yearColors.length],
+                    backgroundColor: yearColors[colorIndex % yearColors.length] + '80',
+                    tension: 0.1,
+                    borderWidth: 2
+                });
+                colorIndex++;
             });
-            
-            // Суммируем время простоя в секундах
-            const totalSeconds = items.reduce((sum, item) => {
-                return sum + (parseFloat(item.total_downtime_seconds) || 0);
-            }, 0);
-            
-            return totalSeconds;
         });
         
-        return {
-            label: type,
-            data: chartData,
-            borderColor: colors[index % colors.length],
-            backgroundColor: colors[index % colors.length] + '80',
-            tension: 0.1,
-            borderWidth: 2
-        };
-    });
+        return datasets;
+    } else {
+        // Обычный режим без сравнения
+        return uniqueTypes.map((type, index) => {
+            const chartData = labels.map((label, labelIndex) => {
+                // Преобразуем label в строку для безопасности
+                const labelStr = String(label);
+                // Определяем номер месяца для поиска
+                let monthNumber = null;
+                let labelYear = null;
+                
+                // Парсим метку вида "янв 2024" или просто "янв"
+                const parts = labelStr.split(' ');
+                if (parts.length === 2) {
+                    const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+                    monthNumber = monthAbbr.indexOf(parts[0]) + 1;
+                    labelYear = parseInt(parts[1]);
+                } else if (labelStr.length <= 3 && ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'].includes(labelStr)) {
+                    const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+                    monthNumber = monthAbbr.indexOf(labelStr) + 1;
+                }
+                
+                const items = data.filter(item => {
+                    const itemType = item.failure_type?.trim();
+                    const itemPeriod = parseInt(item.period_label);
+                    
+                    if (itemType !== type) return false;
+                    
+                    if (monthNumber !== null) {
+                        if (labelYear !== null && hasYearData) {
+                            const itemYear = parseInt(item.year);
+                            return itemPeriod === monthNumber && itemYear === labelYear;
+                        }
+                        return itemPeriod === monthNumber;
+                    } else {
+                        return item.period_label == label;
+                    }
+                });
+                
+                // Суммируем время простоя в секундах
+                const totalSeconds = items.reduce((sum, item) => {
+                    return sum + (parseFloat(item.total_downtime_seconds) || 0);
+                }, 0);
+                
+                return totalSeconds;
+            });
+            
+            return {
+                label: type,
+                data: chartData,
+                borderColor: colors[index % colors.length],
+                backgroundColor: colors[index % colors.length] + '80',
+                tension: 0.1,
+                borderWidth: 2
+            };
+        });
+    }
 }
 
 function generateCountDatasets(data, labels) {
@@ -660,40 +790,117 @@ function generateCountDatasets(data, labels) {
         '#417505', '#7B68EE', '#FF6347', '#32CD32', '#FFD700', '#FF69B4', '#00CED1', '#FF4500'
     ];
     
-    return uniqueTypes.map((type, index) => {
-        const chartData = labels.map((label, labelIndex) => {
-            // Определяем номер месяца для поиска
-            let monthNumber = null;
-            if (label.length <= 3 && ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'].includes(label)) {
-                const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-                monthNumber = monthAbbr.indexOf(label) + 1;
-            }
+    // Проверяем, есть ли данные с годом и месяцем для сравнения
+    const hasYearData = data.length > 0 && data[0].year != null;
+    const hasMonthData = data.length > 0 && data[0].month != null;
+    const hasMultipleYears = data.some(item => item.year != null) && 
+                           [...new Set(data.map(item => item.year).filter(y => y != null))].length > 1;
+    const hasMultipleMonths = data.some(item => item.month != null) && 
+                           [...new Set(data.map(item => item.month).filter(m => m != null))].length > 1;
+    
+    // Режим сравнения: если есть несколько годов ИЛИ несколько месяцев с данными
+    if (hasYearData && (hasMultipleYears || (hasMonthData && hasMultipleMonths))) {
+        // Режим сравнения: создаем dataset для каждого типа поломки + года
+        // Используем расширенную палитру цветов для уникальности
+        const yearColors = [
+            '#4A90E2', '#F5A623', '#7ED321', '#BD10E0', '#50E3C2', '#B8E986', '#9013FE', '#D0021B',
+            '#417505', '#7B68EE', '#FF6347', '#32CD32', '#FFD700', '#FF69B4', '#00CED1', '#FF4500',
+            '#8E44AD', '#E67E22', '#1ABC9C', '#3498DB', '#9B59B6', '#F39C12', '#16A085', '#2980B9',
+            '#C0392B', '#D35400', '#27AE60', '#2ECC71', '#E74C3C', '#95A5A6', '#34495E', '#7F8C8D'
+        ];
+        const datasets = [];
+        let colorIndex = 0;
+        
+        uniqueTypes.forEach(type => {
+            const yearValues = data.map(item => item.year ? parseInt(item.year) : null).filter(y => y != null && !isNaN(y));
+            const years = [...new Set(yearValues)].sort();
             
-            const items = data.filter(item => {
-                const itemType = item.failure_type?.trim();
-                const itemPeriod = parseInt(item.period_label);
+            years.forEach(year => {
+                const chartData = labels.map(label => {
+                    // Преобразуем label в строку для безопасности
+                    const labelStr = String(label);
+                    // Теперь label - это просто название месяца: "янв", "фев" и т.д.
+                    const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+                    const monthNum = monthAbbr.indexOf(labelStr) + 1;
+                    
+                    if (monthNum > 0) {
+                        const items = data.filter(item => {
+                            const itemType = item.failure_type?.trim();
+                            const itemYear = item.year ? parseInt(item.year) : null;
+                            // Если есть поле month в данных, используем его, иначе period_label
+                            const itemMonth = item.month ? parseInt(item.month) : parseInt(item.period_label);
+                            return itemType === type && itemYear === year && itemMonth === monthNum;
+                        });
+                        
+                        return items.reduce((sum, item) => sum + (parseInt(item.failure_count) || 0), 0);
+                    }
+                    return 0;
+                });
                 
-                if (itemType !== type) return false;
-                
-                if (monthNumber !== null) {
-                    return itemPeriod === monthNumber;
-                } else {
-                    return item.period_label == label;
-                }
+                datasets.push({
+                    label: `${type} (${year})`,
+                    data: chartData,
+                    borderColor: yearColors[colorIndex % yearColors.length],
+                    backgroundColor: yearColors[colorIndex % yearColors.length] + '80',
+                    tension: 0.1,
+                    borderWidth: 2
+                });
+                colorIndex++;
             });
-            
-            return items.reduce((sum, item) => sum + (parseInt(item.failure_count) || 0), 0);
         });
         
-        return {
-            label: type,
-            data: chartData,
-            borderColor: colors[index % colors.length],
-            backgroundColor: colors[index % colors.length] + '80',
-            tension: 0.1,
-            borderWidth: 2
-        };
-    });
+        return datasets;
+    } else {
+        // Обычный режим без сравнения
+        return uniqueTypes.map((type, index) => {
+            const chartData = labels.map((label, labelIndex) => {
+                // Преобразуем label в строку для безопасности
+                const labelStr = String(label);
+                // Определяем номер месяца для поиска
+                let monthNumber = null;
+                let labelYear = null;
+                
+                // Парсим метку вида "янв 2024" или просто "янв"
+                const parts = labelStr.split(' ');
+                if (parts.length === 2) {
+                    const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+                    monthNumber = monthAbbr.indexOf(parts[0]) + 1;
+                    labelYear = parseInt(parts[1]);
+                } else if (labelStr.length <= 3 && ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'].includes(labelStr)) {
+                    const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+                    monthNumber = monthAbbr.indexOf(labelStr) + 1;
+                }
+                
+                const items = data.filter(item => {
+                    const itemType = item.failure_type?.trim();
+                    const itemPeriod = parseInt(item.period_label);
+                    
+                    if (itemType !== type) return false;
+                    
+                    if (monthNumber !== null) {
+                        if (labelYear !== null && hasYearData) {
+                            const itemYear = parseInt(item.year);
+                            return itemPeriod === monthNumber && itemYear === labelYear;
+                        }
+                        return itemPeriod === monthNumber;
+                    } else {
+                        return item.period_label == label;
+                    }
+                });
+                
+                return items.reduce((sum, item) => sum + (parseInt(item.failure_count) || 0), 0);
+            });
+            
+            return {
+                label: type,
+                data: chartData,
+                borderColor: colors[index % colors.length],
+                backgroundColor: colors[index % colors.length] + '80',
+                tension: 0.1,
+                borderWidth: 2
+            };
+        });
+    }
 }
 
 function getXAxisTitle(params) {
