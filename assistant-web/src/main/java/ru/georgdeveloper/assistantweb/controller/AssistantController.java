@@ -65,6 +65,11 @@ public class AssistantController {
         return "dinamic_bd";
     }
 
+    @GetMapping("/dinamic_type")
+    public String dinamicType() {
+        return "dinamic_type";
+    }
+
     @GetMapping("/top_causes")
     public String topCauses() {
         return "top_causes";
