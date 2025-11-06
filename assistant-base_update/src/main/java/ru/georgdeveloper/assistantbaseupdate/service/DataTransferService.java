@@ -12,8 +12,8 @@ import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 /**
  * Сервис для ежедневного переноса данных из SQL Server в MySQL
@@ -29,6 +29,8 @@ public class DataTransferService {
 
     @Autowired
     private JdbcTemplate mysqlJdbcTemplate;
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     /**
      * Ежедневный перенос данных в 8:00 утра
@@ -94,8 +96,8 @@ public class DataTransferService {
         }
     }
 
-    /**
-     * Перенос данных из SQL Server в MySQL
+     /**
+     * Перенос данных из SQL Server в MySQL с автоматической разбивкой длинных нарядов
      */
     private int transferDataFromSqlServer(LocalDateTime startDateTime, LocalDateTime endDateTime) {
         String sql = """
@@ -116,6 +118,170 @@ public class DataTransferService {
         
         logger.info("Найдено {} записей для переноса (диапазон [{} .. {}])", rows.size(), startDateTime, endDateTime);
         
+        int successCount = 0;
+        int errorCount = 0;
+        int splitOrdersCount = 0;
+
+        for (int i = 0; i < rows.size(); i++) {
+            try {
+                Map<String, Object> row = rows.get(i);
+                String codeValue = getStringValue(row.get("WOCodeName"));
+                
+                logger.info("--- Обработка наряда код: {} ---", codeValue);
+                
+                // Парсим даты из SQL Server
+                LocalDateTime startBdT1 = parseSqlServerDateTime(row.get("Date_T1"));
+                LocalDateTime startMaintT2 = parseSqlServerDateTime(row.get("Date_T2"));
+                LocalDateTime stopMaintT3 = parseSqlServerDateTime(row.get("Date_T3"));
+                LocalDateTime stopBdT4 = parseSqlServerDateTime(row.get("Date_T4"));
+                
+                logger.info("Времена из SQL Server:");
+                logger.info("  T1: {}", startBdT1);
+                logger.info("  T2: {}", startMaintT2);
+                logger.info("  T3: {}", stopMaintT3);
+                logger.info("  T4: {}", stopBdT4);
+                logger.info("  SDuration: {}", row.get("SDuration"));
+                
+                // Проверяем длительность в SQL Server
+                int durationMinutes = parseDurationToMinutes(getStringValue(row.get("SDuration")));
+                logger.info("Длительность наряда из SDuration: {} минут ({:.2f} часов)", 
+                    durationMinutes, durationMinutes / 60.0);
+                
+                // Проверяем, нужно ли разбивать наряд (более 23:59)
+                if (durationMinutes > 1439 && startBdT1 != null && stopBdT4 != null) {
+                    logger.info("⚡ НАЙДЕН ДЛИТЕЛЬНЫЙ НАРЯД, ВЫПОЛНЯЕМ РАЗБИВКУ ПО СМЕНАМ...");
+                    
+                    int partsCreated = splitAndTransferOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4);
+                    successCount += partsCreated;
+                    splitOrdersCount++;
+                    logger.info("✅ Наряд разбит на {} частей", partsCreated);
+                } else {
+                    // Если не нужно разбивать, просто переносим наряд как есть
+                    transferSingleOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4, durationMinutes);
+                    successCount++;
+                }
+                
+                if ((i + 1) % 50 == 0) {
+                    logger.info("Обработано {} записей", i + 1);
+                }
+                
+            } catch (Exception e) {
+                errorCount++;
+                logger.error("Ошибка при обработке записи {}: {}", i + 1, e.getMessage(), e);
+            }
+        }
+        
+        logger.info("Перенос данных завершен. Успешно: {}, Ошибок: {}, Разбито нарядов: {}", 
+            successCount, errorCount, splitOrdersCount);
+        return successCount;
+    }
+
+     /**
+     * Разбивка длинного наряда на части по границам смен
+     */
+    private int splitAndTransferOrder(Map<String, Object> row, LocalDateTime startBdT1, 
+                                    LocalDateTime startMaintT2, LocalDateTime stopMaintT3, 
+                                    LocalDateTime stopBdT4) {
+        List<LocalDateTime> shiftBoundaries = getAllShiftBoundaries(startBdT1, stopBdT4);
+        logger.info("Все границы смен: {}", formatDateTimeList(shiftBoundaries));
+        
+        // Все точки разбивки: начало + все границы смен + конец
+        List<LocalDateTime> splitPoints = new ArrayList<>();
+        splitPoints.add(startBdT1);
+        splitPoints.addAll(shiftBoundaries);
+        splitPoints.add(stopBdT4);
+        
+        int partsCreated = 0;
+        logger.info("Всего будет создано {} частей", splitPoints.size() - 1);
+        
+        // Создаем части наряда
+        for (int i = 0; i < splitPoints.size() - 1; i++) {
+            LocalDateTime partStart = splitPoints.get(i);
+            LocalDateTime partEnd = splitPoints.get(i + 1);
+            
+            // Определяем T2 и T3 для каждой части
+            LocalDateTime partStartMaintT2;
+            LocalDateTime partStopMaintT3;
+            
+            if (i == 0) {
+                // Первая часть - используем оригинальные T2 и T3 (ограниченные)
+                partStartMaintT2 = (startMaintT2 != null && !startMaintT2.isBefore(partStart)) ? startMaintT2 : partStart;
+                partStopMaintT3 = (stopMaintT3 != null && stopMaintT3.isBefore(partEnd)) ? stopMaintT3 : partEnd;
+            } else {
+                // Остальные части - T2 и T3 равны границам смен
+                partStartMaintT2 = partStart;
+                partStopMaintT3 = partEnd;
+            }
+            
+            // Рассчитываем все необходимые поля
+            int partDuration = calculateDurationMinutes(partStart, partEnd);
+            Time partDowntime = formatDowntime(partDuration);
+            
+            // Расчет TTR (Time To Repair) - разница между T1 и T4
+            int partTtrMinutes = calculateDurationMinutes(partStart, partEnd);
+            Time partTtr = formatDowntime(partTtrMinutes);
+            
+            // Расчет T2_minus_T1 - разница между T2 и T1
+            int partT2MinusT1Minutes = calculateDurationMinutes(partStart, partStartMaintT2);
+            Time partT2MinusT1 = formatDowntime(partT2MinusT1Minutes);
+            
+            // Вставляем запись в MySQL
+            transferOrderPart(row, partStart, partStartMaintT2, partStopMaintT3, partEnd, 
+                            partDowntime, partTtr, partT2MinusT1);
+            partsCreated++;
+            
+            logger.info("✅ Часть {}:", i + 1);
+            logger.info("   T1: {}", formatDateTime(partStart));
+            logger.info("   T2: {}", formatDateTime(partStartMaintT2));
+            logger.info("   T3: {}", formatDateTime(partStopMaintT3));
+            logger.info("   T4: {}", formatDateTime(partEnd));
+            logger.info("   downtime: {}", partDowntime);
+            logger.info("   ttr: {}", partTtr);
+            logger.info("   t2_minus_t1: {}", partT2MinusT1);
+        }
+        
+        return partsCreated;
+    }
+
+
+        /**
+     * Получить ВСЕ границы смен (08:00) между startTime и endTime
+     */
+    private List<LocalDateTime> getAllShiftBoundaries(LocalDateTime startTime, LocalDateTime endTime) {
+        List<LocalDateTime> boundaries = new ArrayList<>();
+        
+        // Начинаем с дня startTime
+        LocalDate currentDay = startTime.toLocalDate();
+        
+        // Первая граница - 08:00 текущего дня (если startTime раньше 08:00)
+        LocalDateTime firstShiftBoundary = currentDay.atTime(8, 0);
+        if (startTime.isBefore(firstShiftBoundary) && firstShiftBoundary.isBefore(endTime)) {
+            boundaries.add(firstShiftBoundary);
+        }
+        
+        // Добавляем границы следующих дней
+        currentDay = currentDay.plusDays(1);
+        while (true) {
+            LocalDateTime shiftBoundary = currentDay.atTime(8, 0);
+            if (shiftBoundary.isBefore(endTime)) {
+                boundaries.add(shiftBoundary);
+                currentDay = currentDay.plusDays(1);
+            } else {
+                break;
+            }
+        }
+        
+        Collections.sort(boundaries);
+        return boundaries;
+    }
+
+     /**
+     * Перенос одной части наряда
+     */
+    private void transferOrderPart(Map<String, Object> row, LocalDateTime startBdT1, 
+                                 LocalDateTime startMaintT2, LocalDateTime stopMaintT3, 
+                                 LocalDateTime stopBdT4, Time machineDowntime, Time ttr, 
+                                 Time t2MinusT1) {
         String insertSql = """
             INSERT INTO equipment_maintenance_records (
                 machine_name, mechanism_node, additional_kit, description, code, 
@@ -125,100 +291,183 @@ public class DataTransferService {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
-        int successCount = 0;
-        int errorCount = 0;
+        Object[] data = {
+            getStringValue(row.get("MachineName")),
+            getStringValue(row.get("Assembly")),
+            getStringValue(row.get("SubAssembly")),
+            getStringValue(row.get("InitialComment")),
+            getStringValue(row.get("WOCodeName")),
+            getStringValue(row.get("TYPEWO")),
+            startBdT1,
+            startMaintT2,
+            stopMaintT3,
+            stopBdT4,
+            machineDowntime,
+            ttr,
+            t2MinusT1,
+            getStringValue(row.get("WOStatusLocalDescr")),
+            getStringValue(row.get("Maintainers")),
+            getStringValue(row.get("comment")),
+            getStringValue(row.get("PlantDepartmentGeographicalCodeName")),
+            LocalDateTime.now()
+        };
+        
+        mysqlJdbcTemplate.update(insertSql, data);
+    }
 
-        for (int i = 0; i < rows.size(); i++) {
-            try {
-                Map<String, Object> row = rows.get(i);
-                
-                // Преобразование времени из строкового формата
-                Time machineDowntime = parseSqlTime((String) row.get("SDuration"));
-                Time ttr = parseSqlTime((String) row.get("STTR"));
-                Time t2MinusT1 = parseSqlTime((String) row.get("SLogisticTimeMin"));
-                
-                // Подготовка данных для вставки
-                Object[] data = {
-                    getStringValue(row.get("MachineName")),
-                    getStringValue(row.get("Assembly")),
-                    getStringValue(row.get("SubAssembly")),
-                    getStringValue(row.get("InitialComment")),
-                    getStringValue(row.get("WOCodeName")),
-                    getStringValue(row.get("TYPEWO")),
-                    row.get("Date_T1"),
-                    row.get("Date_T2"),
-                    row.get("Date_T3"),
-                    row.get("Date_T4"),
-                    machineDowntime,
-                    ttr,
-                    t2MinusT1,
-                    getStringValue(row.get("WOStatusLocalDescr")),
-                    getStringValue(row.get("Maintainers")),
-                    getStringValue(row.get("comment")),
-                    getStringValue(row.get("PlantDepartmentGeographicalCodeName")),
-                    LocalDateTime.now()
-                };
-                
-                mysqlJdbcTemplate.update(insertSql, data);
-                successCount++;
-                
-                if ((i + 1) % 50 == 0) {
-                    logger.info("Обработано {} записей", i + 1);
-                }
-                
-            } catch (Exception e) {
-                errorCount++;
-                logger.error("Ошибка при обработке записи {}: {}", i + 1, e.getMessage());
+    /**
+     * Перенос обычного наряда (без разбивки)
+     */
+    private void transferSingleOrder(Map<String, Object> row, LocalDateTime startBdT1, 
+                                   LocalDateTime startMaintT2, LocalDateTime stopMaintT3, 
+                                   LocalDateTime stopBdT4, int durationMinutes) {
+        // Расчет для обычного наряда
+        int downtimeMinutes = durationMinutes > 0 ? durationMinutes : calculateDurationMinutes(startBdT1, stopBdT4);
+        Time downtime = formatDowntime(downtimeMinutes);
+        
+        int ttrMinutes = calculateDurationMinutes(startBdT1, stopBdT4);
+        Time ttr = formatDowntime(ttrMinutes);
+        
+        int t2MinusT1Minutes = calculateDurationMinutes(startBdT1, startMaintT2);
+        Time t2MinusT1 = formatDowntime(t2MinusT1Minutes);
+        
+        transferOrderPart(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4, 
+                         downtime, ttr, t2MinusT1);
+        
+        logger.info("✓ Обычный наряд, создана запись:");
+        logger.info("   downtime: {}", downtime);
+        logger.info("   ttr: {}", ttr);
+        logger.info("   t2_minus_t1: {}", t2MinusT1);
+    }
+
+    /**
+     * Вспомогательные методы для работы с датами и временем
+     */
+    
+    private LocalDateTime parseSqlServerDateTime(Object dateValue) {
+        if (dateValue == null) return null;
+        
+        try {
+            if (dateValue instanceof LocalDateTime) {
+                return (LocalDateTime) dateValue;
+            } else if (dateValue instanceof java.sql.Timestamp) {
+                return ((java.sql.Timestamp) dateValue).toLocalDateTime();
+            } else if (dateValue instanceof java.sql.Date) {
+                return ((java.sql.Date) dateValue).toLocalDate().atStartOfDay();
+            } else {
+                // Попробуем распарсить строку
+                String dateStr = dateValue.toString().trim();
+                // Добавьте здесь логику парсинга строки при необходимости
+                return LocalDateTime.parse(dateStr.replace(' ', 'T')); // упрощенный парсинг
             }
+        } catch (Exception e) {
+            logger.warn("Ошибка парсинга даты '{}': {}", dateValue, e.getMessage());
+            return null;
+        }
+    }
+
+    private int parseDurationToMinutes(String durationStr) {
+        if (durationStr == null || durationStr.trim().isEmpty()) {
+            return 0;
         }
         
-        logger.info("Перенос данных завершен. Успешно: {}, Ошибок: {}", successCount, errorCount);
-        return successCount;
+        try {
+            // Форматы: "26:10", "2:35", "123:45"
+            if (durationStr.contains(":")) {
+                String[] parts = durationStr.split(":");
+                if (parts.length == 2) {
+                    int hours = Integer.parseInt(parts[0]);
+                    int minutes = Integer.parseInt(parts[1]);
+                    return hours * 60 + minutes;
+                }
+            }
+            return 0;
+        } catch (Exception e) {
+            logger.warn("Ошибка парсинга длительности '{}': {}", durationStr, e.getMessage());
+            return 0;
+        }
     }
+
+    private int calculateDurationMinutes(LocalDateTime start, LocalDateTime end) {
+        if (start == null || end == null) return 0;
+        
+        try {
+            return (int) java.time.Duration.between(start, end).toMinutes();
+        } catch (Exception e) {
+            logger.warn("Ошибка расчета длительности: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    private Time formatDowntime(int minutes) {
+        if (minutes <= 0) {
+            return Time.valueOf(LocalTime.of(0, 0));
+        }
+        
+        // Ограничиваем максимум 23:59 (1439 минут)
+        if (minutes > 1439) {
+            minutes = 1439;
+        }
+        
+        int hours = minutes / 60;
+        int mins = minutes % 60;
+        return Time.valueOf(LocalTime.of(hours, mins));
+    }
+
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATE_FORMATTER) : "null";
+    }
+
+    private List<String> formatDateTimeList(List<LocalDateTime> dateTimes) {
+        return dateTimes.stream()
+                .map(this::formatDateTime)
+                .toList();
+    }
+
 
     /**
      * Парсинг времени из SQL Server формата
      */
-    private Time parseSqlTime(String timeStr) {
-        if (timeStr == null || timeStr.trim().isEmpty()) {
-            return null;
-        }
+    // private Time parseSqlTime(String timeStr) {
+    //     if (timeStr == null || timeStr.trim().isEmpty()) {
+    //         return null;
+    //     }
         
-        try {
-            timeStr = timeStr.trim();
+    //     try {
+    //         timeStr = timeStr.trim();
             
-            if (timeStr.contains(":")) {
-                String[] parts = timeStr.split(":");
+    //         if (timeStr.contains(":")) {
+    //             String[] parts = timeStr.split(":");
                 
-                if (parts.length == 2) {
-                    // Формат "часы:минуты"
-                    int hours = Integer.parseInt(parts[0]);
-                    int minutes = Integer.parseInt(parts[1]);
-                    return Time.valueOf(LocalTime.of(hours, minutes, 0));
-                } else if (parts.length == 3) {
-                    // Формат "часы:минуты:секунды"
-                    int hours = Integer.parseInt(parts[0]);
-                    int minutes = Integer.parseInt(parts[1]);
-                    String secondsPart = parts[2];
-                    int seconds = secondsPart.contains(".") ? 
-                        (int) Double.parseDouble(secondsPart) : 
-                        Integer.parseInt(secondsPart);
-                    return Time.valueOf(LocalTime.of(hours, minutes, seconds));
-                }
-            } else if (timeStr.matches("\\d+")) {
-                // Время в минутах
-                int totalMinutes = Integer.parseInt(timeStr);
-                int hours = totalMinutes / 60;
-                int minutes = totalMinutes % 60;
-                return Time.valueOf(LocalTime.of(hours, minutes, 0));
-            }
+    //             if (parts.length == 2) {
+    //                 // Формат "часы:минуты"
+    //                 int hours = Integer.parseInt(parts[0]);
+    //                 int minutes = Integer.parseInt(parts[1]);
+    //                 return Time.valueOf(LocalTime.of(hours, minutes, 0));
+    //             } else if (parts.length == 3) {
+    //                 // Формат "часы:минуты:секунды"
+    //                 int hours = Integer.parseInt(parts[0]);
+    //                 int minutes = Integer.parseInt(parts[1]);
+    //                 String secondsPart = parts[2];
+    //                 int seconds = secondsPart.contains(".") ? 
+    //                     (int) Double.parseDouble(secondsPart) : 
+    //                     Integer.parseInt(secondsPart);
+    //                 return Time.valueOf(LocalTime.of(hours, minutes, seconds));
+    //             }
+    //         } else if (timeStr.matches("\\d+")) {
+    //             // Время в минутах
+    //             int totalMinutes = Integer.parseInt(timeStr);
+    //             int hours = totalMinutes / 60;
+    //             int minutes = totalMinutes % 60;
+    //             return Time.valueOf(LocalTime.of(hours, minutes, 0));
+    //         }
             
-        } catch (Exception e) {
-            logger.warn("Ошибка преобразования времени '{}': {}", timeStr, e.getMessage());
-        }
+    //     } catch (Exception e) {
+    //         logger.warn("Ошибка преобразования времени '{}': {}", timeStr, e.getMessage());
+    //     }
         
-        return null;
-    }
+    //     return null;
+    // }
 
     private int executeWithRetry(java.util.function.Supplier<Integer> operation, String operationName) {
         int maxRetries = 3;

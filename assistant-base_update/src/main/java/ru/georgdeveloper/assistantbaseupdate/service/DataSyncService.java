@@ -266,6 +266,8 @@ public class DataSyncService {
      */
     private Double getDowntimeFromSqlServer(DataSyncProperties.Area area, LocalDateTime startDate, LocalDateTime endDate) {
         StringBuilder sql = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        
         sql.append("SELECT SUM(Duration) as total_duration ");
         sql.append("FROM REP_BreakdownReport ");
         sql.append("WHERE ");
@@ -273,30 +275,35 @@ public class DataSyncService {
         sql.append("AND (Comment NOT LIKE '%Cause:%Ошибочный запрос%' AND Comment NOT LIKE '%Cause:%Ложный вызов%') ");
         sql.append("AND NOT (LEN(Comment) BETWEEN 15 AND 19 AND WOStatusLocalDescr LIKE '%Закрыто%') ");
         sql.append("AND TYPEWO NOT LIKE '%Tag%' ");
+        
+        // Добавляем параметры дат
+        params.add(startDate);
+        params.add(endDate);
+        params.add(startDate);
+        params.add(endDate);
 
-        // Добавляем фильтр по области, если он задан
-        if (area.getFilterColumn() != null && area.getFilterValue() != null) {
+        // Специальная логика для Modules - фильтрация по участку FinishigArea и модулям A-1, A-2, A-3
+        if ("Modules".equals(area.getName())) {
+            sql.append("AND PlantDepartmentGeographicalCodeName = 'FinishigArea' ");
+            sql.append("AND MachineName IN ('Module A-1', 'Module A-2', 'Module A-3') ");
+        } 
+        // Для остальных областей используем стандартную фильтрацию
+        else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
             sql.append("AND ").append(area.getFilterColumn()).append(" = ? ");
+            params.add(area.getFilterValue());
         }
 
         try {
-            Double result;
-            if (area.getFilterColumn() != null && area.getFilterValue() != null) {
-                result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
-                                                             startDate, endDate, startDate, endDate, area.getFilterValue());
-            } else {
-                result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
-                                                             startDate, endDate, startDate, endDate);
-            }
-            
+            Double result = sqlServerJdbcTemplate.queryForObject(sql.toString(), params.toArray(), Double.class);
             return result != null ? result : 0.0;
         } catch (Exception e) {
             logger.error("Ошибка получения данных простоя из SQL Server для области {}: {}", 
                         area.getName(), e.getMessage());
+            logger.error("SQL запрос: {}", sql.toString());
+            logger.error("Параметры: {}", params);
             return 0.0;
         }
     }
-
 
     /**
      * Рассчитывает инкрементальное рабочее время на основе количества прошедших 3-минутных интервалов с начала смены
