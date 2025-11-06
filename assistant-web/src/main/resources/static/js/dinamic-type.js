@@ -3,10 +3,40 @@ let currentMode = 'downtime';
 let chartType = 'line';
 let chartData = null;
 let showLabels = false;
+let drillChart = null;
+let drillLevel = 0; // 0 none, 1 equipment, 2 causes, 3 mechanisms
+let currentFailureType = null;
+let currentPeriod = null;
+let currentYear = null; // Год из dataset.label
+let currentMachine = null;
+let currentCause = null;
+let currentParams = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     loadInitialData();
+    
+    // Обработчики для модального окна drill-down
+    const closeBtn = document.getElementById('closeBtn');
+    const backBtn = document.getElementById('backBtn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+    
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            if (drillLevel === 4) {
+                drillToMechanisms();
+            } else if (drillLevel === 3) {
+                drillToCauses();
+            } else if (drillLevel === 2) {
+                openDrilldownEquipment(currentFailureType, currentPeriod, currentYear);
+            } else {
+                closeModal();
+            }
+        });
+    }
 });
 
 function setupEventListeners() {
@@ -471,9 +501,119 @@ function createMainChart() {
                         text: getXAxisTitle(chartData.params)
                     }
                 }
+            },
+            interaction: {
+                mode: 'nearest',
+                intersect: false
+            },
+            onClick: (_evt, elems) => {
+                console.log('Chart clicked', elems);
+                if (!elems?.length) return;
+                const element = elems[0];
+                const datasetIndex = element.datasetIndex;
+                const dataIndex = element.index;
+                
+                const dataset = mainChart.data.datasets[datasetIndex];
+                let failureType = dataset.label;
+                let year = null;
+                
+                // Извлекаем год из названия если есть (формат: "Тип поломки (2024)")
+                if (failureType.includes(' (')) {
+                    const match = failureType.match(/\((\d{4})\)/);
+                    if (match) {
+                        year = parseInt(match[1]);
+                        failureType = failureType.split(' (')[0];
+                    }
+                }
+                
+                const periodLabel = mainChart.data.labels[dataIndex];
+                
+                console.log('Opening drill-down:', { failureType, periodLabel, year });
+                
+                // Сохраняем текущие параметры фильтров
+                currentParams = chartData.params;
+                currentFailureType = failureType;
+                currentPeriod = periodLabel;
+                currentYear = year;
+                
+                openDrilldownEquipment(failureType, periodLabel, year);
             }
         }
     });
+    
+    // Альтернативный способ обработки клика для line charts
+    // Используем обработчик на canvas, так как onClick в options может не работать для всех типов графиков
+    const canvas = document.getElementById('mainChart');
+    if (canvas && mainChart) {
+        // Удаляем старый обработчик если есть
+        if (canvas._chartClickHandler) {
+            canvas.removeEventListener('click', canvas._chartClickHandler);
+        }
+        
+        // Создаем новый обработчик
+        canvas._chartClickHandler = (evt) => {
+            console.log('Canvas clicked', evt);
+            if (!mainChart) {
+                console.log('Chart not initialized');
+                return;
+            }
+            
+            // Пробуем разные режимы определения точки клика
+            let points = mainChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+            
+            if (!points.length) {
+                // Для line charts пробуем режим 'index'
+                points = mainChart.getElementsAtEventForMode(evt, 'index', { intersect: false }, true);
+            }
+            
+            if (!points.length) {
+                // Пробуем режим 'point'
+                points = mainChart.getElementsAtEventForMode(evt, 'point', { intersect: true }, true);
+            }
+            
+            if (points.length) {
+                console.log('Found points:', points.length, points[0]);
+                handleChartClick(points[0]);
+            } else {
+                console.log('No points found at click position');
+            }
+        };
+        
+        canvas.addEventListener('click', canvas._chartClickHandler);
+        console.log('Chart click handler attached');
+    }
+}
+
+function handleChartClick(element) {
+    if (!element) return;
+    
+    const datasetIndex = element.datasetIndex;
+    const dataIndex = element.index;
+    
+    const dataset = mainChart.data.datasets[datasetIndex];
+    let failureType = dataset.label;
+    let year = null;
+    
+    // Извлекаем год из названия если есть (формат: "Тип поломки (2024)")
+    if (failureType.includes(' (')) {
+        const match = failureType.match(/\((\d{4})\)/);
+        if (match) {
+            year = parseInt(match[1]);
+            failureType = failureType.split(' (')[0];
+        }
+    }
+    
+    const periodLabel = mainChart.data.labels[dataIndex];
+    
+    console.log('Opening drill-down:', { failureType, periodLabel, year });
+    
+    // Сохраняем текущие параметры фильтров
+    currentParams = chartData.params;
+    currentFailureType = failureType;
+    currentPeriod = periodLabel;
+    currentYear = year;
+    
+    openDrilldownEquipment(failureType, periodLabel, year);
 }
 
 function createCustomLegend(datasets, rawData) {
@@ -925,4 +1065,582 @@ function showError(message) {
     errorDiv.style.display = 'block';
     setTimeout(() => errorDiv.style.display = 'none', 5000);
 }
+
+// Drill-down functions
+function openModal() {
+    document.getElementById('drillModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('drillModal').style.display = 'none';
+    drillLevel = 0;
+    currentFailureType = null;
+    currentPeriod = null;
+    currentYear = null;
+    currentMachine = null;
+    currentCause = null;
+    if (drillChart) {
+        drillChart.destroy();
+        drillChart = null;
+    }
+}
+
+async function openDrilldownEquipment(failureType, periodLabel, year) {
+    currentFailureType = failureType;
+    currentPeriod = periodLabel;
+    currentYear = year;
+    drillLevel = 1;
+    
+    const titleParts = [`Тип поломки: ${failureType}`, `Период: ${periodLabel}`];
+    if (year) titleParts.push(`Год: ${year}`);
+    document.getElementById('modalTitle').innerText = titleParts.join(' — ');
+    document.getElementById('backBtn').style.display = 'none';
+    openModal();
+    
+    // Преобразуем период в даты для запроса с учетом года
+    const dateRange = getDateRangeFromPeriod(periodLabel, currentParams, year);
+    
+    const params = new URLSearchParams();
+    if (dateRange.dateFrom) params.append('dateFrom', dateRange.dateFrom);
+    if (dateRange.dateTo) params.append('dateTo', dateRange.dateTo);
+    // Фильтруем по типу поломки - показываем оборудование с поломками этого типа
+    params.append('failureType', failureType);
+    
+    // Добавляем фильтры из текущих параметров
+    if (currentParams.area && !currentParams.area.includes('all')) {
+        currentParams.area.forEach(area => params.append('area', area));
+    }
+    if (currentParams.equipment && !currentParams.equipment.includes('all')) {
+        currentParams.equipment.forEach(equipment => params.append('equipment', equipment));
+    }
+    
+    try {
+        const data = await fetch('/top-equipment/data?' + params.toString()).then(r => r.json());
+        renderDrillChart('Оборудование', data, item => {
+            currentMachine = item.label;
+            drillToCauses();
+        });
+    } catch (error) {
+        console.error('Ошибка загрузки оборудования:', error);
+        showError('Ошибка загрузки данных оборудования');
+    }
+}
+
+async function drillToCauses() {
+    drillLevel = 2;
+    document.getElementById('backBtn').style.display = 'inline-block';
+    
+    // Используем период и год для запроса
+    const dateRange = getDateRangeFromPeriod(currentPeriod, currentParams, currentYear);
+    const params = new URLSearchParams();
+    params.append('machine', currentMachine);
+    if (dateRange.dateFrom) params.append('dateFrom', dateRange.dateFrom);
+    if (dateRange.dateTo) params.append('dateTo', dateRange.dateTo);
+    
+    // Фильтруем по типу поломки - показываем только причины, относящиеся к запрашиваемому типу
+    if (currentFailureType) {
+        params.append('failureType', currentFailureType);
+    }
+    
+    // Добавляем фильтры из текущих параметров
+    if (currentParams.area && !currentParams.area.includes('all')) {
+        currentParams.area.forEach(area => params.append('area', area));
+    }
+    
+    try {
+        // Получаем причины, отфильтрованные по типу поломки на сервере
+        let data = await fetch('/top-equipment/drilldown/causes?' + params.toString()).then(r => r.json());
+        
+        // Дополнительная фильтрация на клиенте по failure_type (если поле есть в данных)
+        if (currentFailureType && data.length > 0 && data[0].failure_type !== undefined) {
+            const requestedType = currentFailureType.trim();
+            data = data.filter(item => {
+                const itemType = (item.failure_type || '').trim();
+                return itemType === requestedType;
+            });
+        }
+        
+        // Фильтруем причины, оставляя только те, у которых cause не пустой
+        const validCauses = data.filter(item => {
+            const cause = (item.cause || item.label || '').trim();
+            return cause !== '' && cause !== null && cause !== undefined;
+        });
+        
+        // Если нет валидных причин (все пустые), пропускаем уровни причин и механизмов, переходим сразу к событиям
+        if (validCauses.length === 0) {
+            console.log('No valid causes found, skipping to events directly');
+            currentCause = ''; // Устанавливаем пустую строку для cause
+            // Переходим сразу к событиям для данного оборудования с фильтром по типу поломки
+            drillToEventsDirectly();
+            return;
+        }
+        
+        // Если есть валидные причины, показываем их
+        renderDrillChart('Причины', validCauses, item => {
+            currentCause = item.label;
+            drillToMechanisms();
+        });
+    } catch (error) {
+        console.error('Ошибка загрузки причин:', error);
+        showError('Ошибка загрузки данных причин');
+    }
+}
+
+async function drillToMechanisms() {
+    drillLevel = 3;
+    document.getElementById('backBtn').style.display = 'inline-block';
+    
+    // Если и тип, и cause пустые - переходим сразу к событиям
+    if ((!currentFailureType || currentFailureType.trim() === '') && 
+        (!currentCause || currentCause.trim() === '')) {
+        console.log('Both failureType and cause are empty, skipping to events');
+        drillToEvents('all');
+        return;
+    }
+    
+    // Используем период и год для запроса
+    const dateRange = getDateRangeFromPeriod(currentPeriod, currentParams, currentYear);
+    const params = new URLSearchParams();
+    params.append('machine', currentMachine);
+    
+    // Если cause пустой, используем пустую строку (для SQL это будет TRIM(cause) = '')
+    // SQL запрос использует TRIM(cause) = ?, поэтому пустая строка будет искать записи с пустым cause
+    params.append('cause', currentCause || '');
+    
+    if (dateRange.dateFrom) params.append('dateFrom', dateRange.dateFrom);
+    if (dateRange.dateTo) params.append('dateTo', dateRange.dateTo);
+    
+    if (currentParams.area && !currentParams.area.includes('all')) {
+        currentParams.area.forEach(area => params.append('area', area));
+    }
+    
+    try {
+        // Получаем механизмы для данного оборудования и причины (или без причины, если cause пустой)
+        let data = await fetch('/top-equipment/drilldown/mechanisms?' + params.toString()).then(r => r.json());
+        
+        // Фильтруем по типу поломки на клиенте (если поле есть в данных)
+        // Механизмы должны относиться к запрашиваемому типу поломки
+        if (currentFailureType && currentFailureType.trim() !== '' && data.length > 0) {
+            // Если в данных есть поле failure_type, фильтруем по нему
+            if (data[0].failure_type !== undefined) {
+                const requestedType = currentFailureType.trim();
+                data = data.filter(item => {
+                    const itemType = (item.failure_type || '').trim();
+                    return itemType === requestedType;
+                });
+            }
+            // Если поля нет, но есть тип - данные уже должны быть отфильтрованы на сервере
+        }
+        
+        // Фильтруем механизмы, оставляя только валидные (не пустые и не "Не указан")
+        const validMechanisms = data.filter(item => {
+            const mechanism = (item.mechanism_node || item.label || '').trim();
+            return mechanism !== '' && mechanism !== null && mechanism !== undefined && mechanism !== 'Не указан';
+        });
+        
+        // Если нет валидных механизмов, переходим к событиям
+        if (validMechanisms.length === 0) {
+            console.log('No valid mechanisms found, skipping to events');
+            drillToEvents('all');
+            return;
+        }
+        
+        renderDrillChart('Узлы/механизмы', validMechanisms, item => drillToEvents(item.label));
+    } catch (error) {
+        console.error('Ошибка загрузки механизмов:', error);
+        showError('Ошибка загрузки данных механизмов');
+    }
+}
+
+// Функция для прямого запроса событий для оборудования без фильтрации по cause и mechanism
+async function drillToEventsDirectly() {
+    drillLevel = 4;
+    document.getElementById('backBtn').style.display = 'inline-block';
+    
+    // Используем период и год для запроса
+    const dateRange = getDateRangeFromPeriod(currentPeriod, currentParams, currentYear);
+    
+    try {
+        console.log('Getting all events directly for:', { machine: currentMachine, failureType: currentFailureType, dateRange });
+        
+        // Используем новый endpoint для получения всех событий для оборудования
+        const params = new URLSearchParams();
+        params.append('machine', currentMachine);
+        if (dateRange.dateFrom) params.append('dateFrom', dateRange.dateFrom);
+        if (dateRange.dateTo) params.append('dateTo', dateRange.dateTo);
+        if (currentFailureType && currentFailureType.trim() !== '') {
+            params.append('failureType', currentFailureType);
+        }
+        if (currentParams.area && !currentParams.area.includes('all')) {
+            currentParams.area.forEach(area => params.append('area', area));
+        }
+        
+        // Используем новый endpoint /drilldown/all-events
+        const events = await fetch('/top-equipment/drilldown/all-events?' + params.toString()).then(r => r.json());
+        
+        console.log('Events received:', events.length);
+        
+        // Сортируем по дате (новые сверху)
+        events.sort((a, b) => {
+            const dateA = new Date(a.start_bd_t1 || 0);
+            const dateB = new Date(b.start_bd_t1 || 0);
+            return dateB - dateA;
+        });
+        
+        const titleParts = ['События'];
+        if (currentFailureType) titleParts.push(currentFailureType);
+        titleParts.push(currentMachine || '');
+        titleParts.push(currentPeriod || '');
+        document.getElementById('modalTitle').innerText = titleParts.join(' — ');
+        
+        console.log('Final events to display:', events.length);
+        renderEventsTable('События', events);
+    } catch (error) {
+        console.error('Ошибка загрузки событий:', error);
+        showError('Ошибка загрузки данных событий: ' + error.message);
+    }
+}
+
+async function drillToEvents(mechanism) {
+    drillLevel = 4;
+    document.getElementById('backBtn').style.display = 'inline-block';
+    
+    // Используем период и год для запроса
+    const dateRange = getDateRangeFromPeriod(currentPeriod, currentParams, currentYear);
+    const params = new URLSearchParams();
+    params.append('machine', currentMachine);
+    
+    // Если mechanism = 'all', это означает, что мы пропустили уровень механизмов
+    // В этом случае используем пустую строку для cause (если он пустой) и не передаем конкретный механизм
+    // Но бэкенд требует обязательный параметр mechanism, поэтому передаем пустую строку
+    // SQL запрос использует COALESCE(TRIM(mechanism_node), 'Не указан'), поэтому пустая строка будет искать все
+    params.append('cause', currentCause || '');
+    
+    // Если mechanism = 'all', не добавляем фильтр по механизму (используем пустую строку)
+    // Но лучше передать пустую строку, чтобы бэкенд не ругался
+    if (mechanism === 'all') {
+        // Для 'all' передаем пустую строку - бэкенд может обработать это как "все механизмы"
+        // Или можно использовать специальное значение, но пока используем пустую строку
+        params.append('mechanism', '');
+    } else {
+        params.append('mechanism', mechanism);
+    }
+    
+    if (dateRange.dateFrom) params.append('dateFrom', dateRange.dateFrom);
+    if (dateRange.dateTo) params.append('dateTo', dateRange.dateTo);
+    
+    if (currentParams.area && !currentParams.area.includes('all')) {
+        currentParams.area.forEach(area => params.append('area', area));
+    }
+    
+    try {
+        // Получаем события для данного оборудования, причины и механизма (или все, если mechanism = 'all')
+        let events = await fetch('/top-equipment/drilldown/events?' + params.toString()).then(r => r.json());
+        
+        // Фильтруем по типу поломки на клиенте
+        // События должны относиться к запрашиваемому типу поломки
+        if (currentFailureType && currentFailureType.trim() !== '' && events.length > 0) {
+            // Если в данных есть поле failure_type, фильтруем по нему
+            if (events[0].failure_type !== undefined) {
+                const requestedType = currentFailureType.trim();
+                events = events.filter(event => {
+                    const eventType = (event.failure_type || '').trim();
+                    return eventType === requestedType;
+                });
+            }
+            // Если поля нет, данные уже отфильтрованы по причине и механизму
+        }
+        
+        // Формируем заголовок для таблицы событий
+        let eventTitle = 'События';
+        if (mechanism && mechanism !== 'all') {
+            eventTitle = `События: ${mechanism}`;
+        } else if (!currentCause || currentCause.trim() === '') {
+            eventTitle = 'События (без указания причины)';
+        } else {
+            eventTitle = `События: ${currentCause}`;
+        }
+        
+        renderEventsTable(eventTitle, events);
+    } catch (error) {
+        console.error('Ошибка загрузки событий:', error);
+        showError('Ошибка загрузки данных событий');
+    }
+}
+
+function renderDrillChart(title, rows, onBarClick) {
+    const ctxEl = ensureDrillCanvas();
+    if (drillChart) drillChart.destroy();
+    
+    // Определяем формат данных в зависимости от уровня drill-down
+    let labels, downtimeValues, countValues;
+    
+    if (drillLevel === 1) {
+        // Оборудование - два показателя
+        labels = rows.map(r => r.machine_name || r.equipment_name || r.label || 'Неизвестно');
+        downtimeValues = rows.map(r => Number(r.total_downtime_hours || 0) * 3600); // Конвертируем в секунды
+        countValues = rows.map(r => Number(r.failure_count || r.incident_count || 0));
+        
+        document.getElementById('modalTitle').innerText = `${title} — ${currentFailureType || ''} / ${currentPeriod || ''}`;
+        
+        drillChart = new Chart(ctxEl, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { 
+                        label: 'Σ простоя, ч', 
+                        data: downtimeValues.map(v => v / 3600), // Конвертируем обратно в часы для отображения
+                        backgroundColor: 'rgba(231,76,60,0.6)' 
+                    },
+                    { 
+                        label: 'Кол-во вызовов', 
+                        data: countValues, 
+                        backgroundColor: 'rgba(52,152,219,0.6)' 
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                onClick: (_e, els) => {
+                    if (els?.length) {
+                        const i = els[0].index;
+                        onBarClick({ label: labels[i], value: downtimeValues[i] });
+                    }
+                },
+                plugins: { legend: { display: true } },
+                scales: { x: { beginAtZero: true } }
+            }
+        });
+    } else {
+        // Причины или механизмы - один показатель
+        labels = rows.map(r => r.cause || r.mechanism_node || r.label);
+        downtimeValues = rows.map(r => Number(r.total_downtime_hours || 0));
+        
+        const titleParts = [title];
+        if (currentFailureType) titleParts.push(currentFailureType);
+        if (currentMachine) titleParts.push(currentMachine);
+        if (currentCause && drillLevel > 2) titleParts.push(currentCause);
+        document.getElementById('modalTitle').innerText = titleParts.join(' — ');
+        
+        drillChart = new Chart(ctxEl, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Σ простоя, ч',
+                    data: downtimeValues,
+                    backgroundColor: 'rgba(231,76,60,0.6)'
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                onClick: (_e, els) => {
+                    if (els?.length) {
+                        const i = els[0].index;
+                        onBarClick({ label: labels[i], value: downtimeValues[i] });
+                    }
+                },
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true } }
+            }
+        });
+    }
+}
+
+function ensureDrillCanvas() {
+    const body = document.querySelector('.modal-body');
+    let canvas = document.getElementById('drillChart');
+    if (!canvas) {
+        body.innerHTML = '<canvas id="drillChart" class="chart-canvas"></canvas>';
+        canvas = document.getElementById('drillChart');
+    }
+    return canvas.getContext('2d');
+}
+
+function renderEventsTable(title, events) {
+    const container = document.querySelector('.modal-body');
+    if (drillChart) {
+        drillChart.destroy();
+        drillChart = null;
+    }
+    
+    const titleParts = [title];
+    if (currentFailureType) titleParts.push(currentFailureType);
+    if (currentMachine) titleParts.push(currentMachine);
+    if (currentCause) titleParts.push(currentCause);
+    document.getElementById('modalTitle').innerText = titleParts.join(' — ');
+    
+    container.innerHTML = `
+        <div style="display:flex; flex-direction:column; height:100%;">
+            <div style="font-weight:600; margin-bottom:8px; flex-shrink:0;">${title}</div>
+            <div style="flex:1; overflow-y:auto; border:1px solid #eee; border-radius:6px; min-height:0;">
+                <table style="width:100%; border-collapse: separate; border-spacing:0; font-size: 14px;">
+                    <thead style="position: sticky; top: 0; background: #fafafa; z-index: 1;">
+                        <tr style="text-align:left; border-bottom:1px solid #eee;">
+                            <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Код события</th>
+                            <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Время простоя</th>
+                            <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Комментарии</th>
+                            <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Причина</th>
+                            <th style="padding:8px; position:sticky; top:0; background:#fafafa;">Дата</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${events.map(e => `
+                            <tr style="border-bottom:1px dashed #eee;">
+                                <td style="padding:8px; white-space:nowrap;">${e.code ?? ''}</td>
+                                <td style="padding:8px; white-space:nowrap;">${e.machine_downtime ?? ''}</td>
+                                <td style="padding:8px;">${(e.comments ?? '').toString()}</td>
+                                <td style="padding:8px; white-space:nowrap;">${e.cause ?? ''}</td>
+                                <td style="padding:8px; white-space:nowrap;">${e.start_bd_t1 ?? ''}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+}
+
+function getDateRangeFromPeriod(periodLabel, params, explicitYear = null) {
+    // Преобразуем период в диапазон дат
+    // periodLabel может быть: номер недели, название месяца, год и т.д.
+    const dateRange = { dateFrom: null, dateTo: null };
+    
+    console.log('getDateRangeFromPeriod called with:', { periodLabel, params, explicitYear });
+    
+    // Определяем год - приоритет у явно переданного года из метки графика
+    let year = null;
+    if (explicitYear) {
+        year = explicitYear;
+    } else if (params.year && params.year.length > 0 && !params.year.includes('all')) {
+        year = parseInt(params.year[0]); // Берем первый выбранный год
+    } else {
+        year = new Date().getFullYear();
+    }
+    
+    // Определяем месяц из параметров
+    let month = null;
+    if (params.month && params.month.length > 0 && !params.month.includes('all')) {
+        const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+        const monthIndex = monthNames.indexOf(params.month[0]);
+        if (monthIndex >= 0) {
+            month = monthIndex + 1;
+        } else {
+            // Возможно, это уже номер месяца
+            month = parseInt(params.month[0]);
+        }
+        console.log(`Month determined from params: ${month} (${params.month[0]})`);
+    }
+    
+    // Определяем период из метки
+    const monthAbbr = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+    const monthIndex = monthAbbr.indexOf(periodLabel);
+    
+    // Если выбраны недели, но не выбран месяц, определяем месяц из выбранных недель
+    const hasWeeksSelected = params.week && params.week.length > 0 && !params.week.includes('all');
+    if (hasWeeksSelected && !month) {
+        // Определяем месяц из первой выбранной недели
+        // Используем более точную формулу: находим первый понедельник года и вычисляем дату недели
+        const firstWeek = parseInt(params.week[0]);
+        if (!isNaN(firstWeek)) {
+            // Находим первый понедельник года (ISO недели начинаются с понедельника)
+            const jan1 = new Date(year, 0, 1);
+            const jan1Day = jan1.getDay(); // 0 = воскресенье, 1 = понедельник, ...
+            // Вычисляем день недели для 1 января (0 = воскресенье)
+            // Для ISO недель (mode 1): неделя 1 - это первая неделя с 4+ днями в новом году
+            // Упрощенный расчет: находим первый понедельник
+            let daysToMonday = (8 - jan1Day) % 7; // Дней до первого понедельника
+            if (daysToMonday === 0 && jan1Day !== 1) daysToMonday = 7;
+            if (jan1Day === 0) daysToMonday = 1; // Если 1 января - воскресенье
+            
+            // Дата начала первой недели
+            const week1Start = new Date(year, 0, 1 + daysToMonday);
+            
+            // Дата начала нужной недели
+            const daysFromWeek1 = (firstWeek - 1) * 7;
+            const weekStart = new Date(week1Start);
+            weekStart.setDate(week1Start.getDate() + daysFromWeek1);
+            
+            month = weekStart.getMonth() + 1;
+            console.log(`Determined month ${month} from week ${firstWeek} in year ${year} (week starts: ${weekStart.toISOString().split('T')[0]})`);
+        }
+    }
+    
+    if (monthIndex >= 0) {
+        // Это месяц в сокращенном формате
+        month = monthIndex + 1;
+        dateRange.dateFrom = `${year}-${String(month).padStart(2, '0')}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        dateRange.dateTo = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    } else if (!isNaN(parseInt(periodLabel))) {
+        // Это номер недели или день месяца
+        const periodNumber = parseInt(periodLabel);
+        
+        // Если выбраны недели в фильтрах, то periodLabel - это день месяца (не номер недели)
+        // Когда выбраны недели, график показывает дни месяца, а не номера недель
+        const hasWeeksSelected = params.week && params.week.length > 0 && !params.week.includes('all');
+        const hasMonthsSelected = params.month && params.month.length > 0 && !params.month.includes('all');
+        
+        if (hasWeeksSelected && hasMonthsSelected) {
+            // Выбраны и недели, и месяцы - periodLabel это день месяца (DAY из SQL)
+            // Месяц должен быть уже определен из params.month выше
+            if (!month) {
+                console.warn('Month not determined from params, using current month');
+                month = new Date().getMonth() + 1;
+            }
+            dateRange.dateFrom = `${year}-${String(month).padStart(2, '0')}-${String(periodNumber).padStart(2, '0')}`;
+            dateRange.dateTo = dateRange.dateFrom;
+            console.log(`Date range for week+month selection: ${dateRange.dateFrom} (day ${periodNumber} of month ${month}, year ${year})`);
+        } else if (hasWeeksSelected && !hasMonthsSelected) {
+            // Выбраны только недели (без месяцев) - periodLabel это день месяца
+            // Но по SQL запросу, когда выбраны недели, обычно выбирается и месяц
+            // Если месяц не выбран, определяем его из недели (уже сделано выше)
+            if (!month) {
+                // Если месяц все еще не определен, используем текущий месяц
+                month = new Date().getMonth() + 1;
+            }
+            dateRange.dateFrom = `${year}-${String(month).padStart(2, '0')}-${String(periodNumber).padStart(2, '0')}`;
+            dateRange.dateTo = dateRange.dateFrom;
+            console.log(`Date range for week selection: ${dateRange.dateFrom} (day ${periodNumber} of month ${month})`);
+        } else if (!hasWeeksSelected && periodNumber <= 31) {
+            // Не выбраны недели, и число <= 31 - это день месяца
+            if (!month) month = new Date().getMonth() + 1; // Используем текущий месяц если не указан
+            dateRange.dateFrom = `${year}-${String(month).padStart(2, '0')}-${String(periodNumber).padStart(2, '0')}`;
+            dateRange.dateTo = dateRange.dateFrom;
+        } else {
+            // Это может быть номер недели (если число > 31 или нет контекста месяца)
+            // Но обычно это не используется, так как недели отображаются как дни
+            if (!month) month = new Date().getMonth() + 1;
+            const firstDay = new Date(year, month - 1, 1);
+            const weekStart = new Date(firstDay);
+            weekStart.setDate(firstDay.getDate() + (periodNumber - 1) * 7);
+            dateRange.dateFrom = formatDateForAPI(weekStart);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            dateRange.dateTo = formatDateForAPI(weekEnd);
+        }
+    } else {
+        // Используем весь год или выбранный месяц
+        if (month) {
+            dateRange.dateFrom = `${year}-${String(month).padStart(2, '0')}-01`;
+            const lastDay = new Date(year, month, 0).getDate();
+            dateRange.dateTo = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        } else {
+            dateRange.dateFrom = `${year}-01-01`;
+            dateRange.dateTo = `${year}-12-31`;
+        }
+    }
+    
+    return dateRange;
+}
+
+function formatDateForAPI(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 

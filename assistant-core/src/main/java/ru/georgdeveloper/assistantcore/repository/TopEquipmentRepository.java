@@ -66,7 +66,8 @@ public class TopEquipmentRepository {
                                                         String dateFrom,
                                                         String dateTo,
                                                         String week,
-                                                        String area) {
+                                                        String area,
+                                                        String failureType) {
         StringBuilder sql = new StringBuilder();
         List<Object> params = new ArrayList<>();
         sql.append("SELECT TRIM(cause) AS cause, ")
@@ -89,6 +90,10 @@ public class TopEquipmentRepository {
         if (area != null && !area.equals("all") && !area.isEmpty()) {
             sql.append("AND area = ? ");
             params.add(area);
+        }
+        if (failureType != null && !failureType.equals("all") && !failureType.isEmpty()) {
+            sql.append("AND TRIM(failure_type) = ? ");
+            params.add(failureType);
         }
         sql.append("GROUP BY TRIM(cause) ")
            .append("HAVING TRIM(cause) IS NOT NULL AND TRIM(cause) <> '' ")
@@ -163,6 +168,47 @@ public class TopEquipmentRepository {
             sql.append("AND area = ? ");
             params.add(area);
         }
+        sql.append("ORDER BY start_bd_t1 DESC LIMIT 500");
+        return jdbcTemplate.queryForList(sql.toString(), params.toArray());
+    }
+
+    /**
+     * Получение всех событий для оборудования за период с опциональным фильтром по типу поломки
+     * Без фильтрации по cause и mechanism - возвращает все события
+     */
+    public List<Map<String, Object>> getEquipmentAllEvents(String machine,
+                                                           String dateFrom,
+                                                           String dateTo,
+                                                           String week,
+                                                           String area,
+                                                           String failureType) {
+        StringBuilder sql = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        sql.append("SELECT code, machine_downtime, comments, cause, start_bd_t1, failure_type ")
+           .append("FROM equipment_maintenance_records WHERE machine_name = ? ");
+        params.add(machine);
+        
+        if (dateFrom != null && !dateFrom.isEmpty()) {
+            sql.append("AND start_bd_t1 >= STR_TO_DATE(?, '%Y-%m-%d') ");
+            params.add(dateFrom);
+        }
+        if (dateTo != null && !dateTo.isEmpty()) {
+            sql.append("AND start_bd_t1 < DATE_ADD(STR_TO_DATE(?, '%Y-%m-%d'), INTERVAL 1 DAY) ");
+            params.add(dateTo);
+        }
+        if (week != null && !week.equals("all") && !week.isEmpty()) {
+            sql.append("AND WEEK(start_bd_t1, 1) = ? ");
+            params.add(Integer.parseInt(week));
+        }
+        if (area != null && !area.equals("all") && !area.isEmpty()) {
+            sql.append("AND area = ? ");
+            params.add(area);
+        }
+        if (failureType != null && !failureType.equals("all") && !failureType.isEmpty()) {
+            sql.append("AND TRIM(failure_type) = ? ");
+            params.add(failureType);
+        }
+        
         sql.append("ORDER BY start_bd_t1 DESC LIMIT 500");
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }
