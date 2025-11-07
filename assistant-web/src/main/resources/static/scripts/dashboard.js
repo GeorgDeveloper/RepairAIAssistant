@@ -61,7 +61,21 @@ const DashboardCharts = {
             title: { text: title },
             axisX: {
                 title: "Время",
-                labelAngle: -45
+                labelAngle: -45,
+                valueFormatString: "YYYY.MM.DD HH.mm",
+                labelFormatter: function(e) {
+                    if (e.value === null || e.value === undefined) return "";
+                    const date = new Date(e.value);
+                    if (isNaN(date.getTime())) return e.value;
+                    
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    
+                    return `${year}.${month}.${day} ${hours}.${minutes}`;
+                }
             },
             axisY: {
                 title: "Значение",
@@ -108,14 +122,35 @@ const DashboardCharts = {
     processChartData(rawData) {
         const groupedData = {};
         
+        // Функция для преобразования timestamp в объект Date
+        const parseTimestamp = (timestamp) => {
+            if (!timestamp) return null;
+            
+            try {
+                const date = new Date(timestamp);
+                if (isNaN(date.getTime())) {
+                    // Если не удалось распарсить как Date, возвращаем null
+                    console.warn('Не удалось распарсить timestamp:', timestamp);
+                    return null;
+                }
+                return date;
+            } catch (e) {
+                console.warn('Ошибка при парсинге timestamp:', timestamp, e);
+                return null;
+            }
+        };
+        
         (rawData || []).forEach(item => {
             if (!groupedData[item.area]) {
                 groupedData[item.area] = [];
             }
-            groupedData[item.area].push({
-                label: item.timestamp,
-                y: item.value
-            });
+            const date = parseTimestamp(item.timestamp);
+            if (date) {
+                groupedData[item.area].push({
+                    x: date,
+                    y: item.value
+                });
+            }
         });
 
         return Object.keys(groupedData).map(area => ({
