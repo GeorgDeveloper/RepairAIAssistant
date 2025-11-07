@@ -32,7 +32,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: dbaPass
+    password: DbaPass123!
     driver-class-name: com.mysql.cj.jdbc.Driver
   http:
     encoding:
@@ -135,7 +135,7 @@ data-sync:
   mysql:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: dbaPass
+    password: DbaPass123!
     driver: com.mysql.cj.jdbc.Driver
   areas:
     - name: Plant
@@ -197,13 +197,13 @@ data-sync:
       area: "SemifinishingArea"
       machine_filter: "Duplex"
     - name: "Calender Comerio Ercole - 01"
-      area: "SemifinishingArea"
+      area: "NewMixingArea"
       machine_filter: "Comerio"
     - name: "VMI APEX - 01"
-      area: "BuildingArea"
+      area: "SemifinishingArea"
       machine_filter: "VMI APEX"
     - name: "VMI APEX - 02"
-      area: "BuildingArea"
+      area: "SemifinishingArea"
       machine_filter: "VMI APEX"
     - name: "Trafila Quadruplex - 01"
       area: "SemifinishingArea"
@@ -215,5 +215,5 @@ data-sync:
       area: "FinishingArea"
       machine_filter: "Module"
     - name: "VMI TPCS 1600-1000"
-      area: "BuildingArea"
+      area: "SemifinishingArea"
       machine_filter: "VMI TPCS"
