@@ -32,23 +32,40 @@ public class BdAvApiWebController {
     @SuppressWarnings("unchecked")
     @GetMapping("/months")
     public List<Map<String, Object>> months(@RequestParam(required = false) List<String> year) {
-        if (year == null || year.isEmpty()) {
-            return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/months", List.class);
+        if (year == null || year.isEmpty() || year.contains("all")) {
+            // Передаем "all" как параметр, чтобы core сервис вернул все месяцы
+            return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/months?year=all", List.class);
         }
-        String yearParam = String.join(",", year);
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/months?year=" + yearParam, List.class);
+        // Формируем URL с несколькими параметрами year
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/bdav/months?");
+        for (int i = 0; i < year.size(); i++) {
+            if (i > 0) url.append('&');
+            url.append("year=").append(year.get(i));
+        }
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 
     @SuppressWarnings("unchecked")
     @GetMapping("/weeks")
     public List<Map<String, Object>> weeks(@RequestParam(required = false) List<String> year, @RequestParam(required = false) List<String> month) {
-        if (year == null || year.isEmpty() || month == null || month.isEmpty()) {
-            return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/weeks", List.class);
+        if (year == null || year.isEmpty() || year.contains("all") || 
+            month == null || month.isEmpty() || month.contains("all")) {
+            // Передаем "all" как параметр, чтобы core сервис вернул все недели
+            return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/bdav/weeks?year=all&month=all", List.class);
         }
-        String yearParam = String.join(",", year);
-        String monthParam = String.join(",", month);
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + 
-                "/bdav/weeks?year=" + yearParam + "&month=" + monthParam, List.class);
+        // Формируем URL с несколькими параметрами year и month
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/bdav/weeks?");
+        for (String y : year) {
+            url.append("year=").append(y).append('&');
+        }
+        for (String m : month) {
+            url.append("month=").append(m).append('&');
+        }
+        // Удаляем последний &
+        if (url.charAt(url.length() - 1) == '&') {
+            url.setLength(url.length() - 1);
+        }
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 
     @SuppressWarnings("unchecked")

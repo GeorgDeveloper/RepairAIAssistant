@@ -10,18 +10,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     const hiddenCauses = new Set();
     let baseChartData = { labels: [], downtime: [], counts: [], colors: [] };
 
-    await Promise.all([loadWeeks(), loadAreas(), loadFailureTypes()]);
+    // Функция для получения контекста canvas с правильной настройкой для высоких DPI
+    function getChartContext(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        // Chart.js сам управляет размерами canvas, но нужно убедиться, что он правильно обрабатывает devicePixelRatio
+        return canvas.getContext('2d');
+    }
+
+    await Promise.all([loadAreas(), loadFailureTypes()]);
     await loadMachines();
     await applyFilters();
     document.getElementById('area').addEventListener('change', loadMachines);
-
-    async function loadWeeks() {
-        const res = await fetch(`${apiBase}/weeks`);
-        const data = await res.json();
-        const el = document.getElementById('week');
-        el.innerHTML = '<option value="all">Все</option>';
-        data.forEach(w => el.innerHTML += `<option value="${w.week_number}">${w.week_number}</option>`);
-    }
 
     async function loadAreas() {
         const res = await fetch(`${apiBase}/areas`);
@@ -52,13 +51,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         const params = new URLSearchParams();
         const df = document.getElementById('dateFrom').value;
         const dt = document.getElementById('dateTo').value;
-        const w = document.getElementById('week').value;
         const a = document.getElementById('area').value;
         const m = document.getElementById('machine').value;
         const ft = document.getElementById('failureType').value;
         if (df) params.append('dateFrom', df);
         if (dt) params.append('dateTo', dt);
-        if (w && w !== 'all') params.append('week', w);
         if (a && a !== 'all') params.append('area', a);
         if (m && m !== 'all') params.append('machine', m);
         if (ft && ft !== 'all') params.append('failureType', ft);
@@ -98,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function updateMainChart() {
         const filtered = getFilteredChart();
-        const ctx = document.getElementById('topChart').getContext('2d');
+        const ctx = getChartContext('topChart');
         if (chart) chart.destroy();
         chart = new Chart(ctx, {
             type: 'bar',
@@ -113,8 +110,37 @@ document.addEventListener('DOMContentLoaded', async function() {
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: true } },
-                scales: { x: { beginAtZero: true } }
+                devicePixelRatio: window.devicePixelRatio || 1,
+                plugins: { 
+                    legend: { 
+                        display: true,
+                        labels: {
+                            font: {
+                                size: 12,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            }
+                        }
+                    } 
+                },
+                scales: { 
+                    x: { 
+                        beginAtZero: true,
+                        ticks: {
+                            font: {
+                                size: 11,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            }
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            font: {
+                                size: 11,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            }
+                        }
+                    }
+                }
             }
         });
 
@@ -199,11 +225,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         const params = new URLSearchParams();
         const df = document.getElementById('dateFrom').value;
         const dt = document.getElementById('dateTo').value;
-        const w = document.getElementById('week').value;
         const a = document.getElementById('area').value;
         if (df) params.append('dateFrom', df);
         if (dt) params.append('dateTo', dt);
-        if (w && w !== 'all') params.append('week', w);
         if (a && a !== 'all') params.append('area', a);
         params.append('cause', cause);
 
@@ -239,7 +263,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function renderDrillChart(title, labels, downtime, counts, onBarClick){
-        const ctx = document.getElementById('drillChart').getContext('2d');
+        const ctx = getChartContext('drillChart');
         if (drillChart) drillChart.destroy();
         drillChart = new Chart(ctx, {
             type: 'bar',
@@ -247,7 +271,40 @@ document.addEventListener('DOMContentLoaded', async function() {
                 { label: 'Время простоя (ч)', data: downtime, backgroundColor: 'rgba(231, 76, 60, .8)' },
                 { label: 'Кол-во заявок', data: counts, backgroundColor: 'rgba(52, 152, 219, 0.45)' }
             ]},
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+            options: { 
+                indexAxis: 'y', 
+                responsive: true, 
+                maintainAspectRatio: false,
+                devicePixelRatio: window.devicePixelRatio || 1,
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: {
+                                size: 12,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 11,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            }
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            font: {
+                                size: 11,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            }
+                        }
+                    }
+                }
+            }
         });
         if (onBarClick){
             document.getElementById('drillChart').onclick = (evt)=>{

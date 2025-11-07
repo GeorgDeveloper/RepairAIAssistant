@@ -106,7 +106,8 @@ public class TopEquipmentRepository {
                                                             String dateFrom,
                                                             String dateTo,
                                                             String week,
-                                                            String area) {
+                                                            String area,
+                                                            String failureType) {
         StringBuilder sql = new StringBuilder();
         List<Object> params = new ArrayList<>();
         sql.append("SELECT COALESCE(TRIM(mechanism_node), 'Не указан') AS mechanism_node, ")
@@ -131,6 +132,10 @@ public class TopEquipmentRepository {
             sql.append("AND area = ? ");
             params.add(area);
         }
+        if (failureType != null && !failureType.equals("all") && !failureType.isEmpty()) {
+            sql.append("AND TRIM(failure_type) = ? ");
+            params.add(failureType);
+        }
         sql.append("GROUP BY mechanism_node ORDER BY total_downtime_hours DESC");
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }
@@ -141,7 +146,8 @@ public class TopEquipmentRepository {
                                                         String dateFrom,
                                                         String dateTo,
                                                         String week,
-                                                        String area) {
+                                                        String area,
+                                                        String failureType) {
         StringBuilder sql = new StringBuilder();
         List<Object> params = new ArrayList<>();
         sql.append("SELECT code, machine_downtime, comments, cause, start_bd_t1 ")
@@ -167,6 +173,10 @@ public class TopEquipmentRepository {
         if (area != null && !area.equals("all") && !area.isEmpty()) {
             sql.append("AND area = ? ");
             params.add(area);
+        }
+        if (failureType != null && !failureType.equals("all") && !failureType.isEmpty()) {
+            sql.append("AND TRIM(failure_type) = ? ");
+            params.add(failureType);
         }
         sql.append("ORDER BY start_bd_t1 DESC LIMIT 500");
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());

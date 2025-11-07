@@ -12,12 +12,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let areasCache = [];
     let selectedAreas = new Set();
 
-    async function loadWeeks() {
-        const data = await fetch(api + '/weeks').then(r=>r.json());
-        const sel = document.getElementById('week');
-        sel.innerHTML = '<option value="all">Все</option>' + data.map(w=>`<option value="${w.week_number}">${w.week_number}</option>`).join('');
-    }
-    
     async function loadFailureTypes() {
         const data = await fetch(api + '/failure-types').then(r=>r.json());
         const sel = document.getElementById('failureType');
@@ -27,14 +21,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function getParams(){
         const dateFrom = document.getElementById('dateFrom').value || '';
         const dateTo = document.getElementById('dateTo').value || '';
-        const week = document.getElementById('week').value || 'all';
         const failureType = document.getElementById('failureType').value || 'all';
-        return { dateFrom, dateTo, week, failureType };
+        return { dateFrom, dateTo, failureType };
     }
 
     async function loadLegend(){
-        const {dateFrom, dateTo, week, failureType} = getParams();
-        const params = new URLSearchParams({ dateFrom, dateTo, week, failureType, limit: 30 });
+        const {dateFrom, dateTo, failureType} = getParams();
+        const params = new URLSearchParams({ dateFrom, dateTo, failureType, limit: 30 });
         const data = await fetch(api + '/data?' + params.toString()).then(r=>r.json());
         areasCache = data;
         if (selectedAreas.size === 0) data.forEach(d => selectedAreas.add(d.area));
@@ -92,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
         chart = new Chart(ctx, {
             type: 'bar',
             data: { labels: data.map(d=>d.area), datasets: [
-                { label: 'Σ простоя, ч', data: data.map(d=>Number(d.total_downtime_hours||0)), backgroundColor: 'rgba(231,76,60,0.6)' },
+                { label: 'Время простоя, ч', data: data.map(d=>Number(d.total_downtime_hours||0)), backgroundColor: 'rgba(231,76,60,0.6)' },
                 { label: 'Кол-во вызовов', data: data.map(d=>Number(d.failure_count||0)), backgroundColor: 'rgba(52,152,219,0.6)' }
             ]},
             options: { indexAxis:'y', maintainAspectRatio:false, onClick: (_e, els)=>{ if(!els?.length) return; const idx=els[0].index; openCategories(chart.data.labels[idx]); }, plugins:{ legend:{ display:true }}, scales:{ x:{ beginAtZero:true }}}
@@ -104,24 +97,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function openCategories(area){
         currentArea = area; drillLevel = 1; document.getElementById('modalTitle').innerText = `Участок: ${area}`; document.getElementById('backBtn').style.display='none'; openModal();
-        const {dateFrom, dateTo, week} = getParams();
-        const params = new URLSearchParams({ area, dateFrom, dateTo, week });
+        const {dateFrom, dateTo, failureType} = getParams();
+        const params = new URLSearchParams({ area, dateFrom, dateTo });
+        if (failureType && failureType !== 'all') params.append('failureType', failureType);
         const data = await fetch(api + '/drilldown/categories?' + params.toString()).then(r=>r.json());
         renderDrillChart('Категории поломок', data.map(r=>({ label: r.category, value: Number(r.total_downtime_hours||0) })), item => openCauses(item.label));
     }
 
     async function openCauses(category){
         currentCategory = category; drillLevel = 2; document.getElementById('backBtn').style.display='inline-block';
-        const {dateFrom, dateTo, week} = getParams();
-        const params = new URLSearchParams({ area: currentArea, category, dateFrom, dateTo, week });
+        const {dateFrom, dateTo, failureType} = getParams();
+        const params = new URLSearchParams({ area: currentArea, category, dateFrom, dateTo });
+        if (failureType && failureType !== 'all') params.append('failureType', failureType);
         const data = await fetch(api + '/drilldown/causes?' + params.toString()).then(r=>r.json());
         renderDrillChart('Причины', data.map(r=>({ label: r.cause, value: Number(r.total_downtime_hours||0) })), item => openEvents(item.label));
     }
 
     async function openEvents(cause){
         drillLevel = 3; document.getElementById('backBtn').style.display='inline-block';
-        const {dateFrom, dateTo, week} = getParams();
-        const params = new URLSearchParams({ area: currentArea, category: currentCategory, cause, dateFrom, dateTo, week });
+        const {dateFrom, dateTo, failureType} = getParams();
+        const params = new URLSearchParams({ area: currentArea, category: currentCategory, cause, dateFrom, dateTo });
+        if (failureType && failureType !== 'all') params.append('failureType', failureType);
         const events = await fetch(api + '/drilldown/events?' + params.toString()).then(r=>r.json());
         renderEventsTable(`События: ${cause}`, events);
     }
@@ -130,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const ctx = ensureDrillCanvas(); if (drillChart) drillChart.destroy();
         const labels = items.map(i=>i.label); const values = items.map(i=>i.value);
         document.getElementById('modalTitle').innerText = `${title} — ${currentArea || ''} ${currentCategory?(' / '+currentCategory):''}`;
-        drillChart = new Chart(ctx, { type:'bar', data:{ labels, datasets:[{ label:'Σ простоя, ч', data: values, backgroundColor:'rgba(231,76,60,0.6)'}]}, options:{ indexAxis:'y', maintainAspectRatio:false, plugins:{legend:{display:false}}, onClick: (_e,els)=>{ if(els?.length){ const i=els[0].index; onBarClick({ label: labels[i], value: values[i] }); } }, scales:{x:{beginAtZero:true}} } });
+        drillChart = new Chart(ctx, { type:'bar', data:{ labels, datasets:[{ label:'Время простоя, ч', data: values, backgroundColor:'rgba(231,76,60,0.6)'}]}, options:{ indexAxis:'y', maintainAspectRatio:false, plugins:{legend:{display:false}}, onClick: (_e,els)=>{ if(els?.length){ const i=els[0].index; onBarClick({ label: labels[i], value: values[i] }); } }, scales:{x:{beginAtZero:true}} } });
     }
 
     function ensureDrillCanvas(){
@@ -192,5 +188,5 @@ document.addEventListener('DOMContentLoaded', function() {
         applyFilters(false);
     }
 
-    (async function init(){ await Promise.all([loadWeeks(), loadFailureTypes()]); applyFilters(true); })();
+    (async function init(){ await Promise.all([loadFailureTypes()]); applyFilters(true); })();
 });

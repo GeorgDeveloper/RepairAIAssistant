@@ -39,7 +39,7 @@ public class TopAreasRepository {
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }
 
-    public List<Map<String, Object>> getAreaTypeCategories(String area, String dateFrom, String dateTo, String week) {
+    public List<Map<String, Object>> getAreaTypeCategories(String area, String dateFrom, String dateTo, String week, String failureType) {
         String expr = categoryCaseExpr();
         StringBuilder sql = new StringBuilder();
         List<Object> params = new ArrayList<>();
@@ -50,11 +50,12 @@ public class TopAreasRepository {
         if (dateFrom != null && !dateFrom.isEmpty()) { sql.append("AND start_bd_t1 >= STR_TO_DATE(?, '%Y-%m-%d') "); params.add(dateFrom); }
         if (dateTo != null && !dateTo.isEmpty()) { sql.append("AND start_bd_t1 < DATE_ADD(STR_TO_DATE(?, '%Y-%m-%d'), INTERVAL 1 DAY) "); params.add(dateTo); }
         if (week != null && !week.equals("all") && !week.isEmpty()) { sql.append("AND WEEK(start_bd_t1, 1) = ? "); params.add(Integer.parseInt(week)); }
+        if (failureType != null && !failureType.equals("all") && !failureType.isEmpty()) { sql.append("AND failure_type = ? "); params.add(failureType); }
         sql.append("GROUP BY ").append(expr).append(" ORDER BY total_downtime_hours DESC");
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }
 
-    public List<Map<String, Object>> getAreaCategoryCauses(String area, String category, String dateFrom, String dateTo, String week) {
+    public List<Map<String, Object>> getAreaCategoryCauses(String area, String category, String dateFrom, String dateTo, String week, String failureType) {
         String expr = categoryCaseExpr();
         StringBuilder sql = new StringBuilder();
         List<Object> params = new ArrayList<>();
@@ -65,11 +66,12 @@ public class TopAreasRepository {
         if (dateFrom != null && !dateFrom.isEmpty()) { sql.append("AND start_bd_t1 >= STR_TO_DATE(?, '%Y-%m-%d') "); params.add(dateFrom); }
         if (dateTo != null && !dateTo.isEmpty()) { sql.append("AND start_bd_t1 < DATE_ADD(STR_TO_DATE(?, '%Y-%m-%d'), INTERVAL 1 DAY) "); params.add(dateTo); }
         if (week != null && !week.equals("all") && !week.isEmpty()) { sql.append("AND WEEK(start_bd_t1, 1) = ? "); params.add(Integer.parseInt(week)); }
+        if (failureType != null && !failureType.equals("all") && !failureType.isEmpty()) { sql.append("AND failure_type = ? "); params.add(failureType); }
         sql.append("GROUP BY TRIM(cause) HAVING TRIM(cause) IS NOT NULL AND TRIM(cause) <> '' ORDER BY total_downtime_hours DESC");
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }
 
-    public List<Map<String, Object>> getAreaCategoryEvents(String area, String category, String cause, String dateFrom, String dateTo, String week) {
+    public List<Map<String, Object>> getAreaCategoryEvents(String area, String category, String cause, String dateFrom, String dateTo, String week, String failureType) {
         String expr = categoryCaseExpr();
         StringBuilder sql = new StringBuilder();
         List<Object> params = new ArrayList<>();
@@ -79,6 +81,7 @@ public class TopAreasRepository {
         if (dateFrom != null && !dateFrom.isEmpty()) { sql.append("AND start_bd_t1 >= STR_TO_DATE(?, '%Y-%m-%d') "); params.add(dateFrom); }
         if (dateTo != null && !dateTo.isEmpty()) { sql.append("AND start_bd_t1 < DATE_ADD(STR_TO_DATE(?, '%Y-%m-%d'), INTERVAL 1 DAY) "); params.add(dateTo); }
         if (week != null && !week.equals("all") && !week.isEmpty()) { sql.append("AND WEEK(start_bd_t1, 1) = ? "); params.add(Integer.parseInt(week)); }
+        if (failureType != null && !failureType.equals("all") && !failureType.isEmpty()) { sql.append("AND failure_type = ? "); params.add(failureType); }
         sql.append("ORDER BY start_bd_t1 DESC LIMIT 500");
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }

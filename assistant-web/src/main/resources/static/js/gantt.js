@@ -233,7 +233,7 @@ function groupDataByAreaAndMachine(data) {
         if (!grouped[area]) {
             grouped[area] = {
                 machines: {},
-                collapsed: false
+                collapsed: true
             };
         }
         if (!grouped[area].machines[item.machine_name]) {

@@ -1447,7 +1447,7 @@ function renderDrillChart(title, rows, onBarClick) {
                 labels: labels,
                 datasets: [
                     { 
-                        label: 'Σ простоя, ч', 
+                        label: 'Время простоя, ч', 
                         data: downtimeValues.map(v => v / 3600), // Конвертируем обратно в часы для отображения
                         backgroundColor: 'rgba(231,76,60,0.6)' 
                     },
@@ -1487,7 +1487,7 @@ function renderDrillChart(title, rows, onBarClick) {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Σ простоя, ч',
+                    label: 'Время простоя, ч',
                     data: downtimeValues,
                     backgroundColor: 'rgba(231,76,60,0.6)'
                 }]
