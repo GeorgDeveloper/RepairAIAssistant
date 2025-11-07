@@ -43,10 +43,12 @@ function setupEventListeners() {
     // Настройка множественного выбора для года
     setupMultiSelect('year', function() {
         loadMonths();
+        updateWeekFilterState();
     });
     
     // Настройка множественного выбора для месяца
     setupMultiSelect('month', function() {
+        updateWeekFilterState();
         loadWeeks();
     });
     
@@ -211,6 +213,7 @@ async function loadInitialData() {
             loadAreas()
         ]);
         await loadEquipment(['all']);
+        updateWeekFilterState();
         await applyFilters();
     } catch (error) {
         showError('Ошибка загрузки данных: ' + error.message);
@@ -256,9 +259,48 @@ async function loadMonths() {
         }));
         
         populateMultiSelect('month', monthsWithNames, 'monthName', 'Все');
+        updateWeekFilterState();
         loadWeeks();
     } catch (error) {
         console.error('Ошибка загрузки месяцев:', error);
+    }
+}
+
+function updateWeekFilterState() {
+    const years = getSelectedValues('year');
+    const months = getSelectedValues('month');
+    const weekButton = document.getElementById('week-button');
+    const weekMultiselect = document.getElementById('week-multiselect');
+    
+    // Проверяем, выбрано ли больше одного года или больше одного месяца
+    const hasMultipleYears = !years.includes('all') && years.length > 1;
+    const hasMultipleMonths = !months.includes('all') && months.length > 1;
+    const shouldDisable = hasMultipleYears || hasMultipleMonths;
+    
+    if (shouldDisable) {
+        // Отключаем выбор недель
+        weekButton.disabled = true;
+        weekButton.style.opacity = '0.5';
+        weekButton.style.cursor = 'not-allowed';
+        weekMultiselect.style.pointerEvents = 'none';
+        
+        // Очищаем выбранные недели
+        const weekDropdown = document.getElementById('week-dropdown');
+        const weekAllCheckbox = document.getElementById('week-all');
+        const weekCheckboxes = weekDropdown.querySelectorAll('input[type="checkbox"]:not(#week-all)');
+        weekCheckboxes.forEach(cb => cb.checked = false);
+        weekAllCheckbox.checked = true;
+        updateButtonText('week');
+        
+        // Очищаем список недель
+        const existingOptions = weekDropdown.querySelectorAll('.multi-select-option:not(:first-child)');
+        existingOptions.forEach(option => option.remove());
+    } else {
+        // Включаем выбор недель
+        weekButton.disabled = false;
+        weekButton.style.opacity = '1';
+        weekButton.style.cursor = 'pointer';
+        weekMultiselect.style.pointerEvents = 'auto';
     }
 }
 
@@ -266,11 +308,16 @@ async function loadWeeks() {
     const years = getSelectedValues('year');
     const months = getSelectedValues('month');
     
-    if (years.includes('all') || months.includes('all')) {
+    // Проверяем, нужно ли отключить выбор недель
+    const hasMultipleYears = !years.includes('all') && years.length > 1;
+    const hasMultipleMonths = !months.includes('all') && months.length > 1;
+    
+    if (years.includes('all') || months.includes('all') || hasMultipleYears || hasMultipleMonths) {
         const dropdown = document.getElementById('week-dropdown');
         const existingOptions = dropdown.querySelectorAll('.multi-select-option:not(:first-child)');
         existingOptions.forEach(option => option.remove());
         updateButtonText('week');
+        updateWeekFilterState();
         return;
     }
     
@@ -286,6 +333,7 @@ async function loadWeeks() {
         const weeks = await response.json();
         
         populateMultiSelect('week', weeks, 'week', 'Все');
+        updateWeekFilterState();
     } catch (error) {
         console.error('Ошибка загрузки недель:', error);
     }
@@ -1047,7 +1095,17 @@ function getXAxisTitle(params) {
     if (params.week && params.week.length > 0 && !params.week.includes('all')) {
         return 'Дни месяца';
     } else if (params.month && params.month.length > 0 && !params.month.includes('all')) {
-        return 'Номера недель';
+        // Проверяем, выбрано ли несколько месяцев или несколько годов
+        const hasMultipleMonths = params.month.length > 1;
+        const hasMultipleYears = params.year && params.year.length > 1 && !params.year.includes('all');
+        
+        // Если выбрано несколько месяцев или несколько годов, отображаются месяцы
+        if (hasMultipleMonths || hasMultipleYears) {
+            return 'Месяцы';
+        } else {
+            // Если выбран один месяц и один год, отображаются недели
+            return 'Номера недель';
+        }
     } else if (params.year && params.year.length > 0 && !params.year.includes('all')) {
         return 'Месяцы';
     } else {
@@ -1460,6 +1518,26 @@ function ensureDrillCanvas() {
     return canvas.getContext('2d');
 }
 
+function formatDateTime(dateString) {
+    if (!dateString) return '';
+    
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString; // Если дата невалидна, возвращаем исходную строку
+        
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        
+        return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+    } catch (error) {
+        return dateString; // В случае ошибки возвращаем исходную строку
+    }
+}
+
 function renderEventsTable(title, events) {
     const container = document.querySelector('.modal-body');
     if (drillChart) {
@@ -1494,7 +1572,7 @@ function renderEventsTable(title, events) {
                                 <td style="padding:8px; white-space:nowrap;">${e.machine_downtime ?? ''}</td>
                                 <td style="padding:8px;">${(e.comments ?? '').toString()}</td>
                                 <td style="padding:8px; white-space:nowrap;">${e.cause ?? ''}</td>
-                                <td style="padding:8px; white-space:nowrap;">${e.start_bd_t1 ?? ''}</td>
+                                <td style="padding:8px; white-space:nowrap;">${formatDateTime(e.start_bd_t1)}</td>
                             </tr>
                         `).join('')}
                     </tbody>

@@ -138,15 +138,30 @@ public class DynamicsRepository {
             month != null && !month.isEmpty() && !month.contains("all") &&
             year != null && !year.isEmpty() && !year.contains("all")) {
             // По дням недели
-            sql.append("SELECT DAY(start_bd_t1) as period_label, ")
-               .append("TRIM(failure_type) as failure_type, ")
-               .append("SUM(TIME_TO_SEC(machine_downtime)) as total_downtime_seconds, ")
-               .append("COUNT(*) as failure_count ")
-               .append("FROM equipment_maintenance_records ")
-               .append("WHERE YEAR(start_bd_t1) IN (").append(buildInClause(year.size())).append(") ")
-               .append("AND MONTH(start_bd_t1) IN (").append(buildInClause(month.size())).append(") ")
-               .append("AND WEEK(start_bd_t1, 1) IN (").append(buildInClause(week.size())).append(") ")
-               .append("AND failure_type IS NOT NULL AND TRIM(failure_type) != '' ");
+            // Если выбрано несколько месяцев или годов, возвращаем их для сравнения
+            if (year.size() > 1 || month.size() > 1) {
+                sql.append("SELECT DAY(start_bd_t1) as period_label, ")
+                   .append("YEAR(start_bd_t1) as year, ")
+                   .append("MONTH(start_bd_t1) as month, ")
+                   .append("TRIM(failure_type) as failure_type, ")
+                   .append("SUM(TIME_TO_SEC(machine_downtime)) as total_downtime_seconds, ")
+                   .append("COUNT(*) as failure_count ")
+                   .append("FROM equipment_maintenance_records ")
+                   .append("WHERE YEAR(start_bd_t1) IN (").append(buildInClause(year.size())).append(") ")
+                   .append("AND MONTH(start_bd_t1) IN (").append(buildInClause(month.size())).append(") ")
+                   .append("AND WEEK(start_bd_t1, 1) IN (").append(buildInClause(week.size())).append(") ")
+                   .append("AND failure_type IS NOT NULL AND TRIM(failure_type) != '' ");
+            } else {
+                sql.append("SELECT DAY(start_bd_t1) as period_label, ")
+                   .append("TRIM(failure_type) as failure_type, ")
+                   .append("SUM(TIME_TO_SEC(machine_downtime)) as total_downtime_seconds, ")
+                   .append("COUNT(*) as failure_count ")
+                   .append("FROM equipment_maintenance_records ")
+                   .append("WHERE YEAR(start_bd_t1) IN (").append(buildInClause(year.size())).append(") ")
+                   .append("AND MONTH(start_bd_t1) IN (").append(buildInClause(month.size())).append(") ")
+                   .append("AND WEEK(start_bd_t1, 1) IN (").append(buildInClause(week.size())).append(") ")
+                   .append("AND failure_type IS NOT NULL AND TRIM(failure_type) != '' ");
+            }
             
             for (String y : year) params.add(Integer.parseInt(y));
             for (String m : month) params.add(Integer.parseInt(m));
