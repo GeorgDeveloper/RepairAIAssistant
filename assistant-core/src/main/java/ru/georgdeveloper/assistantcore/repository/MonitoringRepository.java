@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -139,6 +140,112 @@ public class MonitoringRepository {
         return jdbcTemplate.queryForList(sql);
     }
 
+    // Данные для графика PM: план/факт/tag за все периоды
+    // Использует логику из триггера update_plant_reports (без фильтров)
+    public List<Map<String, Object>> getPmPlanFactTagAll() {
+        // Используем ту же логику что и в getPmPlanFactTagFiltered, но без фильтров
+        return getPmPlanFactTagFiltered(null, null);
+    }
+
+    // Данные для графика PM с фильтрацией по участку и оборудованию
+    // Использует логику из триггера update_plant_reports:
+    // - Plan: COUNT(*) из pm_maintenance_records по scheduled_proposed_date
+    // - Fact: COUNT(*) из pm_maintenance_records по scheduled_date где status IN ('Закрыто','Выполнено')
+    // - Tag: COUNT(*) из tag_maintenance_records по production_day
+    public List<Map<String, Object>> getPmPlanFactTagFiltered(String area, String machineName) {
+        StringBuilder sql = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        
+        // Собираем все уникальные даты из всех трех источников
+        sql.append("SELECT ");
+        sql.append("    all_dates.production_day, ");
+        sql.append("    COALESCE(pm_plan.quantity, 0) AS plan, ");
+        sql.append("    COALESCE(pm_fact.quantity, 0) AS fact, ");
+        sql.append("    COALESCE(tag.quantity, 0) AS tag ");
+        sql.append("FROM ( ");
+        sql.append("    SELECT DATE_FORMAT(scheduled_proposed_date, '%d.%m.%Y') AS production_day ");
+        sql.append("    FROM pm_maintenance_records ");
+        sql.append("    WHERE scheduled_proposed_date IS NOT NULL ");
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            sql.append("    AND area = ? ");
+            params.add(area);
+        }
+        if (machineName != null && !machineName.isEmpty() && !machineName.equals("all")) {
+            sql.append("    AND machine_name = ? ");
+            params.add(machineName);
+        }
+        sql.append("    UNION ");
+        sql.append("    SELECT DATE_FORMAT(scheduled_date, '%d.%m.%Y') AS production_day ");
+        sql.append("    FROM pm_maintenance_records ");
+        sql.append("    WHERE scheduled_date IS NOT NULL AND status IN ('Закрыто', 'Выполнено') ");
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            sql.append("    AND area = ? ");
+            params.add(area);
+        }
+        if (machineName != null && !machineName.isEmpty() && !machineName.equals("all")) {
+            sql.append("    AND machine_name = ? ");
+            params.add(machineName);
+        }
+        sql.append("    UNION ");
+        sql.append("    SELECT production_day ");
+        sql.append("    FROM tag_maintenance_records ");
+        sql.append("    WHERE production_day IS NOT NULL AND production_day != '' ");
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            sql.append("    AND area = ? ");
+            params.add(area);
+        }
+        if (machineName != null && !machineName.isEmpty() && !machineName.equals("all")) {
+            sql.append("    AND machine_name = ? ");
+            params.add(machineName);
+        }
+        sql.append(") AS all_dates ");
+        sql.append("LEFT JOIN ( ");
+        sql.append("    SELECT DATE_FORMAT(scheduled_proposed_date, '%d.%m.%Y') AS production_day, COUNT(*) AS quantity ");
+        sql.append("    FROM pm_maintenance_records ");
+        sql.append("    WHERE scheduled_proposed_date IS NOT NULL ");
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            sql.append("    AND area = ? ");
+            params.add(area);
+        }
+        if (machineName != null && !machineName.isEmpty() && !machineName.equals("all")) {
+            sql.append("    AND machine_name = ? ");
+            params.add(machineName);
+        }
+        sql.append("    GROUP BY DATE_FORMAT(scheduled_proposed_date, '%d.%m.%Y') ");
+        sql.append(") AS pm_plan ON all_dates.production_day = pm_plan.production_day ");
+        sql.append("LEFT JOIN ( ");
+        sql.append("    SELECT DATE_FORMAT(scheduled_date, '%d.%m.%Y') AS production_day, COUNT(*) AS quantity ");
+        sql.append("    FROM pm_maintenance_records ");
+        sql.append("    WHERE scheduled_date IS NOT NULL AND status IN ('Закрыто', 'Выполнено') ");
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            sql.append("    AND area = ? ");
+            params.add(area);
+        }
+        if (machineName != null && !machineName.isEmpty() && !machineName.equals("all")) {
+            sql.append("    AND machine_name = ? ");
+            params.add(machineName);
+        }
+        sql.append("    GROUP BY DATE_FORMAT(scheduled_date, '%d.%m.%Y') ");
+        sql.append(") AS pm_fact ON all_dates.production_day = pm_fact.production_day ");
+        sql.append("LEFT JOIN ( ");
+        sql.append("    SELECT production_day, COUNT(*) AS quantity ");
+        sql.append("    FROM tag_maintenance_records ");
+        sql.append("    WHERE production_day IS NOT NULL AND production_day != '' ");
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            sql.append("    AND area = ? ");
+            params.add(area);
+        }
+        if (machineName != null && !machineName.isEmpty() && !machineName.equals("all")) {
+            sql.append("    AND machine_name = ? ");
+            params.add(machineName);
+        }
+        sql.append("    GROUP BY production_day ");
+        sql.append(") AS tag ON all_dates.production_day = tag.production_day ");
+        sql.append("ORDER BY STR_TO_DATE(all_dates.production_day, '%d.%m.%Y')");
+        
+        return jdbcTemplate.queryForList(sql.toString(), params.toArray());
+    }
+
     // public List<Map<String, Object>> searchBreakDown() {
     //     String sql = "SELECT production_day, downtime_percentage "
     //             + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(CURDATE()) "
@@ -166,6 +273,37 @@ public class MonitoringRepository {
     public List<Map<String, Object>> getEquipmentMaintenanceRecords() {
         String sql = "SELECT * FROM equipment_maintenance_records ORDER BY id DESC";
         return jdbcTemplate.queryForList(sql);
+    }
+
+    // Все записи ППР (pm_maintenance_records)
+    public List<Map<String, Object>> getPmMaintenanceRecords() {
+        String sql = "SELECT * FROM pm_maintenance_records ORDER BY id DESC";
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    // Получение участков из PM записей
+    public List<Map<String, Object>> getPmAreas() {
+        String sql = "SELECT DISTINCT area FROM pm_maintenance_records " +
+                "WHERE area IS NOT NULL AND TRIM(area) <> '' ORDER BY area";
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    // Получение оборудования из PM записей с фильтром по участку
+    public List<Map<String, Object>> getPmEquipmentByArea(String area) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT DISTINCT machine_name FROM pm_maintenance_records ");
+        sql.append("WHERE machine_name IS NOT NULL AND TRIM(machine_name) <> '' ");
+        
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            sql.append("AND area = ? ");
+        }
+        
+        sql.append("ORDER BY machine_name");
+        
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            return jdbcTemplate.queryForList(sql.toString(), area);
+        }
+        return jdbcTemplate.queryForList(sql.toString());
     }
 
 

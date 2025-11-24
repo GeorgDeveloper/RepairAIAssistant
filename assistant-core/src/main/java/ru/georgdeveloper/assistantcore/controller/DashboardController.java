@@ -60,6 +60,30 @@ public class DashboardController {
         return monitoringRepository.getPmPlanFactTagPerMonth();
     }
 
+    @GetMapping("/pm-plan-fact-tag-all")
+    @ResponseBody
+    public List<Map<String, Object>> getPmPlanFactTagAll(
+            @RequestParam(required = false) String area,
+            @RequestParam(required = false) String machineName) {
+        if ((area != null && !area.isEmpty() && !area.equals("all")) || 
+            (machineName != null && !machineName.isEmpty() && !machineName.equals("all"))) {
+            return monitoringRepository.getPmPlanFactTagFiltered(area, machineName);
+        }
+        return monitoringRepository.getPmPlanFactTagAll();
+    }
+
+    @GetMapping("/pm/areas")
+    @ResponseBody
+    public List<Map<String, Object>> getPmAreas() {
+        return monitoringRepository.getPmAreas();
+    }
+
+    @GetMapping("/pm/equipment")
+    @ResponseBody
+    public List<Map<String, Object>> getPmEquipment(@RequestParam(required = false) String area) {
+        return monitoringRepository.getPmEquipmentByArea(area);
+    }
+
 
     @GetMapping("/current-metrics")
     @ResponseBody
@@ -77,5 +101,11 @@ public class DashboardController {
     @ResponseBody
     public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords() {
         return monitoringRepository.getEquipmentMaintenanceRecords();
+    }
+
+    @GetMapping("/pm-maintenance-records")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getPmMaintenanceRecords() {
+        return monitoringRepository.getPmMaintenanceRecords();
     }
 }

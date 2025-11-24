@@ -32,7 +32,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: DbaPass123!
+    password: dbaPass
     driver-class-name: com.mysql.cj.jdbc.Driver
   http:
     encoding:
@@ -135,7 +135,7 @@ data-sync:
   mysql:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: DbaPass123!
+    password: dbaPass
     driver: com.mysql.cj.jdbc.Driver
   areas:
     - name: Plant

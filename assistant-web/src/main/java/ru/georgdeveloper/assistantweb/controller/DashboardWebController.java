@@ -78,6 +78,42 @@ public class DashboardWebController {
     }
 
     @SuppressWarnings("unchecked")
+    @GetMapping("/pm-plan-fact-tag-all")
+    public List<Map<String, Object>> pmPlanFactTagAll(
+            @RequestParam(required = false) String area,
+            @RequestParam(required = false) String machineName) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/dashboard/pm-plan-fact-tag-all");
+        boolean hasParams = false;
+        
+        if (area != null && !area.isEmpty()) {
+            url.append(hasParams ? "&" : "?").append("area=").append(area);
+            hasParams = true;
+        }
+        
+        if (machineName != null && !machineName.isEmpty()) {
+            url.append(hasParams ? "&" : "?").append("machineName=").append(machineName);
+        }
+        
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/pm/areas")
+    public List<Map<String, Object>> pmAreas() {
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/pm/areas", List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/pm/equipment")
+    public List<Map<String, Object>> pmEquipment(@RequestParam(required = false) String area) {
+        String url = coreServiceUrl + "/dashboard/pm/equipment";
+        if (area != null && !area.isEmpty()) {
+            url += "?area=" + area;
+        }
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url, List.class);
+    }
+
+    @SuppressWarnings("unchecked")
     @GetMapping("/metrics-for-date")
     public Map<String, Object> getMetricsForDate(@RequestParam("date") String date) {
         return (Map<String, Object>) restTemplate.getForObject(coreServiceUrl + "/dashboard/metrics-for-date?date=" + date, Map.class);

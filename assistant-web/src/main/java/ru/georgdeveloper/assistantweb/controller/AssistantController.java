@@ -65,6 +65,11 @@ public class AssistantController {
         return "dinamic_bd";
     }
 
+    @GetMapping("/dinamic_pm")
+    public String dinamicPm() {
+        return "dinamic_pm";
+    }
+
     @GetMapping("/dinamic_type")
     public String dinamicType() {
         return "dinamic_type";
@@ -105,6 +110,11 @@ public class AssistantController {
         return "failures";
     }
 
+    @GetMapping("/pm")
+    public String pm() {
+        return "pm";
+    }
+
     @GetMapping("/final")
     public String finalPage() {
         return "final";
@@ -133,6 +143,13 @@ public class AssistantController {
     public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords(
             @RequestParam(name = "limit", defaultValue = "500") int limit) {
         return coreServiceClient.getEquipmentMaintenanceRecords(limit);
+    }
+
+    @GetMapping("/dashboard/pm-maintenance-records")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getPmMaintenanceRecords(
+            @RequestParam(name = "limit", defaultValue = "500") int limit) {
+        return coreServiceClient.getPmMaintenanceRecords(limit);
     }
 
     public static class FeedbackDto {

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair AI Assistant - ППР</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/pm.css">
+    <link rel="stylesheet" href="/static/lib/jquery.dataTables-1.13.6.min.css">
+    <script src="/static/jquery/jquery-3.6.0.min.js"></script>
+    <script src="/static/lib/jquery.dataTables-1.13.6.min.js"></script>
+</head>
+
+<body>
+    <!-- Use the navigation fragment -->
+    <div th:replace="~{fragments/navigation :: nav}"></div>
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="container">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="yearSelect">Год:</label>
+                        <select id="yearSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="monthSelect">Месяц:</label>
+                        <select id="monthSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="weekSelect">Неделя:</label>
+                        <select id="weekSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="areaSelect">Участок:</label>
+                        <select id="areaSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <button id="loadData" class="btn-apply">Загрузить</button>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <table id="pmTable" class="display nowrap" style="width:100%; min-width: 2000px;">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>id</th>
+                                    <th>machine_name</th>
+                                    <th>work_order_name</th>
+                                    <th>work_order_frequency</th>
+                                    <th>typology</th>
+                                    <th>scheduled_proposed_date</th>
+                                    <th>scheduled_date</th>
+                                    <th>delta_scheduling_days</th>
+                                    <th>pm_report_delay_days</th>
+                                    <th>date_start_work_order</th>
+                                    <th>date_stop_work_order</th>
+                                    <th>preventive_maintenance_duration_min</th>
+                                    <th>wo_estimated_duration_min</th>
+                                    <th>wo_suspension_duration_min</th>
+                                    <th>operations_nok</th>
+                                    <th>operations_ok</th>
+                                    <th>operations_all</th>
+                                    <th>status</th>
+                                    <th>maintainers</th>
+                                    <th>comment</th>
+                                    <th>created_at</th>
+                                    <th>year</th>
+                                    <th>month_number</th>
+                                    <th>month_name</th>
+                                    <th>week_number</th>
+                                    <th>is_completed</th>
+                                    <th>area</th>
+                                </tr>
+                            </thead>
+                            <tbody>                            
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript file -->
+    <script src="/static/js/pm.js"></script>
+</body>
+
+</html>
+
