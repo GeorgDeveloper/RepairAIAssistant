@@ -294,7 +294,7 @@ public class DataSyncService {
         }
 
         try {
-            Double result = sqlServerJdbcTemplate.queryForObject(sql.toString(), params.toArray(), Double.class);
+            Double result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, params.toArray());
             return result != null ? result : 0.0;
         } catch (Exception e) {
             logger.error("Ошибка получения данных простоя из SQL Server для области {}: {}", 
