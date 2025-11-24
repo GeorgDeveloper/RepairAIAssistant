@@ -230,10 +230,9 @@ public class ReportHandler {
                  }
              }
              
-             // Сортируем участки по убыванию BD% и показываем только топ-5
+             // Сортируем участки по убыванию BD% и показываем все участки
              areaBreakdown.entrySet().stream()
                  .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                 .limit(5)
                  .forEach(entry -> {
                      double value = entry.getValue();
                      String colorIndicator = getColorIndicator(value, true, 2.0); // Целевое значение BD: 2%
@@ -304,10 +303,9 @@ public class ReportHandler {
                  }
              }
              
-             // Сортируем участки по убыванию Availability и показываем только топ-5
+             // Сортируем участки по убыванию Availability и показываем все участки
              areaAvailability.entrySet().stream()
                  .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
-                 .limit(5)
                  .forEach(entry -> {
                      double value = entry.getValue();
                      String colorIndicator = getColorIndicator(value, false, 97.0); // Целевое значение Availability: 97%
