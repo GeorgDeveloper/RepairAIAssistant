@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -649,7 +650,7 @@ public class PreventiveMaintenanceTransferService {
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
                 String idcode = (String) record.get("IDCode");
-                Timestamp currentDate = (Timestamp) record.get("scheduled_proposed_date");
+                Timestamp currentDate = convertToTimestamp(record.get("scheduled_proposed_date"));
                 
                 if (idcodeToProposedDate.containsKey(idcode)) {
                     Timestamp newDateValue = idcodeToProposedDate.get(idcode);
@@ -749,7 +750,7 @@ public class PreventiveMaintenanceTransferService {
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
                 String idcode = (String) record.get("IDCode");
-                Timestamp currentDate = (Timestamp) record.get("scheduled_date");
+                Timestamp currentDate = convertToTimestamp(record.get("scheduled_date"));
                 
                 if (idcodeToScheduledDate.containsKey(idcode)) {
                     Timestamp newDateValue = idcodeToScheduledDate.get(idcode);
@@ -1273,6 +1274,38 @@ public class PreventiveMaintenanceTransferService {
     private String formatDate(Timestamp timestamp) {
         if (timestamp == null) return "";
         return new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(timestamp.getTime()));
+    }
+
+    /**
+     * Безопасное преобразование Date в Timestamp
+     * Обрабатывает случаи, когда поле в MySQL имеет тип DATE (возвращает java.sql.Date)
+     * или TIMESTAMP/DATETIME (возвращает java.sql.Timestamp)
+     */
+    private Timestamp convertToTimestamp(Object dateValue) {
+        if (dateValue == null) {
+            return null;
+        }
+        if (dateValue instanceof Timestamp) {
+            return (Timestamp) dateValue;
+        }
+        if (dateValue instanceof Date) {
+            return new Timestamp(((Date) dateValue).getTime());
+        }
+        if (dateValue instanceof java.util.Date) {
+            return new Timestamp(((java.util.Date) dateValue).getTime());
+        }
+        // Если это строка, пытаемся распарсить
+        if (dateValue instanceof String) {
+            try {
+                java.util.Date parsedDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse((String) dateValue);
+                return new Timestamp(parsedDate.getTime());
+            } catch (Exception e) {
+                logger.warn("Не удалось преобразовать строку в дату: {}", dateValue);
+                return null;
+            }
+        }
+        logger.warn("Неизвестный тип даты: {}", dateValue.getClass().getName());
+        return null;
     }
 }
 
