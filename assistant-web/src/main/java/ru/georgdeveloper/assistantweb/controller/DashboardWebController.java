@@ -114,9 +114,67 @@ public class DashboardWebController {
     }
 
     @SuppressWarnings("unchecked")
+    @GetMapping("/tag/areas")
+    public List<Map<String, Object>> tagAreas() {
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/tag/areas", List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/tag/equipment")
+    public List<Map<String, Object>> tagEquipment(@RequestParam(required = false) String area) {
+        String url = coreServiceUrl + "/dashboard/tag/equipment";
+        if (area != null && !area.isEmpty()) {
+            url += "?area=" + area;
+        }
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url, List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/bd/areas")
+    public List<Map<String, Object>> bdAreas() {
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/bd/areas", List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/bd/equipment")
+    public List<Map<String, Object>> bdEquipment(@RequestParam(required = false) String area) {
+        String url = coreServiceUrl + "/dashboard/bd/equipment";
+        if (area != null && !area.isEmpty()) {
+            url += "?area=" + area;
+        }
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url, List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/pm-tag-bd-completed")
+    public List<Map<String, Object>> pmTagBdCompleted(
+            @RequestParam(required = false) String area,
+            @RequestParam(required = false) String machineName) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/dashboard/pm-tag-bd-completed");
+        boolean hasParams = false;
+        
+        if (area != null && !area.isEmpty()) {
+            url.append(hasParams ? "&" : "?").append("area=").append(area);
+            hasParams = true;
+        }
+        
+        if (machineName != null && !machineName.isEmpty()) {
+            url.append(hasParams ? "&" : "?").append("machineName=").append(machineName);
+        }
+        
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
+    }
+
+    @SuppressWarnings("unchecked")
     @GetMapping("/metrics-for-date")
     public Map<String, Object> getMetricsForDate(@RequestParam("date") String date) {
         return (Map<String, Object>) restTemplate.getForObject(coreServiceUrl + "/dashboard/metrics-for-date?date=" + date, Map.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/tag-maintenance-records")
+    public List<Map<String, Object>> tagMaintenanceRecords() {
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/tag-maintenance-records", List.class);
     }
 
 }

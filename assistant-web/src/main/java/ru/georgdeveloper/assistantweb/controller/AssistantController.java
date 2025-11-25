@@ -70,6 +70,16 @@ public class AssistantController {
         return "dinamic_pm";
     }
 
+    @GetMapping("/pm_tag_bd")
+    public String pmTagBd() {
+        return "pm_tag_bd";
+    }
+
+    @GetMapping("/tag")
+    public String tag() {
+        return "tag";
+    }
+
     @GetMapping("/dinamic_type")
     public String dinamicType() {
         return "dinamic_type";

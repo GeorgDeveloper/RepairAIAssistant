@@ -84,6 +84,38 @@ public class DashboardController {
         return monitoringRepository.getPmEquipmentByArea(area);
     }
 
+    @GetMapping("/tag/areas")
+    @ResponseBody
+    public List<Map<String, Object>> getTagAreas() {
+        return monitoringRepository.getTagAreas();
+    }
+
+    @GetMapping("/tag/equipment")
+    @ResponseBody
+    public List<Map<String, Object>> getTagEquipment(@RequestParam(required = false) String area) {
+        return monitoringRepository.getTagEquipmentByArea(area);
+    }
+
+    @GetMapping("/bd/areas")
+    @ResponseBody
+    public List<Map<String, Object>> getBdAreas() {
+        return monitoringRepository.getBdAreas();
+    }
+
+    @GetMapping("/bd/equipment")
+    @ResponseBody
+    public List<Map<String, Object>> getBdEquipment(@RequestParam(required = false) String area) {
+        return monitoringRepository.getBdEquipmentByArea(area);
+    }
+
+    @GetMapping("/pm-tag-bd-completed")
+    @ResponseBody
+    public List<Map<String, Object>> getPmTagBdCompleted(
+            @RequestParam(required = false) String area,
+            @RequestParam(required = false) String machineName) {
+        return monitoringRepository.getPmTagBdCompleted(area, machineName);
+    }
+
 
     @GetMapping("/current-metrics")
     @ResponseBody
@@ -107,5 +139,11 @@ public class DashboardController {
     @ResponseBody
     public java.util.List<java.util.Map<String, Object>> getPmMaintenanceRecords() {
         return monitoringRepository.getPmMaintenanceRecords();
+    }
+
+    @GetMapping("/tag-maintenance-records")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getTagMaintenanceRecords() {
+        return monitoringRepository.getTagMaintenanceRecords();
     }
 }
