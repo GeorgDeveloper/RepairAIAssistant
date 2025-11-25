@@ -66,8 +66,13 @@ public class ManualTransferController {
 
     @PostMapping("/pm")
     public ResponseEntity<String> runPreventiveMaintenanceTransfer() {
-        preventiveMaintenanceTransferService.runTransfer();
-        return ResponseEntity.ok("Preventive maintenance transfer started");
+        try {
+            preventiveMaintenanceTransferService.runTransfer();
+            return ResponseEntity.ok("Preventive maintenance transfer completed successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body("Error during preventive maintenance transfer: " + e.getMessage());
+        }
     }
 }
 
