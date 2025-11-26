@@ -124,4 +124,147 @@ public class DynamicsRepository {
         String sql = "SELECT DISTINCT TRIM(cause) as cause FROM equipment_maintenance_records WHERE cause IS NOT NULL AND TRIM(cause) != '' ORDER BY cause";
         return jdbcTemplate.queryForList(sql);
     }
+
+    /**
+     * Получает данные динамики по типам поломок (failure_type) с группировкой по месяцам
+     * Возвращает время простоя в секундах и количество случаев
+     */
+    public List<Map<String, Object>> getDynamicsByFailureType(List<String> year, List<String> month, List<String> week, List<String> area, List<String> equipment) {
+        StringBuilder sql = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        
+        // Определяем уровень детализации
+        if (week != null && !week.isEmpty() && !week.contains("all") && 
+            month != null && !month.isEmpty() && !month.contains("all") &&
+            year != null && !year.isEmpty() && !year.contains("all")) {
+            // По дням недели
+            // Если выбрано несколько месяцев или годов, возвращаем их для сравнения
+            if (year.size() > 1 || month.size() > 1) {
+                sql.append("SELECT DAY(start_bd_t1) as period_label, ")
+                   .append("YEAR(start_bd_t1) as year, ")
+                   .append("MONTH(start_bd_t1) as month, ")
+                   .append("TRIM(failure_type) as failure_type, ")
+                   .append("SUM(TIME_TO_SEC(machine_downtime)) as total_downtime_seconds, ")
+                   .append("COUNT(*) as failure_count ")
+                   .append("FROM equipment_maintenance_records ")
+                   .append("WHERE YEAR(start_bd_t1) IN (").append(buildInClause(year.size())).append(") ")
+                   .append("AND MONTH(start_bd_t1) IN (").append(buildInClause(month.size())).append(") ")
+                   .append("AND WEEK(start_bd_t1, 1) IN (").append(buildInClause(week.size())).append(") ")
+                   .append("AND failure_type IS NOT NULL AND TRIM(failure_type) != '' ");
+            } else {
+                sql.append("SELECT DAY(start_bd_t1) as period_label, ")
+                   .append("TRIM(failure_type) as failure_type, ")
+                   .append("SUM(TIME_TO_SEC(machine_downtime)) as total_downtime_seconds, ")
+                   .append("COUNT(*) as failure_count ")
+                   .append("FROM equipment_maintenance_records ")
+                   .append("WHERE YEAR(start_bd_t1) IN (").append(buildInClause(year.size())).append(") ")
+                   .append("AND MONTH(start_bd_t1) IN (").append(buildInClause(month.size())).append(") ")
+                   .append("AND WEEK(start_bd_t1, 1) IN (").append(buildInClause(week.size())).append(") ")
+                   .append("AND failure_type IS NOT NULL AND TRIM(failure_type) != '' ");
+            }
+            
+            for (String y : year) params.add(Integer.parseInt(y));
+            for (String m : month) params.add(Integer.parseInt(m));
+            for (String w : week) params.add(Integer.parseInt(w));
+            
+        } else if (month != null && !month.isEmpty() && !month.contains("all") &&
+                   year != null && !year.isEmpty() && !year.contains("all")) {
+            // По неделям месяца
+            // Если выбрано несколько месяцев или годов, возвращаем их для сравнения
+            if (year.size() > 1 || month.size() > 1) {
+                sql.append("SELECT WEEK(start_bd_t1, 1) as period_label, ")
+                   .append("YEAR(start_bd_t1) as year, ")
+                   .append("MONTH(start_bd_t1) as month, ")
+                   .append("TRIM(failure_type) as failure_type, ")
+                   .append("SUM(TIME_TO_SEC(machine_downtime)) as total_downtime_seconds, ")
+                   .append("COUNT(*) as failure_count ")
+                   .append("FROM equipment_maintenance_records ")
+                   .append("WHERE YEAR(start_bd_t1) IN (").append(buildInClause(year.size())).append(") ")
+                   .append("AND MONTH(start_bd_t1) IN (").append(buildInClause(month.size())).append(") ")
+                   .append("AND failure_type IS NOT NULL AND TRIM(failure_type) != '' ");
+            } else {
+                sql.append("SELECT WEEK(start_bd_t1, 1) as period_label, ")
+                   .append("TRIM(failure_type) as failure_type, ")
+                   .append("SUM(TIME_TO_SEC(machine_downtime)) as total_downtime_seconds, ")
+                   .append("COUNT(*) as failure_count ")
+                   .append("FROM equipment_maintenance_records ")
+                   .append("WHERE YEAR(start_bd_t1) IN (").append(buildInClause(year.size())).append(") ")
+                   .append("AND MONTH(start_bd_t1) IN (").append(buildInClause(month.size())).append(") ")
+                   .append("AND failure_type IS NOT NULL AND TRIM(failure_type) != '' ");
+            }
+            
+            for (String y : year) params.add(Integer.parseInt(y));
+            for (String m : month) params.add(Integer.parseInt(m));
+            
+        } else if (year != null && !year.isEmpty() && !year.contains("all")) {
+            // По месяцам года (основной режим для отображения как на скриншоте)
+            // Если выбрано несколько годов, возвращаем год для сравнения
+            if (year.size() > 1) {
+                sql.append("SELECT MONTH(start_bd_t1) as period_label, ")
+                   .append("YEAR(start_bd_t1) as year, ")
+                   .append("TRIM(failure_type) as failure_type, ")
+                   .append("SUM(TIME_TO_SEC(machine_downtime)) as total_downtime_seconds, ")
+                   .append("COUNT(*) as failure_count ")
+                   .append("FROM equipment_maintenance_records ")
+                   .append("WHERE YEAR(start_bd_t1) IN (").append(buildInClause(year.size())).append(") ")
+                   .append("AND failure_type IS NOT NULL AND TRIM(failure_type) != '' ");
+            } else {
+                sql.append("SELECT MONTH(start_bd_t1) as period_label, ")
+                   .append("TRIM(failure_type) as failure_type, ")
+                   .append("SUM(TIME_TO_SEC(machine_downtime)) as total_downtime_seconds, ")
+                   .append("COUNT(*) as failure_count ")
+                   .append("FROM equipment_maintenance_records ")
+                   .append("WHERE YEAR(start_bd_t1) IN (").append(buildInClause(year.size())).append(") ")
+                   .append("AND failure_type IS NOT NULL AND TRIM(failure_type) != '' ");
+            }
+            
+            for (String y : year) params.add(Integer.parseInt(y));
+        } else {
+            // По годам, если год не выбран
+            sql.append("SELECT YEAR(start_bd_t1) as period_label, ")
+               .append("TRIM(failure_type) as failure_type, ")
+               .append("SUM(TIME_TO_SEC(machine_downtime)) as total_downtime_seconds, ")
+               .append("COUNT(*) as failure_count ")
+               .append("FROM equipment_maintenance_records ")
+               .append("WHERE failure_type IS NOT NULL AND TRIM(failure_type) != '' ");
+        }
+        
+        if (area != null && !area.isEmpty() && !area.contains("all")) {
+            sql.append("AND area IN (").append(buildInClause(area.size())).append(") ");
+            params.addAll(area);
+        }
+        
+        if (equipment != null && !equipment.isEmpty() && !equipment.contains("all")) {
+            sql.append("AND machine_name IN (").append(buildInClause(equipment.size())).append(") ");
+            params.addAll(equipment);
+        }
+        
+        // Группировка зависит от того, выбраны ли несколько годов/месяцев и какие поля в SELECT
+        // Проверяем, включен ли month в SELECT (когда выбраны месяц и год для сравнения)
+        boolean hasMonthInSelect = month != null && !month.isEmpty() && !month.contains("all") &&
+                                   year != null && !year.isEmpty() && !year.contains("all") &&
+                                   (year.size() > 1 || month.size() > 1);
+        boolean hasYearInSelect = year != null && !year.isEmpty() && !year.contains("all") && year.size() > 1;
+        
+        if (hasMonthInSelect) {
+            // Если month в SELECT, он должен быть в GROUP BY
+            sql.append("GROUP BY period_label, year, month, failure_type ORDER BY year, month, period_label, failure_type");
+        } else if (hasYearInSelect) {
+            // Если только year в SELECT (несколько годов, но не месяц)
+            sql.append("GROUP BY period_label, year, failure_type ORDER BY year, period_label, failure_type");
+        } else {
+            // Обычная группировка без сравнения
+            sql.append("GROUP BY period_label, failure_type ORDER BY period_label, failure_type");
+        }
+        
+        return jdbcTemplate.queryForList(sql.toString(), params.toArray());
+    }
+
+    /**
+     * Получает список типов поломок из колонки failure_type
+     */
+    public List<Map<String, Object>> getFailureTypesFromColumn() {
+        String sql = "SELECT DISTINCT TRIM(failure_type) as failure_type FROM equipment_maintenance_records WHERE failure_type IS NOT NULL AND TRIM(failure_type) != '' ORDER BY failure_type";
+        return jdbcTemplate.queryForList(sql);
+    }
 }

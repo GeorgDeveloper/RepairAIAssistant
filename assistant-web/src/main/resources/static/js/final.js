@@ -1,4 +1,12 @@
 $(function(){
+    var monthsLimit = 12; // Значение по умолчанию
+
+    function loadConfig(){
+        $.getJSON('/final/config', function(config){
+            monthsLimit = config.monthsLimit || 12;
+        });
+    }
+
     function loadFilters(){
         $.getJSON('/final/years', function(years){
             var yopts = years.map(function(y){ return '<option value="'+ y.year +'">'+ y.year +'</option>'; }).join('');
@@ -22,6 +30,21 @@ $(function(){
         });
     }
 
+    function formatNumber(value, metricName) {
+        if (value == null || value === '') return '';
+        
+        // Для процентных значений форматируем с точностью до сотых
+        if (metricName.includes('%') || metricName.includes('Доступность') || metricName.includes('BD') || metricName.includes('Факт выполнения ппр')) {
+            var num = parseFloat(value);
+            if (!isNaN(num)) {
+                return num.toFixed(2);
+            }
+        }
+        
+        // Для остальных значений возвращаем как есть
+        return value;
+    }
+
     function renderTable(rows){
         // rows: [{metric, m1..mN}]
         var head = '<tr><th>Показатель</th>';
@@ -35,7 +58,11 @@ $(function(){
 
         var body = rows.map(function(r){
             var row = '<tr><th>'+ r.metric +'</th>';
-            for (var i=1;i<=maxCols;i++){ row += '<td>' + (r['m'+i] != null ? r['m'+i] : '') + '</td>'; }
+            for (var i=1;i<=maxCols;i++){ 
+                var value = r['m'+i];
+                var formattedValue = formatNumber(value, r.metric);
+                row += '<td>' + (formattedValue !== '' ? formattedValue : '') + '</td>'; 
+            }
             row += '</tr>';
             return row;
         }).join('');
@@ -61,7 +88,7 @@ $(function(){
         var years = Array.isArray(yearsVal) ? yearsVal : (yearsVal? [yearsVal] : []);
         var months = Array.isArray(monthsVal) ? monthsVal : (monthsVal? [monthsVal] : []);
         var parts = [];
-        parts.push('limit=6');
+        parts.push('limit=' + monthsLimit);
         var yq = serializeMulti('year', years);
         var mq = serializeMulti('month', months);
         if (yq) parts.push(yq);
@@ -69,13 +96,14 @@ $(function(){
         var url = '/final/data' + (parts.length? ('?'+ parts.join('&')) : '');
         $.getJSON(url, function(rows){
             renderTable(rows);
-            updateHeadMonths(rows);
+            // updateHeadMonths(rows);
         });
     }
 
     $('#yearSelect').on('change', function(){ refreshMonths(); });
     $('#applyBtn').on('click', function(){ loadData(); });
 
+    loadConfig();
     loadFilters();
     loadData();
 });

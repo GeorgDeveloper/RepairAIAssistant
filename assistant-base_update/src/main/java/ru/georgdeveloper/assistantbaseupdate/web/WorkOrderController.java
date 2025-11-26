@@ -49,4 +49,14 @@ public class WorkOrderController {
     public List<Map<String, Object>> getWorkOrdersForDashboard() {
         return workOrderService.getLast15WorkOrders();
     }
+    
+    /**
+     * Получение нарядов для детализации показателей по дате и области
+     */
+    @GetMapping("/breakdown-details")
+    @ResponseBody
+    public List<Map<String, Object>> getBreakdownDetails(@RequestParam("date") String date,
+                                                         @RequestParam("area") String area) {
+        return workOrderService.getBreakdownDetailsForDateAndArea(date, area);
+    }
 }

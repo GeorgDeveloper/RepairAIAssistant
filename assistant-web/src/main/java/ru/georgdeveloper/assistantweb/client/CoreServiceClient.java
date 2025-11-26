@@ -36,4 +36,10 @@ public class CoreServiceClient {
         return restTemplate.getForObject(coreServiceUrl + "/dashboard/equipment-maintenance-records?limit=" + limit, 
                 java.util.List.class);
     }
+
+    @SuppressWarnings("unchecked")
+    public java.util.List<java.util.Map<String, Object>> getPmMaintenanceRecords(int limit) {
+        return restTemplate.getForObject(coreServiceUrl + "/dashboard/pm-maintenance-records?limit=" + limit, 
+                java.util.List.class);
+    }
 }

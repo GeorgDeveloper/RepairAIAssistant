@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair AI Assistant - Tag</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/pm.css">
+    <link rel="stylesheet" href="/static/lib/jquery.dataTables-1.13.6.min.css">
+    <script src="/static/jquery/jquery-3.6.0.min.js"></script>
+    <script src="/static/lib/jquery.dataTables-1.13.6.min.js"></script>
+</head>
+
+<body>
+    <!-- Use the navigation fragment -->
+    <div th:replace="~{fragments/navigation :: nav}"></div>
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="container">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="yearSelect">Год:</label>
+                        <select id="yearSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="monthSelect">Месяц:</label>
+                        <select id="monthSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="weekSelect">Неделя:</label>
+                        <select id="weekSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="areaSelect">Участок:</label>
+                        <select id="areaSelect" class="filter-control"><option value="all">Все</option></select>
+                    </div>
+                    <button id="loadData" class="btn-apply">Загрузить</button>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <table id="tagTable" class="display nowrap" style="width:100%; min-width: 2000px;">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>id</th>
+                                    <th>machine_name</th>
+                                    <th>mechanism_node</th>
+                                    <th>additional_kit</th>
+                                    <th>description</th>
+                                    <th>code</th>
+                                    <th>hp_bd</th>
+                                    <th>start_bd_t1</th>
+                                    <th>start_maint_t2</th>
+                                    <th>stop_maint_t3</th>
+                                    <th>stop_bd_t4</th>
+                                    <th>machine_downtime</th>
+                                    <th>ttr</th>
+                                    <th>t2_minus_t1</th>
+                                    <th>status</th>
+                                    <th>maintainers</th>
+                                    <th>comments</th>
+                                    <th>cause</th>
+                                    <th>failure_type</th>
+                                    <th>area</th>
+                                    <th>created_at</th>
+                                    <th>date</th>
+                                    <th>week_number</th>
+                                    <th>month_name</th>
+                                    <th>shift</th>
+                                    <th>staff</th>
+                                    <th>crew</th>
+                                    <th>crew_de_facto</th>
+                                    <th>production_day</th>
+                                </tr>
+                            </thead>
+                            <tbody>                            
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript file -->
+    <script src="/static/js/tag.js"></script>
+</body>
+
+</html>
+

@@ -228,3 +228,70 @@
     overflow-y: auto; 
     flex: 1;
 }
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    width: min(1000px, 92vw);
+    height: 80vh;
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 8px;
+}
+
+.modal-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.close-btn {
+    border: 0;
+    background: #e74c3c;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.back-btn {
+    border: 0;
+    background: #7f8c8d;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.modal-title {
+    margin: 0;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.chart-canvas {
+    width: 100%;
+    height: 100%;
+}
