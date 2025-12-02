@@ -246,7 +246,7 @@
 
 .dashboard-grid-index {
     display: grid;
-    grid-template-columns:  1fr 1fr;
+    grid-template-columns:  2.5fr 1fr;
     grid-gap: 16px;
     /* height: calc(100vh - 136px); */
     padding: 20px 0;
