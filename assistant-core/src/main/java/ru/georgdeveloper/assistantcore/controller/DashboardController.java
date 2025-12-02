@@ -44,20 +44,26 @@ public class DashboardController {
     
     @GetMapping("/breakDown")
     @ResponseBody
-    public List<Map<String, Object>> searchBreakDown() {
-        return monitoringRepository.searchBreakDown();
+    public List<Map<String, Object>> searchBreakDown(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        return monitoringRepository.searchBreakDown(year, month);
     }
 
     @GetMapping("/availability")
     @ResponseBody
-    public List<Map<String, Object>> searchAvailability() {
-        return monitoringRepository.searchAvailability();
+    public List<Map<String, Object>> searchAvailability(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        return monitoringRepository.searchAvailability(year, month);
     }
 
     @GetMapping("/pm-plan-fact-tag")
     @ResponseBody
-    public List<Map<String, Object>> getPmPlanFactTagPerMonth() {
-        return monitoringRepository.getPmPlanFactTagPerMonth();
+    public List<Map<String, Object>> getPmPlanFactTagPerMonth(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        return monitoringRepository.getPmPlanFactTagPerMonth(year, month);
     }
 
     @GetMapping("/pm-plan-fact-tag-all")
@@ -119,8 +125,10 @@ public class DashboardController {
 
     @GetMapping("/current-metrics")
     @ResponseBody
-    public Map<String, Object> getCurrentMetrics() {
-        return monitoringRepository.getCurrentMetrics();
+    public Map<String, Object> getCurrentMetrics(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        return monitoringRepository.getCurrentMetrics(year, month);
     }
 
     @GetMapping("/metrics-for-date")

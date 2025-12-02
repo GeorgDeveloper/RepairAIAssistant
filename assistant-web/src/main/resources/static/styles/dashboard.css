@@ -524,6 +524,47 @@
     background: #a8a8a8;
 }
 
+/* Стили для навигации по месяцам */
+.month-navigation {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-right: auto;
+}
+
+.nav-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.nav-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.month-display {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    min-width: 150px;
+    text-align: center;
+}
+
 /* Стили для легенды типов причин простоя */
 .downtime-legend {
     display: flex;

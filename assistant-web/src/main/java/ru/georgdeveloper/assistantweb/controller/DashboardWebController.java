@@ -25,20 +25,62 @@ public class DashboardWebController {
 
     @SuppressWarnings("unchecked")
     @GetMapping("/breakDown")
-    public List<Map<String, Object>> breakDown() {
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/breakDown", List.class);
+    public List<Map<String, Object>> breakDown(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/dashboard/breakDown");
+        boolean hasParams = false;
+        
+        if (year != null) {
+            url.append("?year=").append(year);
+            hasParams = true;
+        }
+        
+        if (month != null) {
+            url.append(hasParams ? "&" : "?").append("month=").append(month);
+        }
+        
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 
     @SuppressWarnings("unchecked")
     @GetMapping("/availability")
-    public List<Map<String, Object>> availability() {
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/availability", List.class);
+    public List<Map<String, Object>> availability(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/dashboard/availability");
+        boolean hasParams = false;
+        
+        if (year != null) {
+            url.append("?year=").append(year);
+            hasParams = true;
+        }
+        
+        if (month != null) {
+            url.append(hasParams ? "&" : "?").append("month=").append(month);
+        }
+        
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 
     @SuppressWarnings("unchecked")
     @GetMapping("/current-metrics")
-    public Map<String, Object> currentMetrics() {
-        return (Map<String, Object>) restTemplate.getForObject(coreServiceUrl + "/dashboard/current-metrics", Map.class);
+    public Map<String, Object> currentMetrics(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/dashboard/current-metrics");
+        boolean hasParams = false;
+        
+        if (year != null) {
+            url.append("?year=").append(year);
+            hasParams = true;
+        }
+        
+        if (month != null) {
+            url.append(hasParams ? "&" : "?").append("month=").append(month);
+        }
+        
+        return (Map<String, Object>) restTemplate.getForObject(url.toString(), Map.class);
     }
 
     @SuppressWarnings("unchecked")
@@ -73,8 +115,22 @@ public class DashboardWebController {
 
     @SuppressWarnings("unchecked")
     @GetMapping("/pm-plan-fact-tag")
-    public List<Map<String, Object>> pmPlanFactTag() {
-        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/pm-plan-fact-tag", List.class);
+    public List<Map<String, Object>> pmPlanFactTag(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/dashboard/pm-plan-fact-tag");
+        boolean hasParams = false;
+        
+        if (year != null) {
+            url.append("?year=").append(year);
+            hasParams = true;
+        }
+        
+        if (month != null) {
+            url.append(hasParams ? "&" : "?").append("month=").append(month);
+        }
+        
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 
     @SuppressWarnings("unchecked")

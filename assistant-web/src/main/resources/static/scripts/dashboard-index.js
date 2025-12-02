@@ -1,5 +1,81 @@
 // Specific functions for the index dashboard page (index.html)
 const IndexDashboard = {
+    // Управление месяцем
+    currentDate: null,
+    
+    initMonthNavigation() {
+        // Проверяем, что элементы существуют
+        const prevBtn = document.getElementById('prevMonthBtn');
+        const nextBtn = document.getElementById('nextMonthBtn');
+        const monthDisplay = document.getElementById('currentMonthDisplay');
+        
+        if (!prevBtn || !nextBtn || !monthDisplay) {
+            console.error('Элементы навигации по месяцам не найдены');
+            return;
+        }
+        
+        // Инициализация: устанавливаем текущий месяц (предыдущий день от сегодня)
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        this.currentDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), 1);
+        
+        this.updateMonthDisplay();
+        this.updateNavigationButtons();
+        
+        // Обработчики событий для кнопок навигации
+        prevBtn.addEventListener('click', () => {
+            this.navigateMonth(-1);
+        });
+        
+        nextBtn.addEventListener('click', () => {
+            this.navigateMonth(1);
+        });
+    },
+    
+    navigateMonth(direction) {
+        const newDate = new Date(this.currentDate);
+        newDate.setMonth(newDate.getMonth() + direction);
+        
+        // Проверяем, не превышает ли новый месяц текущий месяц
+        const today = new Date();
+        const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        if (newDate <= currentMonth) {
+            this.currentDate = newDate;
+            this.updateMonthDisplay();
+            this.updateNavigationButtons();
+            this.initializeDashboard();
+        }
+    },
+    
+    updateMonthDisplay() {
+        const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                          'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+        const monthName = monthNames[this.currentDate.getMonth()];
+        const year = this.currentDate.getFullYear();
+        document.getElementById('currentMonthDisplay').textContent = `${monthName} ${year}`;
+    },
+    
+    updateNavigationButtons() {
+        const today = new Date();
+        const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const isCurrentMonth = this.currentDate.getTime() === currentMonth.getTime();
+        
+        // Отключаем кнопку "вперед", если мы на текущем месяце
+        const nextBtn = document.getElementById('nextMonthBtn');
+        nextBtn.disabled = isCurrentMonth;
+        nextBtn.style.opacity = isCurrentMonth ? '0.5' : '1';
+        nextBtn.style.cursor = isCurrentMonth ? 'not-allowed' : 'pointer';
+    },
+    
+    // Проверяет, является ли выбранный месяц текущим (предыдущим месяцем)
+    isCurrentMonth() {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const currentMonth = new Date(yesterday.getFullYear(), yesterday.getMonth(), 1);
+        return this.currentDate.getTime() === currentMonth.getTime();
+    },
+    
     // Утилиты
     Utils: {
         filterEmptyData(dataPoints) {
@@ -17,41 +93,110 @@ const IndexDashboard = {
 
     // Создание графиков
     Charts: {
+        // Генерирует все дни месяца
+        generateAllDaysInMonth(year, month) {
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const days = [];
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayStr = String(day).padStart(2, '0');
+                const monthStr = String(month).padStart(2, '0');
+                days.push(`${dayStr}.${monthStr}.${year}`);
+            }
+            return days;
+        },
+        
         create(containerId, chartId, title, dataPoints, chartType) {
-            const filteredData = IndexDashboard.Utils.filterEmptyData(dataPoints);
-            
-            if (!filteredData.length) {
-                document.querySelector(chartId).innerHTML = 
-                    `<div style="text-align: center; padding-top: 50px; color: #677;">
-                        <h3>${title}</h3>
-                        <p>Нет данных для отображения</p>
-                    </div>`;
-                return;
+            // Уничтожаем старый график и resizable, если они существуют
+            try {
+                const existingChart = $(chartId).CanvasJSChart();
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+            } catch (e) {
+                // Игнорируем ошибки, если графика нет
             }
             
-            const uniqueDataMap = new Map();
-            filteredData.forEach(point => {
-                if (point.label && point.y != null) {
-                    uniqueDataMap.set(point.label, point.y);
+            // Уничтожаем resizable, если он существует
+            try {
+                if ($(containerId).data('ui-resizable')) {
+                    $(containerId).resizable('destroy');
                 }
-            });
+            } catch (e) {
+                // Игнорируем ошибки
+            }
             
-            const coloredDataPoints = Array.from(uniqueDataMap.entries())
-                .sort((a, b) => new Date(a[0]) - new Date(b[0]))
-                .map(([label, y]) => ({
-                    label, y,
-                    color: IndexDashboard.Utils.getColorForPoint(y, chartType)
-                }));
+            // Проверяем, является ли текущий месяц выбранным
+            const isCurrentMonth = IndexDashboard.isCurrentMonth();
+            
+            let coloredDataPoints;
+            
+            if (isCurrentMonth) {
+                // Для текущего месяца используем старую логику - только дни с данными
+                const filteredData = IndexDashboard.Utils.filterEmptyData(dataPoints);
+                
+                if (!filteredData.length) {
+                    document.querySelector(chartId).innerHTML = 
+                        `<div style="text-align: center; padding-top: 50px; color: #677;">
+                            <h3>${title}</h3>
+                            <p>Нет данных для отображения</p>
+                        </div>`;
+                    return;
+                }
+                
+                const uniqueDataMap = new Map();
+                filteredData.forEach(point => {
+                    if (point.label && point.y != null) {
+                        uniqueDataMap.set(point.label, point.y);
+                    }
+                });
+                
+                coloredDataPoints = Array.from(uniqueDataMap.entries())
+                    .sort((a, b) => {
+                        // Сортируем по дате правильно
+                        const dateA = a[0].split('.').reverse().join('-');
+                        const dateB = b[0].split('.').reverse().join('-');
+                        return new Date(dateA) - new Date(dateB);
+                    })
+                    .map(([label, y]) => ({
+                        label, y,
+                        color: IndexDashboard.Utils.getColorForPoint(y, chartType)
+                    }));
+            } else {
+                // Для других месяцев - показываем все дни месяца
+                const year = IndexDashboard.currentDate.getFullYear();
+                const month = IndexDashboard.currentDate.getMonth() + 1;
+                const allDays = this.generateAllDaysInMonth(year, month);
+                
+                // Создаем Map для быстрого доступа к данным
+                const dataMap = new Map();
+                if (dataPoints && dataPoints.length > 0) {
+                    dataPoints.forEach(point => {
+                        if (point.label && point.y != null) {
+                            dataMap.set(point.label, point.y);
+                        }
+                    });
+                }
+                
+                // Создаем точки данных для всех дней месяца
+                coloredDataPoints = allDays.map(label => {
+                    const y = dataMap.get(label) || null;
+                    return {
+                        label,
+                        y: y,
+                        color: y != null ? IndexDashboard.Utils.getColorForPoint(y, chartType) : '#cccccc'
+                    };
+                });
+            }
             
             const options = {
                 animationEnabled: true,
                 title: { text: title, fontSize: 14 },
                 axisX: {
                     labelAngle: -45,
-                    interval: 2,
+                    interval: isCurrentMonth ? 2 : 1,
                     labelAutoFit: true,
-                    labelMaxWidth: 80,
-                    labelFontSize: 10
+                    labelMaxWidth: isCurrentMonth ? 80 : 60,
+                    labelFontSize: isCurrentMonth ? 10 : 9
                 },
                 axisY: { suffix: "%", labelFontSize: 10 },
                 data: [{
@@ -60,39 +205,133 @@ const IndexDashboard = {
                     dataPoints: coloredDataPoints,
                     dataPointWidth: 10,
                     click: function(e) {
-                        console.log('Chart column clicked:', e.dataPoint.label);
-                        const date = e.dataPoint.label;
-                        IndexDashboard.showIndicatorTable(date);
+                        if (e.dataPoint.y != null) {
+                            console.log('Chart column clicked:', e.dataPoint.label);
+                            const date = e.dataPoint.label;
+                            IndexDashboard.showIndicatorTable(date);
+                        }
                     }
                 }]
             };
             
-            $(containerId).resizable({
-                create() {
+            // Очищаем контейнер перед созданием нового графика
+            const chartElement = document.querySelector(chartId);
+            if (chartElement) {
+                chartElement.innerHTML = '';
+            }
+            
+            // Создаем новый график
+            setTimeout(() => {
+                try {
                     $(chartId).CanvasJSChart(options);
                     const chart = $(chartId).CanvasJSChart();
-                    setTimeout(() => chart.render(), 0);
-                    setTimeout(() => chart.render(), 150);
-                },
-                resize() {
-                    $(chartId).CanvasJSChart().render();
+                    if (chart) {
+                        chart.render();
+                    }
+                } catch (e) {
+                    console.error('Ошибка при создании графика:', e);
                 }
-            });
+            }, 100);
+            
+            // Настраиваем resizable после создания графика
+            setTimeout(() => {
+                try {
+                    $(containerId).resizable({
+                        create() {
+                            const chart = $(chartId).CanvasJSChart();
+                            if (chart) {
+                                chart.render();
+                            }
+                        },
+                        resize() {
+                            const chart = $(chartId).CanvasJSChart();
+                            if (chart) {
+                                chart.render();
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Ошибка при настройке resizable:', e);
+                }
+            }, 200);
         },
         
         createPmLineChart(containerSelector, chartSelector, data) {
-            if (!data?.length) {
-                document.querySelector(chartSelector).innerHTML = '<p>Нет данных для отображения</p>';
-                return;
+            // Уничтожаем старый график и resizable, если они существуют
+            try {
+                const existingChart = $(chartSelector).CanvasJSChart();
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+            } catch (e) {
+                // Игнорируем ошибки, если графика нет
             }
             
-            const parse = key => data.map(x => ({ 
-                label: x.production_day, 
-                y: Number(x[key]) || 0 
-            }));
+            try {
+                if ($(containerSelector).data('ui-resizable')) {
+                    $(containerSelector).resizable('destroy');
+                }
+            } catch (e) {
+                // Игнорируем ошибки
+            }
             
-            const totalPlan = data.reduce((s, x) => s + (Number(x.plan) || 0), 0);
-            const totalFact = data.reduce((s, x) => s + (Number(x.fact) || 0), 0);
+            // Проверяем, является ли текущий месяц выбранным
+            const isCurrentMonth = IndexDashboard.isCurrentMonth();
+            
+            let parse;
+            
+            if (isCurrentMonth) {
+                // Для текущего месяца используем старую логику - только дни с данными
+                if (!data?.length) {
+                    document.querySelector(chartSelector).innerHTML = '<p>Нет данных для отображения</p>';
+                    return;
+                }
+                
+                parse = key => data.map(x => ({ 
+                    label: x.production_day, 
+                    y: Number(x[key]) || 0 
+                })).sort((a, b) => {
+                    // Сортируем по дате правильно
+                    const dateA = a.label.split('.').reverse().join('-');
+                    const dateB = b.label.split('.').reverse().join('-');
+                    return new Date(dateA) - new Date(dateB);
+                });
+            } else {
+                // Для других месяцев - показываем все дни месяца
+                const year = IndexDashboard.currentDate.getFullYear();
+                const month = IndexDashboard.currentDate.getMonth() + 1;
+                const allDays = this.generateAllDaysInMonth(year, month);
+                
+                // Создаем Map для быстрого доступа к данным
+                const dataMap = new Map();
+                if (data && data.length > 0) {
+                    data.forEach(x => {
+                        if (x.production_day) {
+                            dataMap.set(x.production_day, {
+                                plan: Number(x.plan) || 0,
+                                fact: Number(x.fact) || 0,
+                                tag: Number(x.tag) || 0
+                            });
+                        }
+                    });
+                }
+                
+                // Создаем точки данных для всех дней месяца
+                parse = key => allDays.map(label => {
+                    const dayData = dataMap.get(label);
+                    return {
+                        label,
+                        y: dayData ? dayData[key] : 0
+                    };
+                });
+            }
+            
+            const planPoints = parse('plan');
+            const factPoints = parse('fact');
+            const tagPoints = parse('tag');
+            
+            const totalPlan = planPoints.reduce((s, x) => s + (x.y || 0), 0);
+            const totalFact = factPoints.reduce((s, x) => s + (x.y || 0), 0);
             const completion = totalPlan > 0 ? Math.round((totalFact / totalPlan) * 100) : 0;
             
             const options = {
@@ -105,25 +344,56 @@ const IndexDashboard = {
                     horizontalAlign: "right",
                     dockInsidePlotArea: true
                 }],
-                axisX: { title: "Дата", labelAngle: -45, margin: 10, labelFontSize: 10 },
+                axisX: { title: "Дата", labelAngle: -45, margin: 10, labelFontSize: isCurrentMonth ? 10 : 9, interval: isCurrentMonth ? 2 : 1 },
                 axisY: { title: "Количество", includeZero: true, margin: 10, labelFontSize: 10 },
                 legend: { verticalAlign: "bottom" },
                 data: [
-                    { type: "line", name: "Plan", showInLegend: true, color: "#e31a1c", markerSize: 4, dataPoints: parse('plan') },
-                    { type: "line", name: "Fact", showInLegend: true, color: "#33a02c", markerSize: 4, dataPoints: parse('fact') },
-                    { type: "line", name: "Tag", showInLegend: true, color: "#1f78b4", markerSize: 4, dataPoints: parse('tag') }
+                    { type: "line", name: "Plan", showInLegend: true, color: "#e31a1c", markerSize: 4, dataPoints: planPoints },
+                    { type: "line", name: "Fact", showInLegend: true, color: "#33a02c", markerSize: 4, dataPoints: factPoints },
+                    { type: "line", name: "Tag", showInLegend: true, color: "#1f78b4", markerSize: 4, dataPoints: tagPoints }
                 ]
             };
             
-            $(containerSelector).resizable({
-                create() {
+            // Очищаем контейнер перед созданием нового графика
+            const chartElement = document.querySelector(chartSelector);
+            if (chartElement) {
+                chartElement.innerHTML = '';
+            }
+            
+            // Создаем новый график
+            setTimeout(() => {
+                try {
                     $(chartSelector).CanvasJSChart(options);
                     const chart = $(chartSelector).CanvasJSChart();
-                    setTimeout(() => chart.render(), 0);
-                    setTimeout(() => chart.render(), 150);
-                },
-                resize() { $(chartSelector).CanvasJSChart().render(); }
-            });
+                    if (chart) {
+                        chart.render();
+                    }
+                } catch (e) {
+                    console.error('Ошибка при создании PM графика:', e);
+                }
+            }, 100);
+            
+            // Настраиваем resizable после создания графика
+            setTimeout(() => {
+                try {
+                    $(containerSelector).resizable({
+                        create() {
+                            const chart = $(chartSelector).CanvasJSChart();
+                            if (chart) {
+                                chart.render();
+                            }
+                        },
+                        resize() {
+                            const chart = $(chartSelector).CanvasJSChart();
+                            if (chart) {
+                                chart.render();
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Ошибка при настройке resizable для PM:', e);
+                }
+            }, 200);
         }
     },
 
@@ -135,9 +405,28 @@ const IndexDashboard = {
                 return;
             }
             
-            const prevDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const prevDay = prevDate.toLocaleDateString('ru-RU');
-            const currentMonth = prevDate.toLocaleDateString('ru-RU', { month: 'long' });
+            // Используем выбранный месяц из навигации
+            const selectedDate = IndexDashboard.currentDate;
+            const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+                              'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+            const currentMonth = monthNames[selectedDate.getMonth()];
+            
+            // Проверяем, является ли текущий месяц выбранным
+            const isCurrentMonth = IndexDashboard.isCurrentMonth();
+            
+            let prevDay;
+            if (isCurrentMonth) {
+                // Для текущего месяца используем старую логику - предыдущий день
+                const prevDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                prevDay = prevDate.toLocaleDateString('ru-RU');
+            } else {
+                // Для других месяцев - последний день выбранного месяца
+                const lastDayOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+                const day = String(lastDayOfMonth.getDate()).padStart(2, '0');
+                const month = String(lastDayOfMonth.getMonth() + 1).padStart(2, '0');
+                const year = lastDayOfMonth.getFullYear();
+                prevDay = `${day}.${month}.${year}`;
+            }
             
             const sections = [
                 { name: 'Резиносмешение', prefix: 'report_new_mixing_area' },
@@ -207,31 +496,54 @@ const IndexDashboard = {
     // Инициализация дашборда
     async initializeDashboard() {
         try {
+            // Получаем год и месяц из currentDate
+            const year = this.currentDate.getFullYear();
+            const month = this.currentDate.getMonth() + 1; // JavaScript месяцы начинаются с 0
+            
+            // Формируем URL с параметрами месяца
+            const breakDownUrl = `/dashboard/breakDown?year=${year}&month=${month}`;
+            const availabilityUrl = `/dashboard/availability?year=${year}&month=${month}`;
+            const pmUrl = `/dashboard/pm-plan-fact-tag?year=${year}&month=${month}`;
+            const metricsUrl = `/dashboard/current-metrics?year=${year}&month=${month}`;
+            
             // Загрузка данных для графиков
             const [breakDownData, availabilityData, currentMetrics, topBreakdownsWeek, topBreakdownsWeekKeyLines, pmData] = await Promise.all([
-                DashboardAPI.fetchData('/dashboard/breakDown'),
-                DashboardAPI.fetchData('/dashboard/availability'),
-                DashboardAPI.fetchCurrentMetrics(),
+                DashboardAPI.fetchData(breakDownUrl),
+                DashboardAPI.fetchData(availabilityUrl),
+                DashboardAPI.fetchData(metricsUrl),
                 DashboardAPI.fetchData('/dashboard/top-breakdowns-week'),
                 DashboardAPI.fetchData('/dashboard/top-breakdowns-week-key-lines'),
-                DashboardAPI.fetchData('/dashboard/pm-plan-fact-tag')
+                DashboardAPI.fetchData(pmUrl)
             ]);
             
             // Подготовка данных для графиков
             const breakDownPoints = breakDownData?.map(item => ({
                 label: item.production_day,
-                y: item.downtime_percentage ? Number(item.downtime_percentage) : null
+                y: item.downtime_percentage != null ? Number(item.downtime_percentage) : null
             })) || [];
             
             const availabilityPoints = availabilityData?.map(item => ({
                 label: item.production_day,
-                y: item.availability ? Number(item.availability) : null
+                y: item.availability != null ? Number(item.availability) : null
             })) || [];
             
+            console.log('BreakDown data points:', breakDownPoints.length);
+            console.log('Availability data points:', availabilityPoints.length);
+            console.log('PM data:', pmData?.length || 0);
+            
             // Создание графиков и таблиц
-            this.Charts.create("#resizable1", "#breakDown", "BreakDown %", breakDownPoints, "breakDown");
-            this.Charts.create("#resizable2", "#availability", "Availability %", availabilityPoints, "availability");
-            this.Charts.createPmLineChart('#resizablePm', '#pmChart', pmData);
+            // Используем setTimeout для обеспечения правильного порядка создания
+            setTimeout(() => {
+                this.Charts.create("#resizable1", "#breakDown", "BreakDown %", breakDownPoints, "breakDown");
+            }, 50);
+            
+            setTimeout(() => {
+                this.Charts.create("#resizable2", "#availability", "Availability %", availabilityPoints, "availability");
+            }, 100);
+            
+            setTimeout(() => {
+                this.Charts.createPmLineChart('#resizablePm', '#pmChart', pmData);
+            }, 150);
             
             this.Tables.createMetrics(currentMetrics);
             this.Tables.createTopBreakdowns(topBreakdownsWeek, 'topBreakdownsWeekTable', true);
@@ -245,6 +557,7 @@ const IndexDashboard = {
 
 // Инициализация при загрузке страницы
 window.onload = async function() {
+    IndexDashboard.initMonthNavigation();
     await IndexDashboard.initializeDashboard();
     
     // Настройка автоматического перерендера графиков при изменении размеров
