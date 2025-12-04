@@ -1,10 +1,10 @@
-package ru.georgdeveloper.assistantbaseupdate.repository;
+package ru.georgdeveloper.assistantbaseupdate.repository.sqlserver;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import ru.georgdeveloper.assistantbaseupdate.entity.WorkOrder;
+import ru.georgdeveloper.assistantbaseupdate.entity.sqlserver.WorkOrder;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
 
@@ -55,4 +55,16 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, String> {
     /** Получение нарядов по зоне */
     @Query("SELECT w FROM WorkOrder w WHERE w.plantDepartmentGeographicalCodeName = :area AND w.isDeleted = 0 ORDER BY w.dateT1 DESC")
     List<WorkOrder> findByArea(@Param("area") String area, Pageable pageable);
+    
+    /** Получение детализации нарядов для конкретной даты и области */
+    @Query("SELECT w FROM WorkOrder w WHERE " +
+           "w.plantDepartmentGeographicalCodeName = :area AND " +
+           "w.isDeleted = 0 AND " +
+           "((w.sDateT1 LIKE CONCAT(:date, '%')) OR (w.sDateT4 LIKE CONCAT(:date, '%'))) AND " +
+           "w.typeWo NOT LIKE '%Tag%' AND " +
+           "w.comment NOT LIKE '%Cause:%Ошибочный запрос%' AND " +
+           "w.comment NOT LIKE '%Cause:%Ложный вызов%' AND " +
+           "NOT (LENGTH(w.comment) BETWEEN 15 AND 19 AND w.woStatusLocalDescr LIKE '%Закрыто%') " +
+           "ORDER BY w.duration DESC")
+    List<WorkOrder> findBreakdownDetailsForDateAndArea(@Param("date") String date, @Param("area") String area);
 }

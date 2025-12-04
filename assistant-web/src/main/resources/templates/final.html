@@ -6,7 +6,7 @@
     <title>Итоги месяца</title>
     <link rel="stylesheet" href="/static/styles/style.css">
     <link rel="stylesheet" href="/static/styles/final.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/static/jquery/jquery-3.6.0.min.js"></script>
 </head>
 <body>
     <div th:replace="~{fragments/navigation :: nav}"></div>
@@ -24,7 +24,7 @@
                 </div>
                 <div>
                     <label for="monthSelect">Месяц</label>
-                    <select id="monthSelect" multiple size="6"></select>
+                    <select id="monthSelect" multiple size="12"></select>
                 </div>
                 <div>
                     <button id="applyBtn" class="btn-apply">Показать</button>

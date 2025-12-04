@@ -46,8 +46,9 @@ public class TopEquipmentController {
                                                         @RequestParam(required = false) String dateFrom,
                                                         @RequestParam(required = false) String dateTo,
                                                         @RequestParam(required = false) String week,
-                                                        @RequestParam(required = false) String area) {
-        return repository.getEquipmentCauses(machine, dateFrom, dateTo, week, area);
+                                                        @RequestParam(required = false) String area,
+                                                        @RequestParam(required = false) String failureType) {
+        return repository.getEquipmentCauses(machine, dateFrom, dateTo, week, area, failureType);
     }
 
     @GetMapping("/drilldown/mechanisms")
@@ -56,8 +57,9 @@ public class TopEquipmentController {
                                                             @RequestParam(required = false) String dateFrom,
                                                             @RequestParam(required = false) String dateTo,
                                                             @RequestParam(required = false) String week,
-                                                            @RequestParam(required = false) String area) {
-        return repository.getEquipmentMechanisms(machine, cause, dateFrom, dateTo, week, area);
+                                                            @RequestParam(required = false) String area,
+                                                            @RequestParam(required = false) String failureType) {
+        return repository.getEquipmentMechanisms(machine, cause, dateFrom, dateTo, week, area, failureType);
     }
 
     @GetMapping("/drilldown/events")
@@ -67,7 +69,24 @@ public class TopEquipmentController {
                                                         @RequestParam(required = false) String dateFrom,
                                                         @RequestParam(required = false) String dateTo,
                                                         @RequestParam(required = false) String week,
-                                                        @RequestParam(required = false) String area) {
-        return repository.getEquipmentEvents(machine, cause, mechanism, dateFrom, dateTo, week, area);
+                                                        @RequestParam(required = false) String area,
+                                                        @RequestParam(required = false) String failureType) {
+        return repository.getEquipmentEvents(machine, cause, mechanism, dateFrom, dateTo, week, area, failureType);
+    }
+
+    @GetMapping("/breakdown-details")
+    public List<Map<String, Object>> getBreakdownDetailsForDateAndArea(@RequestParam("date") String date,
+                                                                       @RequestParam("area") String area) {
+        return repository.getBreakdownDetailsForDateAndArea(date, area);
+    }
+
+    @GetMapping("/drilldown/all-events")
+    public List<Map<String, Object>> getEquipmentAllEvents(@RequestParam String machine,
+                                                            @RequestParam(required = false) String dateFrom,
+                                                            @RequestParam(required = false) String dateTo,
+                                                            @RequestParam(required = false) String week,
+                                                            @RequestParam(required = false) String area,
+                                                            @RequestParam(required = false) String failureType) {
+        return repository.getEquipmentAllEvents(machine, dateFrom, dateTo, week, area, failureType);
     }
 }

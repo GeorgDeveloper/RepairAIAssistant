@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Динамика по типам поломок</title>
+    <link rel="stylesheet" href="static/styles/style.css">
+    <link rel="stylesheet" href="static/styles/dinamic-bd.css">
+    <script src="/static/lib/chart.min.js"></script>
+    <script src="/static/lib/chartjs-plugin-datalabels.min.js"></script>
+</head>
+
+<body>
+    <!-- Use the navigation fragment -->
+    <div th:replace="~{fragments/navigation :: nav}"></div>
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="container">
+                <h1>Динамика по типам поломок</h1>
+                
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="year">Год:</label>
+                        <div class="multi-select" id="year-multiselect">
+                            <button type="button" class="multi-select-button" id="year-button">
+                                <span id="year-text">Все</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="year-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="year-all" value="all" checked>
+                                    <label for="year-all">Все</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="month">Месяц:</label>
+                        <div class="multi-select" id="month-multiselect">
+                            <button type="button" class="multi-select-button" id="month-button">
+                                <span id="month-text">Все</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="month-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="month-all" value="all" checked>
+                                    <label for="month-all">Все</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="week">Неделя:</label>
+                        <div class="multi-select" id="week-multiselect">
+                            <button type="button" class="multi-select-button" id="week-button">
+                                <span id="week-text">Все</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="week-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="week-all" value="all" checked>
+                                    <label for="week-all">Все</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="area">Участок:</label>
+                        <div class="multi-select" id="area-multiselect">
+                            <button type="button" class="multi-select-button" id="area-button">
+                                <span id="area-text">Все участки</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="area-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="area-all" value="all" checked>
+                                    <label for="area-all">Все участки</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="equipment">Оборудование:</label>
+                        <div class="multi-select" id="equipment-multiselect">
+                            <button type="button" class="multi-select-button" id="equipment-button">
+                                <span id="equipment-text">Всё оборудование</span>
+                            </button>
+                            <div class="multi-select-dropdown" id="equipment-dropdown">
+                                <div class="multi-select-option">
+                                    <input type="checkbox" id="equipment-all" value="all" checked>
+                                    <label for="equipment-all">Всё оборудование</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="apply-filters" class="btn-apply">Применить фильтры</button>
+                </div>
+                
+                <div class="loading" id="loading">Загрузка данных...</div>
+                <div class="error" id="error"></div>
+                
+                <div class="charts-wrapper">
+                    <div class="charts-column">
+                        <div class="chart-controls">
+                            <button id="toggleChart" class="btn-toggle">
+                                Показать количество
+                            </button>
+                            <button id="toggleChartType" class="btn-toggle">
+                                Накопительная
+                            </button>
+                            <button id="toggleLabels" class="btn-toggle">
+                                Значения: выкл
+                            </button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="mainChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                    <div class="legend-column">
+                        <h4>Легенда</h4>
+                        <button id="toggleAllLegend" class="btn-toggle-all">Отключить все</button>
+                        <div id="customLegend"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="drillModal" class="modal" role="dialog" aria-modal="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle" class="modal-title">Детализация</h3>
+                    <div class="modal-actions">
+                        <button id="backBtn" class="back-btn" style="display:none;">Назад</button>
+                        <button id="closeBtn" class="close-btn">Закрыть</button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <canvas id="drillChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript file -->
+    <script src="static/js/dinamic-type.js"></script>
+</body>
+
+</html>
+

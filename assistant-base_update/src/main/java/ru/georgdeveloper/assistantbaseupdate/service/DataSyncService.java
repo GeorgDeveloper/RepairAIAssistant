@@ -8,8 +8,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.config.DataSyncProperties;
-import ru.georgdeveloper.assistantbaseupdate.repository.ProductionMetricsOnlineRepository;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -39,9 +37,6 @@ public class DataSyncService {
     @Autowired
     @Qualifier("mysqlJdbcTemplate")
     private JdbcTemplate mysqlJdbcTemplate;
-
-    @Autowired
-    private ProductionMetricsOnlineRepository repository;
 
     /**
      * Планируемая задача синхронизации данных каждые 3 минуты
@@ -113,14 +108,14 @@ public class DataSyncService {
         // 3. Получаем время простоя из SQL Server
         Double downtime = getDowntimeFromSqlServer(area, dateRange[0], dateRange[1]);
 
-        // 4. Рассчитываем инкрементальное рабочее время
+        // 4. Рассчитываем инкрементальное рабочее время на основе количества прошедших 3-минутных интервалов
         Double incrementalWorkingTime = calculateIncrementalWorkingTime(workingTime, dateRange[0]);
         
-        // 5. Рассчитываем метрики
+        // 6. Рассчитываем метрики
         Double downtimePercentage = calculateDowntimePercentage(downtime, incrementalWorkingTime);
         Double availability = calculateAvailability(downtimePercentage);
 
-        // 6. Сохраняем в MySQL
+        // 7. Сохраняем в MySQL
         saveMetricsToMysql(area.getName(), downtime, incrementalWorkingTime, downtimePercentage, availability);
 
         logger.debug("Область {} синхронизирована: downtime={}, wt={}, incremental_wt={}, percentage={}, availability={}", 
@@ -271,6 +266,8 @@ public class DataSyncService {
      */
     private Double getDowntimeFromSqlServer(DataSyncProperties.Area area, LocalDateTime startDate, LocalDateTime endDate) {
         StringBuilder sql = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        
         sql.append("SELECT SUM(Duration) as total_duration ");
         sql.append("FROM REP_BreakdownReport ");
         sql.append("WHERE ");
@@ -278,36 +275,47 @@ public class DataSyncService {
         sql.append("AND (Comment NOT LIKE '%Cause:%Ошибочный запрос%' AND Comment NOT LIKE '%Cause:%Ложный вызов%') ");
         sql.append("AND NOT (LEN(Comment) BETWEEN 15 AND 19 AND WOStatusLocalDescr LIKE '%Закрыто%') ");
         sql.append("AND TYPEWO NOT LIKE '%Tag%' ");
+        
+        // Добавляем параметры дат
+        params.add(startDate);
+        params.add(endDate);
+        params.add(startDate);
+        params.add(endDate);
 
-        // Добавляем фильтр по области, если он задан
-        if (area.getFilterColumn() != null && area.getFilterValue() != null) {
+        // Специальная логика для Modules - фильтрация по участку FinishigArea и модулям A-1, A-2, A-3
+        if ("Modules".equals(area.getName())) {
+            sql.append("AND PlantDepartmentGeographicalCodeName = 'FinishigArea' ");
+            sql.append("AND MachineName IN ('Module A-1', 'Module A-2', 'Module A-3') ");
+        } 
+        // Для остальных областей используем стандартную фильтрацию
+        else if (area.getFilterColumn() != null && area.getFilterValue() != null) {
             sql.append("AND ").append(area.getFilterColumn()).append(" = ? ");
+            params.add(area.getFilterValue());
         }
 
         try {
-            Double result;
-            if (area.getFilterColumn() != null && area.getFilterValue() != null) {
-                result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
-                                                             startDate, endDate, startDate, endDate, area.getFilterValue());
-            } else {
-                result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, 
-                                                             startDate, endDate, startDate, endDate);
-            }
-            
+            Double result = sqlServerJdbcTemplate.queryForObject(sql.toString(), Double.class, params.toArray());
             return result != null ? result : 0.0;
         } catch (Exception e) {
             logger.error("Ошибка получения данных простоя из SQL Server для области {}: {}", 
                         area.getName(), e.getMessage());
+            logger.error("SQL запрос: {}", sql.toString());
+            logger.error("Параметры: {}", params);
             return 0.0;
         }
     }
 
     /**
-     * Рассчитывает инкрементальное рабочее время на основе текущего времени
+     * Рассчитывает инкрементальное рабочее время на основе количества прошедших 3-минутных интервалов с начала смены
+     * 
+     * Логика:
+     * 1. Берем исходное working_time из БД
+     * 2. Делим на 480 интервалов (24 часа * 60 минут / 3 минуты = 480)
+     * 3. Умножаем на количество прошедших интервалов с начала смены
      */
-    private Double calculateIncrementalWorkingTime(Double fullWorkingTime, LocalDateTime startDate) {
-        if (fullWorkingTime == null || fullWorkingTime == 0) {
-            return fullWorkingTime;
+    private Double calculateIncrementalWorkingTime(Double workingTime, LocalDateTime startDate) {
+        if (workingTime == null || workingTime == 0) {
+            return workingTime;
         }
         
         LocalDateTime now = LocalDateTime.now();
@@ -316,20 +324,26 @@ public class DataSyncService {
         
         // Если текущее время вне диапазона 08:00-08:00, возвращаем полное значение
         if (now.isBefore(currentStart) || now.isAfter(currentEnd)) {
-            return fullWorkingTime;
+            return workingTime;
         }
         
         // Вычисляем количество прошедших 3-минутных интервалов с 08:00
         long minutesFromStart = java.time.Duration.between(currentStart, now).toMinutes();
-        long intervals = minutesFromStart / 3 + 1; // +1 чтобы начинать с 1
+        long intervalsPassed = minutesFromStart / 3; // Количество прошедших интервалов
         
         // Общее количество интервалов в сутках (24 часа * 60 минут / 3 минуты = 480)
         long totalIntervals = 480;
         
-        // Рассчитываем инкремент на интервал
-        double increment = fullWorkingTime / totalIntervals;
+        // Рассчитываем значение на один интервал
+        double valuePerInterval = workingTime / totalIntervals;
         
-        return Math.round(increment * intervals * 100.0) / 100.0;
+        // Рассчитываем текущее рабочее время: значение_на_интервал * количество_прошедших_интервалов
+        double currentWorkingTime = valuePerInterval * intervalsPassed;
+        
+        logger.debug("Расчет рабочего времени: исходное={} мин, интервалов прошло={}, значение на интервал={}, текущее={}", 
+                    workingTime, intervalsPassed, valuePerInterval, currentWorkingTime);
+        
+        return Math.round(currentWorkingTime * 100.0) / 100.0; // Округление до 2 знаков
     }
     
     /**

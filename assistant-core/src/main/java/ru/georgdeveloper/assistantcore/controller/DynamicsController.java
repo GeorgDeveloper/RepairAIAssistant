@@ -50,4 +50,22 @@ public class DynamicsController {
     public List<Map<String, Object>> getFailureTypes() {
         return dynamicsRepository.getFailureTypes();
     }
+
+    @GetMapping("/type/data")
+    @ResponseBody
+    public List<Map<String, Object>> getDynamicsByFailureType(
+            @RequestParam(required = false) List<String> year,
+            @RequestParam(required = false) List<String> month,
+            @RequestParam(required = false) List<String> week,
+            @RequestParam(required = false) List<String> area,
+            @RequestParam(required = false) List<String> equipment) {
+        
+        return dynamicsRepository.getDynamicsByFailureType(year, month, week, area, equipment);
+    }
+
+    @GetMapping("/type/failure-types")
+    @ResponseBody
+    public List<Map<String, Object>> getFailureTypesFromColumn() {
+        return dynamicsRepository.getFailureTypesFromColumn();
+    }
 }
