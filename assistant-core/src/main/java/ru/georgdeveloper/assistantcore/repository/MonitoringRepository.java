@@ -312,6 +312,34 @@ public class MonitoringRepository {
         return jdbcTemplate.queryForList(sql);
     }
 
+    // Все записи диагностики (diagnostics_reports)
+    public List<Map<String, Object>> getDiagnosticsReports() {
+        String sql = "SELECT * FROM diagnostics_reports ORDER BY id DESC";
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    // Получение оборудования из equipment_list
+    public List<Map<String, Object>> getEquipmentList() {
+        String sql = "SELECT id, machine_name, area FROM equipment_list ORDER BY machine_name";
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    // Получение оборудования из equipment_list с фильтром по участку
+    public List<Map<String, Object>> getEquipmentListByArea(String area) {
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            String sql = "SELECT id, machine_name, area FROM equipment_list WHERE area = ? ORDER BY machine_name";
+            return jdbcTemplate.queryForList(sql, area);
+        }
+        return getEquipmentList();
+    }
+
+    // Получение участков из equipment_list
+    public List<Map<String, Object>> getDiagnosticsAreas() {
+        String sql = "SELECT DISTINCT area FROM equipment_list " +
+                "WHERE area IS NOT NULL AND TRIM(area) <> '' ORDER BY area";
+        return jdbcTemplate.queryForList(sql);
+    }
+
     // Получение участков из PM записей
     public List<Map<String, Object>> getPmAreas() {
         String sql = "SELECT DISTINCT area FROM pm_maintenance_records " +

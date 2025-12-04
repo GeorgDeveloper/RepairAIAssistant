@@ -125,6 +125,16 @@ public class AssistantController {
         return "pm";
     }
 
+    @GetMapping("/diagnostics-report")
+    public String diagnosticsReport() {
+        return "diagnostics_report";
+    }
+
+    @GetMapping("/create-diagnostics-report")
+    public String createDiagnosticsReport() {
+        return "create_diagnostics_report";
+    }
+
     @GetMapping("/final")
     public String finalPage() {
         return "final";
@@ -160,6 +170,13 @@ public class AssistantController {
     public java.util.List<java.util.Map<String, Object>> getPmMaintenanceRecords(
             @RequestParam(name = "limit", defaultValue = "500") int limit) {
         return coreServiceClient.getPmMaintenanceRecords(limit);
+    }
+
+    @GetMapping("/dashboard/diagnostics-reports")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getDiagnosticsReports(
+            @RequestParam(name = "limit", defaultValue = "500") int limit) {
+        return coreServiceClient.getDiagnosticsReports(limit);
     }
 
     public static class FeedbackDto {

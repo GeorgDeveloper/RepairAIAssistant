@@ -234,9 +234,10 @@ public class TopEquipmentRepository {
            .append("machine_downtime, start_bd_t1, stop_bd_t4, cause, comments ")
            .append("FROM equipment_maintenance_records WHERE 1=1 ");
         
-        // Фильтр по дате
+        // Фильтр по дате - используем production_day, если он заполнен, иначе fallback на start_bd_t1
         if (date != null && !date.isEmpty()) {
-            sql.append("AND DATE(start_bd_t1) = STR_TO_DATE(?, '%d.%m.%Y') ");
+            sql.append("AND (production_day = ? OR (production_day IS NULL OR production_day = '') AND DATE(start_bd_t1) = STR_TO_DATE(?, '%d.%m.%Y')) ");
+            params.add(date);
             params.add(date);
         }
         

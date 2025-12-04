@@ -233,4 +233,20 @@ public class DashboardWebController {
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/tag-maintenance-records", List.class);
     }
 
+    @SuppressWarnings("unchecked")
+    @GetMapping("/diagnostics/areas")
+    public List<Map<String, Object>> diagnosticsAreas() {
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/diagnostics/areas", List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/diagnostics/equipment")
+    public List<Map<String, Object>> diagnosticsEquipment(@RequestParam(required = false) String area) {
+        String url = coreServiceUrl + "/dashboard/diagnostics/equipment";
+        if (area != null && !area.isEmpty()) {
+            url += "?area=" + area;
+        }
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url, List.class);
+    }
+
 }

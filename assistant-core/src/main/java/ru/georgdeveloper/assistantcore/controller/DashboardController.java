@@ -154,4 +154,22 @@ public class DashboardController {
     public java.util.List<java.util.Map<String, Object>> getTagMaintenanceRecords() {
         return monitoringRepository.getTagMaintenanceRecords();
     }
+
+    @GetMapping("/diagnostics-reports")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getDiagnosticsReports() {
+        return monitoringRepository.getDiagnosticsReports();
+    }
+
+    @GetMapping("/diagnostics/areas")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getDiagnosticsAreas() {
+        return monitoringRepository.getDiagnosticsAreas();
+    }
+
+    @GetMapping("/diagnostics/equipment")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getDiagnosticsEquipment(@RequestParam(required = false) String area) {
+        return monitoringRepository.getEquipmentListByArea(area);
+    }
 }
