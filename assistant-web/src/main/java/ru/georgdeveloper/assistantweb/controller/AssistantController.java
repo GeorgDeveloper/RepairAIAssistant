@@ -140,6 +140,16 @@ public class AssistantController {
         return "diagnostics_schedule";
     }
 
+    @GetMapping("/dinamic_diagnostics")
+    public String dinamicDiagnostics() {
+        return "dinamic_diagnostics";
+    }
+
+    @GetMapping("/dinamic_diagnostics_reports")
+    public String dinamicDiagnosticsReports() {
+        return "dinamic_diagnostics_reports";
+    }
+
     @GetMapping("/final")
     public String finalPage() {
         return "final";
