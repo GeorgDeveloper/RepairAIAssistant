@@ -917,12 +917,47 @@ function renderScheduleTable(entries, dates) {
                 cell.text(codes);
                 
                 if (dayEntries.length === 1) {
-                    const type = dayEntries[0].diagnosticsType;
-                    cell.css('background-color', type.colorCode || '#90EE90');
+                    const entry = dayEntries[0];
+                    const type = entry.diagnosticsType;
+                    
+                    // Определяем цвет в зависимости от статуса
+                    let backgroundColor = type.colorCode || '#90EE90';
+                    let statusText = '';
+                    
+                    if (entry.isCompleted) {
+                        // Проверяем, есть ли дефект (в notes)
+                        if (entry.notes && entry.notes.includes('Обнаружен дефект')) {
+                            backgroundColor = '#DDA0DD'; // Светло-фиолетовый
+                            statusText = ' (дефект)';
+                        } else {
+                            backgroundColor = '#808080'; // Серый
+                            statusText = ' (выполнено)';
+                        }
+                    } else {
+                        // Проверяем, просрочен ли наряд
+                        if (dateStr) {
+                            const scheduledDate = parseDate(dateStr);
+                            if (scheduledDate) {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const scheduled = new Date(scheduledDate);
+                                scheduled.setHours(0, 0, 0, 0);
+                                
+                                if (scheduled < today) {
+                                    // Просроченный наряд
+                                    backgroundColor = '#FF6B6B'; // Красный
+                                    statusText = ' (не выполнено)';
+                                }
+                            }
+                        }
+                    }
+                    
+                    cell.css('background-color', backgroundColor);
                     // Добавляем возможность перетаскивания для одной записи
                     cell.attr('draggable', 'true');
-                    cell.attr('data-entry-id', dayEntries[0].id);
+                    cell.attr('data-entry-id', entry.id);
                     cell.attr('data-equipment', equipment);
+                    cell.attr('data-entry-data', JSON.stringify(entry)); // Сохраняем данные для модального окна
                 } else {
                     cell.css('background-color', '#FFD700');
                 }
@@ -933,7 +968,24 @@ function renderScheduleTable(entries, dates) {
                         tooltip += ' (' + e.diagnosticsType.durationMinutes + ' мин)';
                     }
                     if (e.isCompleted) {
-                        tooltip += ' (выполнено)';
+                        if (e.notes && e.notes.includes('Обнаружен дефект')) {
+                            tooltip += ' (дефект)';
+                        } else {
+                            tooltip += ' (выполнено)';
+                        }
+                    } else {
+                        if (dateStr) {
+                            const scheduledDate = parseDate(dateStr);
+                            if (scheduledDate) {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const scheduled = new Date(scheduledDate);
+                                scheduled.setHours(0, 0, 0, 0);
+                                if (scheduled < today) {
+                                    tooltip += ' (не выполнено)';
+                                }
+                            }
+                        }
                     }
                     return tooltip;
                 }).join('\n'));
@@ -949,6 +1001,9 @@ function renderScheduleTable(entries, dates) {
     
     // Добавляем обработчики drag and drop для ячеек с диагностиками
     setupDragAndDrop();
+    
+    // Добавляем обработчик двойного клика для открытия модального окна
+    setupDoubleClickHandler();
 }
 
 function setupDragAndDrop() {
@@ -1248,8 +1303,141 @@ function restoreEntryDate(entryId, originalDateStr, equipment) {
     });
 }
 
+function setupDoubleClickHandler() {
+    // Обработчик двойного клика на ячейки с одной диагностикой
+    $(document).on('dblclick', '.schedule-cell.has-diagnostics[draggable="true"]', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const entryDataStr = $(this).attr('data-entry-data');
+        if (!entryDataStr) {
+            return;
+        }
+        
+        const entry = JSON.parse(entryDataStr);
+        
+        // Показываем модальное окно
+        showEntryStatusModal(entry);
+    });
+}
+
+function showEntryStatusModal(entry) {
+    // Создаем модальное окно, если его еще нет
+    let modal = $('#entryStatusModal');
+    if (modal.length === 0) {
+        modal = $('<div>').attr('id', 'entryStatusModal').addClass('entry-status-modal');
+        modal.html(`
+            <div class="entry-status-modal-content">
+                <span class="entry-status-modal-close">&times;</span>
+                <h2>Статус наряда</h2>
+                <div class="entry-status-info">
+                    <p><strong>Оборудование:</strong> <span id="modalEquipment"></span></p>
+                    <p><strong>Тип диагностики:</strong> <span id="modalDiagnosticsType"></span></p>
+                    <p><strong>Дата:</strong> <span id="modalDate"></span></p>
+                </div>
+                <div class="entry-status-actions">
+                    <button id="btnCompleted" class="btn-status btn-completed">Выполнено</button>
+                    <button id="btnDefect" class="btn-status btn-defect">Обнаружен дефект</button>
+                </div>
+            </div>
+        `);
+        $('body').append(modal);
+        
+        // Обработчик закрытия модального окна
+        modal.find('.entry-status-modal-close').on('click', function() {
+            modal.hide();
+        });
+        
+        // Обработчик клика вне модального окна
+        modal.on('click', function(e) {
+            if ($(e.target).hasClass('entry-status-modal')) {
+                modal.hide();
+            }
+        });
+        
+        // Обработчик кнопки "Выполнено"
+        modal.find('#btnCompleted').on('click', function() {
+            const entryId = modal.attr('data-entry-id');
+            updateEntryStatus(entryId, true, false);
+            modal.hide();
+        });
+        
+        // Обработчик кнопки "Обнаружен дефект"
+        modal.find('#btnDefect').on('click', function() {
+            const entryId = modal.attr('data-entry-id');
+            const entryData = JSON.parse(modal.attr('data-entry'));
+            openDiagnosticsReportForm(entryData);
+            modal.hide();
+        });
+    }
+    
+    // Заполняем данные
+    modal.find('#modalEquipment').text(entry.equipment);
+    modal.find('#modalDiagnosticsType').text(entry.diagnosticsType.name);
+    const date = new Date(entry.scheduledDate);
+    modal.find('#modalDate').text(date.toLocaleDateString('ru-RU'));
+    modal.attr('data-entry-id', entry.id);
+    modal.attr('data-entry', JSON.stringify(entry));
+    
+    // Показываем модальное окно
+    modal.show();
+}
+
+function updateEntryStatus(entryId, isCompleted, hasDefect) {
+    $.ajax({
+        url: '/api/diagnostics-schedule/entry/' + entryId + '/status',
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            isCompleted: isCompleted,
+            hasDefect: hasDefect
+        }),
+        success: function(response) {
+            if (response.success) {
+                // Перезагружаем график для текущего месяца
+                if (currentScheduleId && currentMonth) {
+                    loadMonthSchedule(currentScheduleId, currentMonth);
+                }
+            } else {
+                alert('Ошибка при обновлении статуса: ' + (response.message || 'Неизвестная ошибка'));
+            }
+        },
+        error: function(xhr, status, error) {
+            let errorMessage = 'Ошибка обновления статуса';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            alert(errorMessage);
+        }
+    });
+}
+
+function openDiagnosticsReportForm(entry) {
+    // Формируем URL с параметрами для предзаполнения формы
+    const params = new URLSearchParams();
+    params.append('equipment', entry.equipment || '');
+    params.append('area', entry.area || '');
+    // Используем название типа диагностики для формы
+    params.append('diagnostics_type', entry.diagnosticsType ? entry.diagnosticsType.name : '');
+    params.append('detection_date', entry.scheduledDate || '');
+    
+    // Убеждаемся, что entry.id - это число
+    const entryId = entry.id ? String(entry.id) : '';
+    if (entryId) {
+        params.append('entry_id', entryId);
+    }
+    params.append('return_to', 'schedule');
+    
+    // Открываем форму в новом окне или переходим на страницу
+    const url = '/create-diagnostics-report?' + params.toString();
+    console.log('Переход на форму создания отчета:', url);
+    window.location.href = url;
+}
+
 function parseDate(dateStr) {
+    if (!dateStr) return null;
     const parts = dateStr.split('-');
+    if (parts.length !== 3) return null;
     return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
 }
 

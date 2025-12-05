@@ -417,5 +417,56 @@ public class DiagnosticsScheduleController {
             return ResponseEntity.status(500).body(response);
         }
     }
+
+    /**
+     * Обновить статус диагностической записи
+     */
+    @PutMapping("/entry/{entryId}/status")
+    public ResponseEntity<Map<String, Object>> updateEntryStatus(
+            @PathVariable Long entryId,
+            @RequestBody Map<String, Object> request) {
+        try {
+            Boolean isCompleted = request.containsKey("isCompleted") 
+                    ? (Boolean) request.get("isCompleted") 
+                    : false;
+            Boolean hasDefect = request.containsKey("hasDefect") 
+                    ? (Boolean) request.get("hasDefect") 
+                    : false;
+            
+            DiagnosticsScheduleEntry entry = scheduleService.updateEntryStatus(entryId, isCompleted, hasDefect);
+            
+            // Создаем Map с данными записи, избегая проблем с сериализацией Hibernate прокси
+            Map<String, Object> entryData = new HashMap<>();
+            entryData.put("id", entry.getId());
+            entryData.put("equipment", entry.getEquipment());
+            entryData.put("area", entry.getArea());
+            entryData.put("scheduledDate", entry.getScheduledDate().toString());
+            entryData.put("isCompleted", entry.getIsCompleted());
+            entryData.put("completedDate", entry.getCompletedDate() != null ? entry.getCompletedDate().toString() : null);
+            entryData.put("notes", entry.getNotes());
+            
+            if (entry.getDiagnosticsType() != null) {
+                Map<String, Object> typeData = new HashMap<>();
+                typeData.put("id", entry.getDiagnosticsType().getId());
+                typeData.put("code", entry.getDiagnosticsType().getCode());
+                typeData.put("name", entry.getDiagnosticsType().getName());
+                typeData.put("durationMinutes", entry.getDiagnosticsType().getDurationMinutes());
+                typeData.put("colorCode", entry.getDiagnosticsType().getColorCode());
+                entryData.put("diagnosticsType", typeData);
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("entry", entryData);
+            response.put("message", "Статус успешно обновлен");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Ошибка при обновлении статуса: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
 }
 

@@ -755,6 +755,38 @@ public class DiagnosticsScheduleService {
     }
 
     /**
+     * Обновляет статус диагностической записи
+     * @param entryId ID записи
+     * @param isCompleted выполнена ли диагностика
+     * @param hasDefect обнаружен ли дефект
+     * @return обновленная запись
+     */
+    @Transactional
+    public DiagnosticsScheduleEntry updateEntryStatus(Long entryId, boolean isCompleted, boolean hasDefect) {
+        DiagnosticsScheduleEntry entry = entryRepository.findById(entryId)
+                .orElseThrow(() -> new RuntimeException("Запись не найдена"));
+        
+        entry.setIsCompleted(isCompleted);
+        if (isCompleted) {
+            entry.setCompletedDate(LocalDate.now());
+            if (hasDefect) {
+                // Помечаем в notes, что обнаружен дефект
+                String notes = entry.getNotes();
+                if (notes == null || notes.isEmpty()) {
+                    notes = "Обнаружен дефект";
+                } else if (!notes.contains("Обнаружен дефект")) {
+                    notes = "Обнаружен дефект. " + notes;
+                }
+                entry.setNotes(notes);
+            }
+        } else {
+            entry.setCompletedDate(null);
+        }
+        
+        return entryRepository.save(entry);
+    }
+
+    /**
      * Обновляет график для конкретного месяца
      */
     @Transactional

@@ -102,7 +102,106 @@
         </div>
     </div>
 
-    <script src="/static/js/create_diagnostics_report.js"></script>
+    <script>
+        // Простое заполнение полей из URL параметров (работает без jQuery)
+        console.log('HTML загружен, начинаем заполнение полей...');
+        console.log('Текущий URL:', window.location.href);
+        
+        // Сохраняем параметры для возврата
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            const result = {};
+            params.forEach(function(value, key) {
+                try {
+                    result[key] = decodeURIComponent(value);
+                } catch (e) {
+                    result[key] = value;
+                }
+            });
+            return result;
+        }
+        
+        const urlParams = getUrlParams();
+        console.log('Параметры из URL:', urlParams);
+        
+        // Сохраняем для использования после загрузки jQuery
+        window.scheduleReturnParams = {
+            returnTo: urlParams['return_to'] || null,
+            entryId: urlParams['entry_id'] || null,
+            equipment: urlParams['equipment'] || null,
+            area: urlParams['area'] || null,
+            diagnosticsType: urlParams['diagnostics_type'] || null,
+            detectionDate: urlParams['detection_date'] || null
+        };
+        console.log('Сохраненные параметры:', window.scheduleReturnParams);
+    </script>
+    <script src="/static/js/create_diagnostics_report.js" onerror="console.error('ОШИБКА ЗАГРУЗКИ СКРИПТА!')"></script>
+    <script>
+        // Заполнение полей после загрузки DOM
+        function fillFormFields() {
+            if (!window.scheduleReturnParams) {
+                console.error('window.scheduleReturnParams не определен!');
+                return;
+            }
+            
+            const params = window.scheduleReturnParams;
+            console.log('Заполнение полей из параметров:', params);
+            
+            // Заполняем дату обнаружения
+            if (params.detectionDate) {
+                const dateInput = document.getElementById('detection_date');
+                if (dateInput) {
+                    dateInput.value = params.detectionDate;
+                    console.log('Дата установлена:', dateInput.value);
+                }
+            }
+            
+            // Заполняем тип диагностики
+            if (params.diagnosticsType) {
+                const typeSelect = document.getElementById('diagnostics_type');
+                if (typeSelect) {
+                    // Маппинг типов
+                    const typeMapping = {
+                        'Вибродиагностика': 'Вибродиагностика',
+                        'Диагностика конденсатоотводчиков': 'Конденсатоотводчики',
+                        'Конденсатоотводчики': 'Конденсатоотводчики',
+                        'Диагностики утечек воздуха': 'Акустическая',
+                        'Тепловизионная диагностика': 'Термодиагностика',
+                        'Термодиагностика': 'Термодиагностика'
+                    };
+                    
+                    let mappedType = typeMapping[params.diagnosticsType];
+                    if (!mappedType) {
+                        if (params.diagnosticsType.includes('Вибро') || params.diagnosticsType.includes('вибро')) {
+                            mappedType = 'Вибродиагностика';
+                        } else if (params.diagnosticsType.includes('Конденсат') || params.diagnosticsType.includes('конденсат')) {
+                            mappedType = 'Конденсатоотводчики';
+                        } else if (params.diagnosticsType.includes('Тепло') || params.diagnosticsType.includes('термо') || params.diagnosticsType.includes('Термо')) {
+                            mappedType = 'Термодиагностика';
+                        } else if (params.diagnosticsType.includes('Утеч') || params.diagnosticsType.includes('утеч') || params.diagnosticsType.includes('Акуст') || params.diagnosticsType.includes('акуст')) {
+                            mappedType = 'Акустическая';
+                        } else {
+                            mappedType = params.diagnosticsType;
+                        }
+                    }
+                    
+                    typeSelect.value = mappedType;
+                    console.log('Тип диагностики установлен:', typeSelect.value);
+                }
+            }
+        }
+        
+        // Заполняем поля после загрузки DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fillFormFields);
+        } else {
+            fillFormFields();
+        }
+        
+        // Также пробуем заполнить после загрузки jQuery (если скрипт использует jQuery)
+        setTimeout(fillFormFields, 500);
+        setTimeout(fillFormFields, 1500);
+    </script>
 </body>
 
 </html>

@@ -190,5 +190,31 @@ public class DiagnosticsScheduleWebController {
             return ResponseEntity.status(500).body(error);
         }
     }
+
+    @PutMapping("/entry/{entryId}/status")
+    public ResponseEntity<Map<String, Object>> updateEntryStatus(
+            @PathVariable Long entryId,
+            @RequestBody Map<String, Object> request) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<Map> responseEntity = restTemplate.exchange(
+                    coreServiceUrl + "/api/diagnostics-schedule/entry/" + entryId + "/status",
+                    HttpMethod.PUT,
+                    requestEntity,
+                    Map.class);
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = (Map<String, Object>) responseEntity.getBody();
+            return ResponseEntity.status(responseEntity.getStatusCode()).body(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Ошибка при обновлении статуса: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
 }
 
