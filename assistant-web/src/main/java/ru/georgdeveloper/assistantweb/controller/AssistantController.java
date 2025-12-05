@@ -135,6 +135,11 @@ public class AssistantController {
         return "create_diagnostics_report";
     }
 
+    @GetMapping("/diagnostics-schedule")
+    public String diagnosticsSchedule() {
+        return "diagnostics_schedule";
+    }
+
     @GetMapping("/final")
     public String finalPage() {
         return "final";

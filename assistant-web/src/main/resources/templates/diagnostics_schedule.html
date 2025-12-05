@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair AI Assistant - График диагностики оборудования</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/pm.css">
+    <link rel="stylesheet" href="/static/styles/diagnostics-schedule.css">
+    <script src="/static/jquery/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <!-- Use the navigation fragment -->
+    <div th:replace="~{fragments/navigation :: nav}"></div>
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="container">
+                <h1>График диагностики оборудования</h1>
+
+                <!-- Кнопки управления -->
+                <div style="margin-bottom: 20px;">
+                    <button id="createScheduleBtn" class="btn-apply">Создать график на год</button>
+                    <button id="loadScheduleBtn" class="btn-apply" style="display: none;">Загрузить график</button>
+                </div>
+
+                <!-- Форма создания графика -->
+                <div id="createScheduleForm" class="schedule-form" style="display: none;">
+                    <h2>Создание графика диагностики на год</h2>
+                    <form id="scheduleForm">
+                        <div class="form-group">
+                            <label for="year">Год:</label>
+                            <input type="number" id="year" name="year" min="2020" max="2100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="startDate">Дата начала распределения:</label>
+                            <input type="date" id="startDate" name="startDate">
+                            <small style="display: block; color: #666; margin-top: 5px;">Если не указана, используется 1 января</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="workersCount">Количество человек:</label>
+                            <input type="number" id="workersCount" name="workersCount" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="shiftDurationHours">Длительность смены (часов):</label>
+                            <input type="number" id="shiftDurationHours" name="shiftDurationHours" min="1" max="24" value="7" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Участок:</label>
+                            <select id="createAreaSelect" class="filter-control">
+                                <option value="">Все участки</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Выберите оборудование (можно выбрать несколько):</label>
+                            <div id="equipmentCheckboxList" class="equipment-checkbox-list"></div>
+                            <button type="button" id="selectAllEquipmentBtn" class="btn-small">Выбрать все</button>
+                            <button type="button" id="deselectAllEquipmentBtn" class="btn-small">Снять выбор</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Типы диагностики (отметьте используемые типы):</label>
+                            <div id="diagnosticsTypesConfig" class="diagnostics-types-config">
+                                <!-- Будет заполнено динамически -->
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Параметры диагностики:</label>
+                            <div id="diagnosticsParams" class="diagnostics-params">
+                                <!-- Будет заполнено динамически -->
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-apply">Создать график</button>
+                            <button type="button" id="cancelCreateBtn" class="btn-cancel">Отмена</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Выбор графика и месяца -->
+                <div id="scheduleSelector" style="display: none; margin-bottom: 20px;">
+                    <div class="filter-group">
+                        <label for="scheduleYearSelect">Год:</label>
+                        <select id="scheduleYearSelect" class="filter-control"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="monthSelect">Месяц:</label>
+                        <select id="monthSelect" class="filter-control">
+                            <option value="1">Январь</option>
+                            <option value="2">Февраль</option>
+                            <option value="3">Март</option>
+                            <option value="4">Апрель</option>
+                            <option value="5">Май</option>
+                            <option value="6">Июнь</option>
+                            <option value="7">Июль</option>
+                            <option value="8">Август</option>
+                            <option value="9">Сентябрь</option>
+                            <option value="10">Октябрь</option>
+                            <option value="11">Ноябрь</option>
+                            <option value="12">Декабрь</option>
+                        </select>
+                    </div>
+                    <button id="prevMonthBtn" class="btn-nav" style="display: none;">◀ Назад</button>
+                    <button id="loadMonthBtn" class="btn-apply">Загрузить месяц</button>
+                    <button id="nextMonthBtn" class="btn-nav" style="display: none;">Вперед ▶</button>
+                    <button id="addEquipmentToScheduleBtn" class="btn-apply" style="display: none; margin-left: 10px;">Добавить оборудование</button>
+                    <button id="deleteScheduleBtn" class="btn-cancel" style="display: none; margin-left: 10px;">Удалить график</button>
+                </div>
+
+                <!-- Форма добавления оборудования в существующий график -->
+                <div id="addEquipmentForm" class="schedule-form" style="display: none; margin-top: 20px; border: 2px solid #007bff; padding: 20px; border-radius: 8px; background-color: #f0f8ff;">
+                    <h2 style="color: #007bff; margin-top: 0;">➕ Добавить оборудование в график</h2>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px; padding: 10px; background-color: #e7f3ff; border-radius: 4px; border-left: 4px solid #007bff;">
+                        <strong>💡 Подсказка:</strong> Вы можете добавлять оборудование в уже созданный график поэтапно. 
+                        Новое оборудование будет равномерно распределено по свободным дням с учетом заданного периода диагностики (±2 недели от идеальной даты).
+                    </p>
+                    <form id="addEquipmentToScheduleForm">
+                        <div class="form-group">
+                            <label for="addStartDate">Дата начала распределения:</label>
+                            <input type="date" id="addStartDate" name="addStartDate">
+                            <small style="display: block; color: #666; margin-top: 5px;">Если не указана, используется 1 января</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Участок:</label>
+                            <select id="addAreaSelect" class="filter-control">
+                                <option value="">Все участки</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Выберите оборудование (можно выбрать несколько):</label>
+                            <div id="addEquipmentCheckboxList" class="equipment-checkbox-list"></div>
+                            <button type="button" id="addSelectAllEquipmentBtn" class="btn-small">Выбрать все</button>
+                            <button type="button" id="addDeselectAllEquipmentBtn" class="btn-small">Снять выбор</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Типы диагностики (отметьте используемые типы):</label>
+                            <div id="addDiagnosticsTypesConfig" class="diagnostics-types-config">
+                                <!-- Будет заполнено динамически -->
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Параметры диагностики:</label>
+                            <div id="addDiagnosticsParams" class="diagnostics-params">
+                                <!-- Будет заполнено динамически -->
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-apply">Добавить в график</button>
+                            <button type="button" id="cancelAddEquipmentBtn" class="btn-cancel">Отмена</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Статистика -->
+                <div id="scheduleStats" style="display: none; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="margin: 0;">Статистика</h3>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="showYearStatsCheckbox" style="cursor: pointer;">
+                            <span>Показать статистику за год</span>
+                        </label>
+                    </div>
+                    <div id="statsContent"></div>
+                </div>
+
+                <!-- Легенда -->
+                <div id="legend" style="display: none; margin-bottom: 20px;">
+                    <h3>Легенда</h3>
+                    <div id="legendContent"></div>
+                </div>
+
+                <!-- Фильтры для графика -->
+                <div id="scheduleFilters" style="display: none; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <h4 style="margin-top: 0;">Фильтры:</h4>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                        <div class="filter-group">
+                            <label for="filterEquipment">Оборудование:</label>
+                            <select id="filterEquipment" class="filter-control">
+                                <option value="">Все оборудование</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterArea">Участок:</label>
+                            <select id="filterArea" class="filter-control">
+                                <option value="">Все участки</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterDiagnosticsType">Тип диагностики:</label>
+                            <select id="filterDiagnosticsType" class="filter-control">
+                                <option value="">Все типы</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <button id="clearFiltersBtn" class="btn-small">Сбросить фильтры</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- График -->
+                <div id="scheduleContainer" style="display: none;">
+                    <div style="overflow-x: auto;">
+                        <table id="scheduleTable" class="schedule-table">
+                            <thead>
+                                <tr>
+                                    <th>Оборудование</th>
+                                    <!-- Даты будут добавлены динамически -->
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Строки будут добавлены динамически -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript file -->
+    <script src="/static/js/diagnostics_schedule.js"></script>
+</body>
+</html>
+
