@@ -61,12 +61,13 @@ public class DiagnosticsWebController {
                     new HttpEntity<>(body, headers);
 
             @SuppressWarnings("unchecked")
-            ResponseEntity<Map> responseEntity = restTemplate.postForEntity(
-                    coreServiceUrl + "/api/diagnostics/create",
-                    requestEntity,
-                    Map.class
-            );
-            Map<String, Object> responseBody = (Map<String, Object>) responseEntity.getBody();
+            ResponseEntity<Map<String, Object>> responseEntity = (ResponseEntity<Map<String, Object>>) (ResponseEntity<?>) 
+                    restTemplate.postForEntity(
+                            coreServiceUrl + "/api/diagnostics/create",
+                            requestEntity,
+                            Map.class
+                    );
+            Map<String, Object> responseBody = responseEntity.getBody();
             return ResponseEntity.status(responseEntity.getStatusCode())
                     .headers(responseEntity.getHeaders())
                     .body(responseBody);
@@ -321,6 +322,7 @@ public class DiagnosticsWebController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> deleteReport(@PathVariable Long id) {
         try {
+            @SuppressWarnings("unchecked")
             ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
                     coreServiceUrl + "/api/diagnostics/" + id,
                     HttpMethod.DELETE,

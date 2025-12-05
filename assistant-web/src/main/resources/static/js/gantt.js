@@ -273,28 +273,62 @@ function generateTimeHeader(dateFrom, dateTo) {
         stepLabel = (date) => `${date.getHours().toString().padStart(2, '0')}:00`;
     }
     
-    const totalMinutes = (toDate - fromDate) / (1000 * 60);
-    const slotsCount = Math.ceil(totalMinutes / stepMinutes);
+    // Используем ту же формулу расчета ширины, что и для полос
     const baseWidth = 60;
-    const slotWidth = baseWidth * zoomLevel;
+    const minuteWidth = (baseWidth * zoomLevel) / 60; // Ширина одной минуты (должна совпадать с расчетом в generateGanttBody)
+    const slotWidth = stepMinutes * minuteWidth; // Ширина слота = количество минут * ширина минуты
     
-    for (let i = 0; i <= slotsCount; i++) {
-        const slotDate = new Date(fromDate);
-        slotDate.setMinutes(fromDate.getMinutes() + (i * stepMinutes));
-        
-        if (slotDate <= toDate) {
-            const timeSlot = document.createElement('div');
-            timeSlot.className = 'time-slot';
-            timeSlot.style.minWidth = slotWidth + 'px';
-            timeSlot.style.width = slotWidth + 'px';
-            timeSlot.textContent = stepLabel(slotDate);
-            timeHeader.appendChild(timeSlot);
+    // Вычисляем общее количество минут в диапазоне
+    const totalMinutes = (toDate - fromDate) / (1000 * 60);
+    
+    // Находим первый слот, который начинается до или в момент fromDate
+    // Округляем fromDate до ближайшего шага вниз
+    const fromMinutes = fromDate.getHours() * 60 + fromDate.getMinutes();
+    const firstSlotMinutes = Math.floor(fromMinutes / stepMinutes) * stepMinutes;
+    const firstSlotDate = new Date(fromDate);
+    firstSlotDate.setHours(Math.floor(firstSlotMinutes / 60), firstSlotMinutes % 60, 0, 0);
+    
+    // Если первый слот раньше fromDate, берем следующий
+    if (firstSlotDate < fromDate) {
+        firstSlotDate.setMinutes(firstSlotDate.getMinutes() + stepMinutes);
+    }
+    
+    // Создаем слоты
+    let currentSlotDate = new Date(firstSlotDate);
+    
+    // Добавляем начальный слот, если первый слот не совпадает с fromDate
+    if (firstSlotDate > fromDate) {
+        const preSlotMinutes = (firstSlotDate - fromDate) / (1000 * 60);
+        const preSlotWidth = preSlotMinutes * minuteWidth;
+        if (preSlotWidth > 0.1) { // Минимальная ширина для отображения
+            const preSlot = document.createElement('div');
+            preSlot.className = 'time-slot';
+            preSlot.style.minWidth = preSlotWidth + 'px';
+            preSlot.style.width = preSlotWidth + 'px';
+            preSlot.textContent = stepLabel(fromDate);
+            timeHeader.appendChild(preSlot);
         }
     }
     
+    // Создаем основные слоты с фиксированным шагом
+    while (currentSlotDate <= toDate) {
+        const timeSlot = document.createElement('div');
+        timeSlot.className = 'time-slot';
+        timeSlot.style.minWidth = slotWidth + 'px';
+        timeSlot.style.width = slotWidth + 'px';
+        timeSlot.textContent = stepLabel(currentSlotDate);
+        timeHeader.appendChild(timeSlot);
+        
+        const nextSlotDate = new Date(currentSlotDate);
+        nextSlotDate.setMinutes(nextSlotDate.getMinutes() + stepMinutes);
+        currentSlotDate = nextSlotDate;
+    }
+    
     // Обновляем минимальную ширину контейнера временных слотов
+    // Используем точный расчет на основе минут
     const timeSlotsContainer = document.querySelector('.time-slots');
-    timeSlotsContainer.style.minWidth = (slotsCount * slotWidth) + 'px';
+    const calculatedWidth = totalMinutes * minuteWidth;
+    timeSlotsContainer.style.minWidth = calculatedWidth + 'px';
 }
 
 function generateGanttBody(groupedData, dateFrom, dateTo) {
@@ -305,7 +339,11 @@ function generateGanttBody(groupedData, dateFrom, dateTo) {
     const toDate = new Date(dateTo);
     const totalMinutes = (toDate - fromDate) / (1000 * 60);
     const baseWidth = 60;
-    const minuteWidth = (baseWidth * zoomLevel) / 60; // Ширина одной минуты
+    const minuteWidth = (baseWidth * zoomLevel) / 60; // Ширина одной минуты (должна совпадать с generateTimeHeader)
+    
+    // Устанавливаем минимальную ширину для body, чтобы соответствовать header
+    const calculatedWidth = totalMinutes * minuteWidth;
+    ganttBody.style.minWidth = calculatedWidth + 'px';
     
     // Сортируем участки по алфавиту
     const sortedAreas = Object.keys(groupedData).sort();
@@ -322,6 +360,9 @@ function generateGanttBody(groupedData, dateFrom, dateTo) {
         sortedMachines.forEach(machine => {
             const machineRow = createMachineRow(machine, area);
             machineRow.style.display = areaData.collapsed ? 'none' : 'flex';
+            
+            // Устанавливаем минимальную ширину для строки машины
+            machineRow.style.minWidth = calculatedWidth + 'px';
             
             areaData.machines[machine].forEach(repair => {
                 createRepairBar(repair, machineRow, fromDate, minuteWidth);
@@ -390,7 +431,11 @@ function createRepairBar(repair, machineRow, fromDate, minuteWidth) {
     const startOffsetMinutes = (repairStart - fromDate) / (1000 * 60);
     const repairDurationMinutes = (repairEnd - repairStart) / (1000 * 60);
     
-    const left = startOffsetMinutes * minuteWidth;
+    // Ширина колонки с именем машины (должна совпадать с CSS)
+    const machineNameWidth = 250;
+    
+    // Позиция полосы: смещение от начала временной шкалы + ширина колонки имени
+    const left = machineNameWidth + (startOffsetMinutes * minuteWidth);
     const width = Math.max(repairDurationMinutes * minuteWidth, 3);
     
     if (width > 0) {
@@ -445,9 +490,13 @@ function addCollapsedAreaBars(header, areaData, area) {
     const dateTo = document.getElementById('date-to').value;
     const fromDate = new Date(dateFrom);
     const toDate = new Date(dateTo);
-    const totalMinutes = (toDate - fromDate) / (1000 * 60);
     const baseWidth = 60;
-    const minuteWidth = (baseWidth * zoomLevel) / 60;
+    const minuteWidth = (baseWidth * zoomLevel) / 60; // Используем ту же формулу
+    
+    // Устанавливаем минимальную ширину для заголовка участка
+    const totalMinutes = (toDate - fromDate) / (1000 * 60);
+    const calculatedWidth = totalMinutes * minuteWidth;
+    header.style.minWidth = calculatedWidth + 'px';
     
     // Собираем все поломки участка
     const allRepairs = [];

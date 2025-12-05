@@ -32,6 +32,7 @@ public class DiagnosticsScheduleWebController {
 
     @GetMapping("/year/{year}")
     public ResponseEntity<Map<String, Object>> getScheduleByYear(@PathVariable Integer year) {
+        @SuppressWarnings("unchecked")
         Map<String, Object> schedule = restTemplate.getForObject(
                 coreServiceUrl + "/api/diagnostics-schedule/year/" + year, Map.class);
         return schedule != null ? ResponseEntity.ok(schedule) : ResponseEntity.notFound().build();
@@ -42,6 +43,7 @@ public class DiagnosticsScheduleWebController {
             @PathVariable Long scheduleId,
             @PathVariable int month) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> result = restTemplate.getForObject(
                     coreServiceUrl + "/api/diagnostics-schedule/" + scheduleId + "/month/" + month, 
                     Map.class);
@@ -57,6 +59,7 @@ public class DiagnosticsScheduleWebController {
     @PostMapping("/create")
     public ResponseEntity<Map<String, Object>> createSchedule(@RequestBody Map<String, Object> request) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(
                     coreServiceUrl + "/api/diagnostics-schedule/create",
                     request,
@@ -80,14 +83,15 @@ public class DiagnosticsScheduleWebController {
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<List<Map<String, Object>>> requestEntity = new HttpEntity<>(entriesData, headers);
 
-            ResponseEntity<Map> responseEntity = restTemplate.exchange(
-                    coreServiceUrl + "/api/diagnostics-schedule/" + scheduleId + "/month/" + month,
-                    HttpMethod.PUT,
-                    requestEntity,
-                    Map.class);
-
             @SuppressWarnings("unchecked")
-            Map<String, Object> response = (Map<String, Object>) responseEntity.getBody();
+            ResponseEntity<Map<String, Object>> responseEntity = (ResponseEntity<Map<String, Object>>) (ResponseEntity<?>) 
+                    restTemplate.exchange(
+                            coreServiceUrl + "/api/diagnostics-schedule/" + scheduleId + "/month/" + month,
+                            HttpMethod.PUT,
+                            requestEntity,
+                            Map.class);
+
+            Map<String, Object> response = responseEntity.getBody();
             return ResponseEntity.status(responseEntity.getStatusCode()).body(response);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
@@ -114,6 +118,7 @@ public class DiagnosticsScheduleWebController {
             if (month != null && month >= 1 && month <= 12) {
                 url += "?month=" + month;
             }
+            @SuppressWarnings("unchecked")
             Map<String, Object> stats = restTemplate.getForObject(url, Map.class);
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
@@ -130,14 +135,15 @@ public class DiagnosticsScheduleWebController {
             HttpHeaders headers = new HttpHeaders();
             HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-            ResponseEntity<Map> responseEntity = restTemplate.exchange(
-                    coreServiceUrl + "/api/diagnostics-schedule/" + scheduleId,
-                    HttpMethod.DELETE,
-                    requestEntity,
-                    Map.class);
-
             @SuppressWarnings("unchecked")
-            Map<String, Object> response = (Map<String, Object>) responseEntity.getBody();
+            ResponseEntity<Map<String, Object>> responseEntity = (ResponseEntity<Map<String, Object>>) (ResponseEntity<?>) 
+                    restTemplate.exchange(
+                            coreServiceUrl + "/api/diagnostics-schedule/" + scheduleId,
+                            HttpMethod.DELETE,
+                            requestEntity,
+                            Map.class);
+
+            Map<String, Object> response = responseEntity.getBody();
             return ResponseEntity.status(responseEntity.getStatusCode()).body(response);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
@@ -152,6 +158,7 @@ public class DiagnosticsScheduleWebController {
             @PathVariable Long scheduleId,
             @RequestBody Map<String, Object> request) {
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(
                     coreServiceUrl + "/api/diagnostics-schedule/" + scheduleId + "/add-equipment",
                     request,
@@ -174,14 +181,15 @@ public class DiagnosticsScheduleWebController {
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(request, headers);
 
-            ResponseEntity<Map> responseEntity = restTemplate.exchange(
-                    coreServiceUrl + "/api/diagnostics-schedule/entry/" + entryId + "/date",
-                    HttpMethod.PUT,
-                    requestEntity,
-                    Map.class);
-
             @SuppressWarnings("unchecked")
-            Map<String, Object> response = (Map<String, Object>) responseEntity.getBody();
+            ResponseEntity<Map<String, Object>> responseEntity = (ResponseEntity<Map<String, Object>>) (ResponseEntity<?>) 
+                    restTemplate.exchange(
+                            coreServiceUrl + "/api/diagnostics-schedule/entry/" + entryId + "/date",
+                            HttpMethod.PUT,
+                            requestEntity,
+                            Map.class);
+
+            Map<String, Object> response = responseEntity.getBody();
             return ResponseEntity.status(responseEntity.getStatusCode()).body(response);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
@@ -200,14 +208,15 @@ public class DiagnosticsScheduleWebController {
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(request, headers);
 
-            ResponseEntity<Map> responseEntity = restTemplate.exchange(
-                    coreServiceUrl + "/api/diagnostics-schedule/entry/" + entryId + "/status",
-                    HttpMethod.PUT,
-                    requestEntity,
-                    Map.class);
-
             @SuppressWarnings("unchecked")
-            Map<String, Object> response = (Map<String, Object>) responseEntity.getBody();
+            ResponseEntity<Map<String, Object>> responseEntity = (ResponseEntity<Map<String, Object>>) (ResponseEntity<?>) 
+                    restTemplate.exchange(
+                            coreServiceUrl + "/api/diagnostics-schedule/entry/" + entryId + "/status",
+                            HttpMethod.PUT,
+                            requestEntity,
+                            Map.class);
+
+            Map<String, Object> response = responseEntity.getBody();
             return ResponseEntity.status(responseEntity.getStatusCode()).body(response);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();

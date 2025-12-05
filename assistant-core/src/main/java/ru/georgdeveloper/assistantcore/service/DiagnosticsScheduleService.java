@@ -140,7 +140,6 @@ public class DiagnosticsScheduleService {
             
             DiagnosticsTask firstTask = tasks.get(0);
             double periodMonths = firstTask.getPeriodMonths();
-            int totalCount = firstTask.getTotalCount();
             int taskDurationMinutes = firstTask.getType().getDurationMinutes();
             
             // Вычисляем идеальные даты для диагностик с учетом периода и даты старта
@@ -315,7 +314,6 @@ public class DiagnosticsScheduleService {
             
             DiagnosticsTask firstTask = tasks.get(0);
             double periodMonths = firstTask.getPeriodMonths();
-            int totalCount = firstTask.getTotalCount();
             
             // Вычисляем идеальные даты для диагностик с учетом периода и даты старта
             List<LocalDate> idealDates = calculateIdealDatesByPeriod(schedule.getYear(), periodMonths, tasks.size(), scheduleStartDate);
@@ -368,57 +366,11 @@ public class DiagnosticsScheduleService {
     }
 
     /**
-     * Находит лучший рабочий день в диапазоне ±2 недели от идеальной даты с учетом существующей загрузки
-     * @deprecated Используется findBestDateNearIdealFromStart для приоритета от начала года
-     */
-    @Deprecated
-    private LocalDate findBestDateNearIdealForAdding(LocalDate idealDate, List<LocalDate> workingDays,
-                                                     Map<LocalDate, List<DiagnosticsTask>> dailyTasks,
-                                                     Map<LocalDate, List<DiagnosticsScheduleEntry>> existingByDate,
-                                                     int workersCount, int shiftHours, int taskMinutes) {
-        LocalDate bestDate = null;
-        int minScore = Integer.MAX_VALUE;
-        
-        // Диапазон ±2 недели (14 дней)
-        LocalDate minDate = idealDate.minusDays(14);
-        LocalDate maxDate = idealDate.plusDays(14);
-        
-        for (LocalDate date : workingDays) {
-            if (date.isBefore(minDate) || date.isAfter(maxDate)) {
-                continue;
-            }
-            
-            int existingDayMinutes = existingByDate.getOrDefault(date, Collections.emptyList())
-                    .stream()
-                    .mapToInt(e -> e.getDiagnosticsType().getDurationMinutes())
-                    .sum();
-            int newDayMinutes = dailyTasks.getOrDefault(date, Collections.emptyList())
-                    .stream()
-                    .mapToInt(t -> t.getType().getDurationMinutes())
-                    .sum();
-            int totalDayMinutes = existingDayMinutes + newDayMinutes;
-            int availableMinutes = workersCount * shiftHours * 60;
-            
-            if (totalDayMinutes + taskMinutes <= availableMinutes) {
-                // Предпочитаем даты ближе к идеальной
-                long daysFromIdeal = Math.abs(java.time.temporal.ChronoUnit.DAYS.between(idealDate, date));
-                int score = totalDayMinutes + (int) (daysFromIdeal * 10); // Штраф за удаление от идеальной даты
-                
-                if (score < minScore) {
-                    minScore = score;
-                    bestDate = date;
-                }
-            }
-        }
-        
-        return bestDate;
-    }
-    
-    /**
      * Находит лучший день для размещения задачи с учетом существующей загрузки
      * @deprecated Используется findBestDateFromStart для приоритета от начала года
      */
     @Deprecated
+    @SuppressWarnings("unused")
     private LocalDate findBestDateForAdding(Map<LocalDate, List<DiagnosticsTask>> dailyTasks,
                                            Map<LocalDate, List<DiagnosticsScheduleEntry>> existingByDate,
                                            List<LocalDate> workingDays,
@@ -890,6 +842,7 @@ public class DiagnosticsScheduleService {
      * @deprecated Используется calculateIdealDatesFromStart для приоритета от начала года
      */
     @Deprecated
+    @SuppressWarnings("unused")
     private List<LocalDate> calculateIdealDates(int year, double periodMonths, int totalCount) {
         List<LocalDate> idealDates = new ArrayList<>();
         
@@ -945,7 +898,6 @@ public class DiagnosticsScheduleService {
         
         // Используем переданную дату старта или начало года
         LocalDate actualStartDate = startDate != null ? startDate : LocalDate.of(year, 1, 1);
-        LocalDate endDate = LocalDate.of(year, 12, 31);
         
         // Вычисляем количество периодов в году от даты старта
         int periodsPerYear = (int) Math.round(12.0 / periodMonths);
@@ -955,7 +907,6 @@ public class DiagnosticsScheduleService {
         
         // Распределяем задачи по периодам, начиная с даты старта
         int startMonth = actualStartDate.getMonthValue();
-        int startDay = actualStartDate.getDayOfMonth();
         
         for (int periodIndex = 0; periodIndex < periodsPerYear; periodIndex++) {
             // Вычисляем границы периода от даты старта
@@ -1034,6 +985,7 @@ public class DiagnosticsScheduleService {
      * @deprecated Используется findBestDateNearIdealFromStart для приоритета от начала года
      */
     @Deprecated
+    @SuppressWarnings("unused")
     private LocalDate findBestDateNearIdeal(LocalDate idealDate, List<LocalDate> workingDays,
                                            Map<LocalDate, List<DiagnosticsTask>> dailyTasks,
                                            int workersCount, int shiftHours, int taskMinutes) {
@@ -1088,7 +1040,10 @@ public class DiagnosticsScheduleService {
 
     /**
      * Находит лучший день для размещения задачи
+     * @deprecated Используется findBestDateFromStart для приоритета от начала года
      */
+    @Deprecated
+    @SuppressWarnings("unused")
     private LocalDate findBestDate(Map<LocalDate, List<DiagnosticsTask>> dailyTasks,
                                    List<LocalDate> workingDays,
                                    int workersCount,
@@ -1158,6 +1113,7 @@ public class DiagnosticsScheduleService {
         @SuppressWarnings("unused")
         public int getSequenceNumber() { return sequenceNumber; }
         public void setSequenceNumber(int sequenceNumber) { this.sequenceNumber = sequenceNumber; }
+        @SuppressWarnings("unused")
         public int getTotalCount() { return totalCount; }
         public void setTotalCount(int totalCount) { this.totalCount = totalCount; }
     }
