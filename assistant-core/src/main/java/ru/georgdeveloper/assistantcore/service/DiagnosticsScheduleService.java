@@ -92,8 +92,23 @@ public class DiagnosticsScheduleService {
                     durationMinutes = type.getDurationMinutes();
                 }
                 
-                // Вычисляем количество диагностик в год: 12 месяцев / период
-                int diagnosticsPerYear = (int) Math.round(12.0 / periodMonths);
+                // Вычисляем количество диагностик с учетом даты старта и оставшегося времени года
+                LocalDate actualStartDate = startDate != null ? startDate : LocalDate.of(year, 1, 1);
+                LocalDate yearEnd = LocalDate.of(year, 12, 31);
+                
+                // Вычисляем количество месяцев от даты старта до конца года
+                long monthsFromStartToEnd = java.time.temporal.ChronoUnit.MONTHS.between(
+                    actualStartDate.withDayOfMonth(1), 
+                    yearEnd.withDayOfMonth(1).plusMonths(1)
+                );
+                
+                // Вычисляем количество полных периодов, которые помещаются в оставшееся время
+                int diagnosticsInRemainingTime = (int) Math.floor(monthsFromStartToEnd / periodMonths);
+                
+                // Если период не помещается полностью, все равно создаем одну задачу в первом периоде
+                if (diagnosticsInRemainingTime == 0 && monthsFromStartToEnd > 0) {
+                    diagnosticsInRemainingTime = 1;
+                }
                 
                 // Создаем временный тип с переопределенной длительностью
                 DiagnosticsType taskType = new DiagnosticsType();
@@ -105,11 +120,11 @@ public class DiagnosticsScheduleService {
                 taskType.setIsActive(type.getIsActive());
                 
                 // Создаем задачи с указанием периода для равномерного распределения
-                for (int i = 0; i < diagnosticsPerYear; i++) {
+                for (int i = 0; i < diagnosticsInRemainingTime; i++) {
                     DiagnosticsTask task = new DiagnosticsTask(eq.getEquipment(), eq.getArea(), taskType);
                     task.setPeriodMonths(periodMonths);
                     task.setSequenceNumber(i);
-                    task.setTotalCount(diagnosticsPerYear);
+                    task.setTotalCount(diagnosticsInRemainingTime);
                     allTasks.add(task);
                     totalDiagnosticsMinutes += durationMinutes;
                 }
@@ -124,7 +139,34 @@ public class DiagnosticsScheduleService {
                             totalDiagnosticsHours, totalWorkingHours));
         }
 
-        // Группируем задачи по оборудованию и типу диагностики для равномерного распределения
+        // Группируем задачи по типу диагностики для равномерного распределения
+        // Сначала группируем по типу, чтобы вычислить общее количество оборудования для каждого типа
+        Map<String, List<DiagnosticsTask>> tasksByType = new HashMap<>();
+        for (DiagnosticsTask task : allTasks) {
+            String typeKey = task.getType().getCode();
+            tasksByType.computeIfAbsent(typeKey, k -> new ArrayList<>()).add(task);
+        }
+        
+        // Для каждого типа диагностики вычисляем количество уникального оборудования
+        Map<String, Integer> equipmentCountByType = new HashMap<>();
+        Map<String, Map<String, Integer>> equipmentIndexByType = new HashMap<>();
+        for (Map.Entry<String, List<DiagnosticsTask>> typeEntry : tasksByType.entrySet()) {
+            Set<String> uniqueEquipment = typeEntry.getValue().stream()
+                    .map(DiagnosticsTask::getEquipment)
+                    .collect(Collectors.toSet());
+            equipmentCountByType.put(typeEntry.getKey(), uniqueEquipment.size());
+            
+            // Создаем индекс для каждого оборудования
+            Map<String, Integer> equipmentIndex = new HashMap<>();
+            List<String> sortedEquipment = new ArrayList<>(uniqueEquipment);
+            Collections.sort(sortedEquipment);
+            for (int i = 0; i < sortedEquipment.size(); i++) {
+                equipmentIndex.put(sortedEquipment.get(i), i);
+            }
+            equipmentIndexByType.put(typeEntry.getKey(), equipmentIndex);
+        }
+        
+        // Группируем задачи по оборудованию и типу диагностики
         Map<String, List<DiagnosticsTask>> tasksByEquipmentAndType = new HashMap<>();
         for (DiagnosticsTask task : allTasks) {
             String key = task.getEquipment() + "|" + task.getType().getCode();
@@ -141,10 +183,16 @@ public class DiagnosticsScheduleService {
             DiagnosticsTask firstTask = tasks.get(0);
             double periodMonths = firstTask.getPeriodMonths();
             int taskDurationMinutes = firstTask.getType().getDurationMinutes();
+            String typeCode = firstTask.getType().getCode();
+            String equipment = firstTask.getEquipment();
             
-            // Вычисляем идеальные даты для диагностик с учетом периода и даты старта
-            // Для периода 6 месяцев: первые задачи в первой половине года, вторые - во второй
-            List<LocalDate> idealDates = calculateIdealDatesByPeriod(year, periodMonths, tasks.size(), scheduleStartDate);
+            // Получаем индекс оборудования для равномерного распределения
+            int equipmentIndex = equipmentIndexByType.get(typeCode).get(equipment);
+            int totalEquipment = equipmentCountByType.get(typeCode);
+            
+            // Вычисляем идеальные даты для диагностик с учетом периода, даты старта и индекса оборудования
+            List<LocalDate> idealDates = calculateIdealDatesByPeriod(
+                    year, periodMonths, tasks.size(), scheduleStartDate, equipmentIndex, totalEquipment);
             
             // Распределяем задачи по идеальным датам с учетом равномерности
             for (int i = 0; i < tasks.size() && i < idealDates.size(); i++) {
@@ -256,8 +304,23 @@ public class DiagnosticsScheduleService {
                     durationMinutes = type.getDurationMinutes();
                 }
                 
-                // Вычисляем количество диагностик в год: 12 месяцев / период
-                int diagnosticsPerYear = (int) Math.round(12.0 / periodMonths);
+                // Вычисляем количество диагностик с учетом даты старта и оставшегося времени года
+                LocalDate actualStartDate = startDate != null ? startDate : LocalDate.of(schedule.getYear(), 1, 1);
+                LocalDate yearEnd = LocalDate.of(schedule.getYear(), 12, 31);
+                
+                // Вычисляем количество месяцев от даты старта до конца года
+                long monthsFromStartToEnd = java.time.temporal.ChronoUnit.MONTHS.between(
+                    actualStartDate.withDayOfMonth(1), 
+                    yearEnd.withDayOfMonth(1).plusMonths(1)
+                );
+                
+                // Вычисляем количество полных периодов, которые помещаются в оставшееся время
+                int diagnosticsInRemainingTime = (int) Math.floor(monthsFromStartToEnd / periodMonths);
+                
+                // Если период не помещается полностью, все равно создаем одну задачу в первом периоде
+                if (diagnosticsInRemainingTime == 0 && monthsFromStartToEnd > 0) {
+                    diagnosticsInRemainingTime = 1;
+                }
                 
                 // Создаем временный тип с переопределенной длительностью
                 DiagnosticsType taskType = new DiagnosticsType();
@@ -269,16 +332,42 @@ public class DiagnosticsScheduleService {
                 taskType.setIsActive(type.getIsActive());
                 
                 // Создаем задачи с указанием периода
-                for (int i = 0; i < diagnosticsPerYear; i++) {
+                for (int i = 0; i < diagnosticsInRemainingTime; i++) {
                     DiagnosticsTask task = new DiagnosticsTask(eq.getEquipment(), eq.getArea(), taskType);
                     task.setPeriodMonths(periodMonths);
                     task.setSequenceNumber(i);
-                    task.setTotalCount(diagnosticsPerYear);
+                    task.setTotalCount(diagnosticsInRemainingTime);
                     allTasks.add(task);
                 }
             }
         }
 
+        // Группируем задачи по типу диагностики для равномерного распределения
+        Map<String, List<DiagnosticsTask>> tasksByType = new HashMap<>();
+        for (DiagnosticsTask task : allTasks) {
+            String typeKey = task.getType().getCode();
+            tasksByType.computeIfAbsent(typeKey, k -> new ArrayList<>()).add(task);
+        }
+        
+        // Для каждого типа диагностики вычисляем количество уникального оборудования
+        Map<String, Integer> equipmentCountByType = new HashMap<>();
+        Map<String, Map<String, Integer>> equipmentIndexByType = new HashMap<>();
+        for (Map.Entry<String, List<DiagnosticsTask>> typeEntry : tasksByType.entrySet()) {
+            Set<String> uniqueEquipment = typeEntry.getValue().stream()
+                    .map(DiagnosticsTask::getEquipment)
+                    .collect(Collectors.toSet());
+            equipmentCountByType.put(typeEntry.getKey(), uniqueEquipment.size());
+            
+            // Создаем индекс для каждого оборудования
+            Map<String, Integer> equipmentIndex = new HashMap<>();
+            List<String> sortedEquipment = new ArrayList<>(uniqueEquipment);
+            Collections.sort(sortedEquipment);
+            for (int i = 0; i < sortedEquipment.size(); i++) {
+                equipmentIndex.put(sortedEquipment.get(i), i);
+            }
+            equipmentIndexByType.put(typeEntry.getKey(), equipmentIndex);
+        }
+        
         // Группируем задачи по оборудованию и типу диагностики
         Map<String, List<DiagnosticsTask>> tasksByEquipmentAndType = new HashMap<>();
         for (DiagnosticsTask task : allTasks) {
@@ -316,9 +405,16 @@ public class DiagnosticsScheduleService {
             
             DiagnosticsTask firstTask = tasks.get(0);
             double periodMonths = firstTask.getPeriodMonths();
+            String typeCode = firstTask.getType().getCode();
+            String equipment = firstTask.getEquipment();
             
-            // Вычисляем идеальные даты для диагностик с учетом периода и даты старта
-            List<LocalDate> idealDates = calculateIdealDatesByPeriod(schedule.getYear(), periodMonths, tasks.size(), scheduleStartDate);
+            // Получаем индекс оборудования для равномерного распределения
+            int equipmentIndex = equipmentIndexByType.get(typeCode).get(equipment);
+            int totalEquipment = equipmentCountByType.get(typeCode);
+            
+            // Вычисляем идеальные даты для диагностик с учетом периода, даты старта и индекса оборудования
+            List<LocalDate> idealDates = calculateIdealDatesByPeriod(
+                    schedule.getYear(), periodMonths, tasks.size(), scheduleStartDate, equipmentIndex, totalEquipment);
             
             // Распределяем задачи по идеальным датам с учетом равномерности
             for (int i = 0; i < tasks.size() && i < idealDates.size(); i++) {
@@ -891,13 +987,20 @@ public class DiagnosticsScheduleService {
      * Приоритет распределения от начала года
      */
     /**
-     * Вычисляет идеальные даты для диагностик с учетом периода
-     * Пример: период 6 месяцев, 120 станков:
-     * - Первые 60 станков распределяются с января по июнь (по 10 в месяц)
-     * - Вторые 60 станков распределяются с июля по декабрь (по 10 в месяц)
-     * Внутри каждого месяца равномерно по неделям (по 5 в неделю, если 20 в месяц)
+     * Вычисляет идеальные даты для диагностик с учетом периода от даты старта
+     * Период определяет интервал между диагностиками:
+     * - период 2 месяца = диагностика раз в 2 месяца
+     * - период 6 месяцев = диагностика раз в 6 месяцев
+     * 
+     * Периоды вычисляются от даты старта и ограничиваются концом года.
+     * Для каждого периода создается одна задача.
+     * Если период выходит за пределы года, задача размещается только в месяце начала периода.
+     * 
+     * @param equipmentIndex индекс оборудования (0-based) для равномерного распределения
+     * @param totalEquipment общее количество оборудования для равномерного распределения
      */
-    private List<LocalDate> calculateIdealDatesByPeriod(int year, double periodMonths, int totalTasks, LocalDate startDate) {
+    private List<LocalDate> calculateIdealDatesByPeriod(int year, double periodMonths, int totalTasks, 
+                                                         LocalDate startDate, int equipmentIndex, int totalEquipment) {
         List<LocalDate> idealDates = new ArrayList<>();
         
         if (totalTasks <= 0) {
@@ -906,80 +1009,65 @@ public class DiagnosticsScheduleService {
         
         // Используем переданную дату старта или начало года
         LocalDate actualStartDate = startDate != null ? startDate : LocalDate.of(year, 1, 1);
-        
-        // Вычисляем количество периодов в году от даты старта
-        int periodsPerYear = (int) Math.round(12.0 / periodMonths);
-        
-        // Количество задач на период (равномерно распределяем)
-        int tasksPerPeriod = (int) Math.ceil((double) totalTasks / periodsPerYear);
+        LocalDate yearEnd = LocalDate.of(year, 12, 31);
         
         // Распределяем задачи по периодам, начиная с даты старта
-        int startMonth = actualStartDate.getMonthValue();
+        LocalDate currentPeriodStart = actualStartDate;
         
-        for (int periodIndex = 0; periodIndex < periodsPerYear; periodIndex++) {
-            // Вычисляем границы периода от даты старта
-            int periodStartMonth = startMonth + (int)(periodIndex * periodMonths);
-            // Корректируем месяц, если вышли за пределы года
-            while (periodStartMonth > 12) {
-                periodStartMonth -= 12;
+        for (int taskIndex = 0; taskIndex < totalTasks; taskIndex++) {
+            // Если начало периода уже после конца года, прекращаем
+            if (currentPeriodStart.isAfter(yearEnd)) {
+                break;
             }
-            int periodEndMonth = (int)Math.min(12, periodStartMonth + (int)periodMonths - 1);
             
-            // Количество задач в этом периоде
-            int tasksInPeriod = Math.min(tasksPerPeriod, totalTasks - periodIndex * tasksPerPeriod);
+            // Вычисляем конец периода
+            LocalDate periodEnd = currentPeriodStart.plusMonths((long) Math.ceil(periodMonths)).minusDays(1);
             
-            // Количество месяцев в периоде
-            int monthsInPeriod = periodEndMonth - periodStartMonth + 1;
-            
-            // Распределяем задачи по месяцам периода
-            int tasksPerMonth = (int) Math.ceil((double) tasksInPeriod / monthsInPeriod);
-            
-            for (int monthOffset = 0; monthOffset < monthsInPeriod; monthOffset++) {
-                int targetMonth = periodStartMonth + monthOffset;
-                // Корректируем месяц, если вышли за пределы года
-                while (targetMonth > 12) {
-                    targetMonth -= 12;
-                }
-                if (targetMonth < 1 || targetMonth > 12) break;
-                
-                // Количество задач в этом месяце
-                int tasksInMonth = Math.min(tasksPerMonth, tasksInPeriod - monthOffset * tasksPerMonth);
-                
-                // Распределяем задачи внутри месяца равномерно по неделям
-                // Для первого месяца периода используем дату старта, для остальных - начало месяца
-                LocalDate monthStart = (periodIndex == 0 && monthOffset == 0) 
-                    ? actualStartDate 
-                    : LocalDate.of(year, targetMonth, 1);
-                LocalDate monthEnd = LocalDate.of(year, targetMonth, 1).withDayOfMonth(
-                    LocalDate.of(year, targetMonth, 1).lengthOfMonth());
-                
-                // Получаем рабочие дни месяца
-                List<LocalDate> monthWorkingDays = getWorkingDays(monthStart, monthEnd);
-                if (monthWorkingDays.isEmpty()) continue;
-                
-                // Распределяем задачи по неделям месяца
-                int weeksInMonth = (int) Math.ceil(monthWorkingDays.size() / 5.0); // Примерно 5 рабочих дней в неделю
-                int tasksPerWeek = (int) Math.ceil((double) tasksInMonth / weeksInMonth);
-                
-                for (int taskIndex = 0; taskIndex < tasksInMonth; taskIndex++) {
-                    int weekIndex = taskIndex / tasksPerWeek;
-                    int taskInWeek = taskIndex % tasksPerWeek;
-                    
-                    // Вычисляем идеальную дату в неделе
-                    int weekStartDayIndex = weekIndex * tasksPerWeek;
-                    if (weekStartDayIndex >= monthWorkingDays.size()) {
-                        weekStartDayIndex = monthWorkingDays.size() - 1;
-                    }
-                    
-                    int dayIndex = weekStartDayIndex + (taskInWeek % tasksPerWeek);
-                    if (dayIndex >= monthWorkingDays.size()) {
-                        dayIndex = monthWorkingDays.size() - 1;
-                    }
-                    
-                    LocalDate idealDate = monthWorkingDays.get(dayIndex);
-                    idealDates.add(idealDate);
-                }
+            // Ограничиваем конец периода концом года
+            if (periodEnd.isAfter(yearEnd)) {
+                periodEnd = yearEnd;
             }
+            
+            // Определяем диапазон для размещения задачи
+            // Если период выходит за пределы года, размещаем задачу только в месяце начала периода
+            LocalDate taskRangeStart = currentPeriodStart;
+            LocalDate taskRangeEnd;
+            
+            if (periodEnd.getYear() > year || 
+                (periodEnd.getYear() == year && periodEnd.getMonthValue() > currentPeriodStart.getMonthValue())) {
+                // Период выходит за пределы года или месяца - размещаем только в месяце начала
+                taskRangeEnd = currentPeriodStart.withDayOfMonth(
+                    currentPeriodStart.lengthOfMonth());
+            } else {
+                // Период полностью в пределах года - используем весь период
+                taskRangeEnd = periodEnd;
+            }
+            
+            // Получаем рабочие дни для размещения задачи
+            List<LocalDate> workingDays = getWorkingDays(taskRangeStart, taskRangeEnd);
+            if (workingDays.isEmpty()) {
+                // Если нет рабочих дней, переходим к следующему периоду
+                currentPeriodStart = currentPeriodStart.plusMonths((long) Math.ceil(periodMonths));
+                continue;
+            }
+            
+            // Размещаем задачу равномерно в доступном диапазоне
+            // Для равномерного распределения по ноябрю для всех единиц оборудования
+            // используем индекс оборудования для вычисления позиции
+            int dayIndex;
+            if (totalEquipment > 1) {
+                // Для равномерного распределения используем индекс оборудования
+                double position = totalEquipment > 1 ? (double) equipmentIndex / (totalEquipment - 1) : 0.5;
+                dayIndex = (int) Math.round(position * (workingDays.size() - 1));
+                dayIndex = Math.min(dayIndex, workingDays.size() - 1);
+            } else {
+                // Если только одно оборудование, размещаем в середине периода
+                dayIndex = workingDays.size() / 2;
+            }
+            idealDates.add(workingDays.get(dayIndex));
+            
+            // Вычисляем начало следующего периода
+            currentPeriodStart = currentPeriodStart.plusMonths((long) Math.ceil(periodMonths));
         }
         
         // Сортируем даты
