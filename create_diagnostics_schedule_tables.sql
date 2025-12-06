@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS `diagnostics_schedule_entries` (
   `is_completed` BOOLEAN DEFAULT FALSE COMMENT 'Выполнена ли диагностика',
   `completed_date` DATE NULL COMMENT 'Дата выполнения',
   `notes` TEXT NULL COMMENT 'Заметки',
+  `duration_minutes` INT NULL COMMENT 'Продолжительность диагностики в минутах (сохраняется при создании наряда)',
   PRIMARY KEY (`id`),
   FOREIGN KEY (`schedule_id`) REFERENCES `diagnostics_schedules` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`diagnostics_type_id`) REFERENCES `diagnostics_types` (`id`),

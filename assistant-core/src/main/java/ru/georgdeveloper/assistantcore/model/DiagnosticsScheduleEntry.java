@@ -42,5 +42,8 @@ public class DiagnosticsScheduleEntry {
     
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes; // Заметки
+    
+    @Column(name = "duration_minutes")
+    private Integer durationMinutes; // Продолжительность диагностики в минутах (сохраняется при создании наряда)
 }
 

@@ -183,6 +183,8 @@ public class DiagnosticsScheduleService {
                 scheduleEntry.setDiagnosticsType(task.getType());
                 scheduleEntry.setScheduledDate(entry.getKey());
                 scheduleEntry.setIsCompleted(false);
+                // Сохраняем продолжительность из задачи (может быть переопределена пользователем)
+                scheduleEntry.setDurationMinutes(task.getType().getDurationMinutes());
                 entries.add(scheduleEntry);
             }
         }
@@ -356,6 +358,8 @@ public class DiagnosticsScheduleService {
                 scheduleEntry.setDiagnosticsType(task.getType());
                 scheduleEntry.setScheduledDate(entry.getKey());
                 scheduleEntry.setIsCompleted(false);
+                // Сохраняем продолжительность из задачи (может быть переопределена пользователем)
+                scheduleEntry.setDurationMinutes(task.getType().getDurationMinutes());
                 entries.add(scheduleEntry);
             }
         }
@@ -800,11 +804,15 @@ public class DiagnosticsScheduleService {
             entryData.put("id", entry.getId());
             entryData.put("equipment", entry.getEquipment());
             entryData.put("area", entry.getArea());
+            // Используем продолжительность из наряда, если она сохранена, иначе из типа диагностики
+            Integer durationMinutes = entry.getDurationMinutes() != null 
+                ? entry.getDurationMinutes() 
+                : entry.getDiagnosticsType().getDurationMinutes();
             entryData.put("diagnosticsType", Map.of(
                 "id", entry.getDiagnosticsType().getId(),
                 "code", entry.getDiagnosticsType().getCode(),
                 "name", entry.getDiagnosticsType().getName(),
-                "durationMinutes", entry.getDiagnosticsType().getDurationMinutes(),
+                "durationMinutes", durationMinutes,
                 "colorCode", entry.getDiagnosticsType().getColorCode() != null 
                     ? entry.getDiagnosticsType().getColorCode() : "#90EE90"
             ));

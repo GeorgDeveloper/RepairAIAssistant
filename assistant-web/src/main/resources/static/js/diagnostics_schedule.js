@@ -964,8 +964,12 @@ function renderScheduleTable(entries, dates) {
                 
                 cell.attr('title', dayEntries.map(e => {
                     let tooltip = e.diagnosticsType.name;
-                    if (e.diagnosticsType.durationMinutes) {
-                        tooltip += ' (' + e.diagnosticsType.durationMinutes + ' мин)';
+                    // Используем продолжительность из наряда (сохраненную при создании)
+                    const duration = e.diagnosticsType && e.diagnosticsType.durationMinutes 
+                        ? e.diagnosticsType.durationMinutes 
+                        : null;
+                    if (duration) {
+                        tooltip += ' (' + duration + ' мин)';
                     }
                     if (e.isCompleted) {
                         if (e.notes && e.notes.includes('Обнаружен дефект')) {

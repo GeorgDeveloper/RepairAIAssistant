@@ -399,7 +399,11 @@ public class DiagnosticsScheduleController {
                     typeData.put("id", entry.getDiagnosticsType().getId());
                     typeData.put("code", entry.getDiagnosticsType().getCode());
                     typeData.put("name", entry.getDiagnosticsType().getName());
-                    typeData.put("durationMinutes", entry.getDiagnosticsType().getDurationMinutes());
+                    // Используем продолжительность из наряда, если она сохранена, иначе из типа диагностики
+                    Integer durationMinutes = entry.getDurationMinutes() != null 
+                        ? entry.getDurationMinutes() 
+                        : entry.getDiagnosticsType().getDurationMinutes();
+                    typeData.put("durationMinutes", durationMinutes);
                     typeData.put("colorCode", entry.getDiagnosticsType().getColorCode());
                     entryData.put("diagnosticsType", typeData);
                 }
