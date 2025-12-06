@@ -8,13 +8,15 @@
     <link rel="stylesheet" href="/static/styles/style.css">
     <link rel="stylesheet" href="/static/styles/long-report.css">
     <link rel="stylesheet" href="/static/lib/jquery.dataTables-1.13.6.min.css">
+    <script src="/static/jquery/jquery-3.7.0.min.js"></script>
+    <script src="/static/lib/jquery.dataTables-1.13.6.min.js"></script>
 </head>
 
 <body>
 
     <div th:replace="~{fragments/navigation :: nav}"></div>
 
-    <div class="total-content">
+    <div class="total-content long-report-page">
         <div class="header">
             <div class="user_logo">
                 Привет, <a href="#">user</a>
@@ -23,39 +25,15 @@
 
         <div class="main-content">
             <div class="container">
-                <div class="content">
-                    <h1>Отчеты о сложных ремонтах</h1>
-                    <!-- Add a button to open the modal -->
-                    <button id="openModalButton" class="showSolutionForm">Добавить запись</button>
+                <h1>Отчеты о сложных ремонтах</h1>
 
-                    <!-- Modal structure -->
-                    <div id="addSolutionModal" class="modal">
-                        <div class="modal-content">
-                            <h2>Добавить запись</h2>
-                            <form id="addSolutionForm">
-                                <input type="text" id="date" name="date" placeholder="Дата" required>
-                                <input type="text" id="executor" name="executor" placeholder="Исполнитель" required>
-                                <select id="region" name="region" required>
-                                    <option value="">Выберите участок</option>
-                                </select>
-                                <select id="equipment" name="equipment" required>
-                                    <option value="">Выберите оборудование</option>
-                                </select>
-                                <select id="node" name="node" required>
-                                    <option value="">Выберите узел</option>
-                                </select>
-                                <textarea id="notes_on_the_operation_of_the_equipment"
-                                    name="notes_on_the_operation_of_the_equipment"
-                                    placeholder="Примечания по работе оборудования" required></textarea>
-                                <textarea id="measures_taken" name="measures_taken" placeholder="Принятые меры" required></textarea>
-                                <textarea id="comments" name="comments" placeholder="Комментарии" required></textarea>
-                                <button type="submit">Добавить</button>
-                                <button type="button" id="closeModalButton">Закрыть</button>
-                            </form>
-                        </div>
-                    </div>
+                <div style="margin: 16px 0;">
+                    <button id="openModalButton" class="btn-apply">Добавить запись</button>
+                </div>
 
-                    <table id="solutionsTable" class="display">
+                <div class="row">
+                    <div class="col">
+                        <table id="solutionsTable" class="display" style="width:100%;">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -74,14 +52,38 @@
                             <!-- Данные будут подгружаться через JS -->
                         </tbody>
                     </table>
+                    </div>
+                </div>
+
+                <!-- Modal structure -->
+                <div id="addSolutionModal" class="modal">
+                    <div class="modal-content">
+                        <h2>Добавить запись</h2>
+                        <form id="addSolutionForm">
+                            <input type="text" id="date" name="date" placeholder="Дата" required>
+                            <input type="text" id="executor" name="executor" placeholder="Исполнитель" required>
+                            <select id="region" name="region" required>
+                                <option value="">Выберите участок</option>
+                            </select>
+                            <select id="equipment" name="equipment" required>
+                                <option value="">Выберите оборудование</option>
+                            </select>
+                            <select id="node" name="node" required>
+                                <option value="">Выберите узел</option>
+                            </select>
+                            <textarea id="notes_on_the_operation_of_the_equipment"
+                                name="notes_on_the_operation_of_the_equipment"
+                                placeholder="Примечания по работе оборудования" required></textarea>
+                            <textarea id="measures_taken" name="measures_taken" placeholder="Принятые меры" required></textarea>
+                            <textarea id="comments" name="comments" placeholder="Комментарии" required></textarea>
+                            <button type="submit">Добавить</button>
+                            <button type="button" id="closeModalButton">Закрыть</button>
+                        </form>
+                    </div>
                 </div>
             </div>
-            <!-- DataTables и jQuery -->
-            <script src="/static/jquery/jquery-3.7.0.min.js"></script>
-            <script src="/static/lib/jquery.dataTables-1.13.6.min.js"></script>
-            <script src="/static/js/long-report.js"></script>
         </div>
-    </div>
-</body>
 
+        <script src="/static/js/long-report.js"></script>
+    </body>
 </html>
