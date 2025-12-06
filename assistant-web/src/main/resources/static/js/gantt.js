@@ -1,11 +1,31 @@
 let zoomLevel = 1;
 let currentData = [];
+let tooltipTimeout = null;
+let isRendering = false;
+
+// Polyfill for padStart (для совместимости со старыми браузерами)
+if (!String.prototype.padStart) {
+    String.prototype.padStart = function(targetLength, padString) {
+        targetLength = targetLength >> 0;
+        padString = String(typeof padString !== 'undefined' ? padString : ' ');
+        if (this.length > targetLength) {
+            return String(this);
+        } else {
+            targetLength = targetLength - this.length;
+            if (targetLength > padString.length) {
+                padString += padString.repeat(targetLength / padString.length);
+            }
+            return padString.slice(0, targetLength) + String(this);
+        }
+    };
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeDatePickers();
     initializeSelect2();
     setupAreaFilterListener();
     setupZoomControls();
+    setupEventDelegation();
     loadInitialData();
     
     document.getElementById('apply-filters').addEventListener('click', function() {
@@ -31,8 +51,45 @@ function setupZoomControls() {
 
 function updateZoom() {
     document.getElementById('zoom-level').textContent = Math.round(zoomLevel * 100) + '%';
-    if (currentData.length > 0) {
-        generateGanttChart(currentData);
+    if (currentData.length > 0 && !isRendering) {
+        requestAnimationFrame(function() {
+            generateGanttChart(currentData);
+        });
+    }
+}
+
+// Настройка делегирования событий для улучшения производительности
+function setupEventDelegation() {
+    const ganttBody = document.getElementById('gantt-body');
+    if (ganttBody) {
+        // Делегирование событий для repair-bar
+        ganttBody.addEventListener('mousemove', function(e) {
+            let target = e.target;
+            // Ищем родительский элемент .repair-bar (совместимость со старыми браузерами)
+            while (target && target !== ganttBody) {
+                if (target.classList && target.classList.contains('repair-bar')) {
+                    showTooltip(e, target);
+                    return;
+                }
+                target = target.parentElement;
+            }
+        });
+        
+        ganttBody.addEventListener('mouseleave', function(e) {
+            // Проверяем, что мышь действительно покинула область с repair-bar
+            let relatedTarget = e.relatedTarget;
+            let hasRepairBar = false;
+            while (relatedTarget && relatedTarget !== ganttBody && relatedTarget !== document.body) {
+                if (relatedTarget.classList && relatedTarget.classList.contains('repair-bar')) {
+                    hasRepairBar = true;
+                    break;
+                }
+                relatedTarget = relatedTarget.parentElement;
+            }
+            if (!hasRepairBar) {
+                hideTooltip();
+            }
+        });
     }
 }
 
@@ -182,6 +239,11 @@ async function fetchDataFromDatabase(params = {}) {
 }
 
 async function applyFilters() {
+    if (isRendering) {
+        console.log('Рендеринг уже выполняется, пропускаем...');
+        return;
+    }
+    
     showLoading(true);
     hideError(); // Очищаем предыдущие ошибки
     
@@ -208,22 +270,34 @@ async function applyFilters() {
     } catch (error) {
         console.error('Ошибка применения фильтров:', error);
         showError('Ошибка применения фильтров: ' + error.message);
+        isRendering = false; // Сбрасываем флаг при ошибке
     } finally {
         showLoading(false);
     }
 }
 
 function generateGanttChart(data) {
+    if (isRendering) return;
+    isRendering = true;
+    
     currentData = data;
     const dateFrom = document.getElementById('date-from').value;
     const dateTo = document.getElementById('date-to').value;
     
     const groupedData = groupDataByAreaAndMachine(data);
     
-    generateTimeHeader(dateFrom, dateTo);
-    generateGanttBody(groupedData, dateFrom, dateTo);
-    generateAreaControls(groupedData);
-    updateSummary(data);
+    // Используем requestAnimationFrame для плавной отрисовки
+    requestAnimationFrame(function() {
+        generateTimeHeader(dateFrom, dateTo);
+        requestAnimationFrame(function() {
+            generateGanttBody(groupedData, dateFrom, dateTo);
+            requestAnimationFrame(function() {
+                generateAreaControls(groupedData);
+                updateSummary(data);
+                isRendering = false;
+            });
+        });
+    });
 }
 
 function groupDataByAreaAndMachine(data) {
@@ -246,7 +320,8 @@ function groupDataByAreaAndMachine(data) {
 
 function generateTimeHeader(dateFrom, dateTo) {
     const timeHeader = document.getElementById('time-header');
-    timeHeader.innerHTML = '';
+    // Используем DocumentFragment для батчинга DOM операций
+    const fragment = document.createDocumentFragment();
     
     const fromDate = new Date(dateFrom);
     const toDate = new Date(dateTo);
@@ -306,7 +381,7 @@ function generateTimeHeader(dateFrom, dateTo) {
             preSlot.style.minWidth = preSlotWidth + 'px';
             preSlot.style.width = preSlotWidth + 'px';
             preSlot.textContent = stepLabel(fromDate);
-            timeHeader.appendChild(preSlot);
+            fragment.appendChild(preSlot);
         }
     }
     
@@ -317,12 +392,16 @@ function generateTimeHeader(dateFrom, dateTo) {
         timeSlot.style.minWidth = slotWidth + 'px';
         timeSlot.style.width = slotWidth + 'px';
         timeSlot.textContent = stepLabel(currentSlotDate);
-        timeHeader.appendChild(timeSlot);
+        fragment.appendChild(timeSlot);
         
         const nextSlotDate = new Date(currentSlotDate);
         nextSlotDate.setMinutes(nextSlotDate.getMinutes() + stepMinutes);
         currentSlotDate = nextSlotDate;
     }
+    
+    // Очищаем и добавляем все элементы за один раз
+    timeHeader.innerHTML = '';
+    timeHeader.appendChild(fragment);
     
     // Обновляем минимальную ширину контейнера временных слотов
     // Используем точный расчет на основе минут
@@ -333,7 +412,8 @@ function generateTimeHeader(dateFrom, dateTo) {
 
 function generateGanttBody(groupedData, dateFrom, dateTo) {
     const ganttBody = document.getElementById('gantt-body');
-    ganttBody.innerHTML = '';
+    // Используем DocumentFragment для батчинга DOM операций
+    const fragment = document.createDocumentFragment();
     
     const fromDate = new Date(dateFrom);
     const toDate = new Date(dateTo);
@@ -353,7 +433,7 @@ function generateGanttBody(groupedData, dateFrom, dateTo) {
         
         // Создаем заголовок участка
         const areaHeader = createAreaHeader(area, areaData);
-        ganttBody.appendChild(areaHeader);
+        fragment.appendChild(areaHeader);
         
         // Создаем строки для машин в этом участке
         const sortedMachines = Object.keys(areaData.machines).sort();
@@ -367,9 +447,13 @@ function generateGanttBody(groupedData, dateFrom, dateTo) {
             areaData.machines[machine].forEach(repair => {
                 createRepairBar(repair, machineRow, fromDate, minuteWidth);
             });
-            ganttBody.appendChild(machineRow);
+            fragment.appendChild(machineRow);
         });
     });
+    
+    // Очищаем и добавляем все элементы за один раз
+    ganttBody.innerHTML = '';
+    ganttBody.appendChild(fragment);
 }
 
 function createAreaHeader(area, areaData) {
@@ -453,8 +537,7 @@ function createRepairBar(repair, machineRow, fromDate, minuteWidth) {
         bar.setAttribute('data-reason', repair.comments);
         bar.setAttribute('data-status', repair.status);
         
-        bar.addEventListener('mousemove', showTooltip);
-        bar.addEventListener('mouseleave', hideTooltip);
+        // События обрабатываются через делегирование (setupEventDelegation)
         
         machineRow.appendChild(bar);
     }
@@ -512,7 +595,8 @@ function addCollapsedAreaBars(header, areaData, area) {
 
 function generateAreaControls(groupedData) {
     const areaControls = document.getElementById('area-controls');
-    areaControls.innerHTML = '';
+    // Используем DocumentFragment для батчинга DOM операций
+    const fragment = document.createDocumentFragment();
     
     const sortedAreas = Object.keys(groupedData).sort();
     
@@ -523,6 +607,7 @@ function generateAreaControls(groupedData) {
         if (areaData.collapsed) {
             button.classList.add('collapsed');
         }
+        button.setAttribute('data-area', area);
         
         const icon = document.createElement('span');
         icon.className = 'area-control-icon';
@@ -542,8 +627,12 @@ function generateAreaControls(groupedData) {
             icon.textContent = isCollapsed ? '▼' : '▶';
         });
         
-        areaControls.appendChild(button);
+        fragment.appendChild(button);
     });
+    
+    // Очищаем и добавляем все элементы за один раз
+    areaControls.innerHTML = '';
+    areaControls.appendChild(fragment);
 }
 
 function toggleAreaCollapse(area) {
@@ -583,30 +672,63 @@ function toggleAreaCollapse(area) {
     }
 }
 
-function showTooltip(e) {
-    let tooltip = document.querySelector('.tooltip') || createTooltip();
+function showTooltip(e, bar) {
+    // Дебаунсинг для улучшения производительности
+    if (tooltipTimeout) {
+        clearTimeout(tooltipTimeout);
+    }
     
-    const machine = this.getAttribute('data-machine');
-    const start = this.getAttribute('data-start');
-    const end = this.getAttribute('data-end');
-    const duration = this.getAttribute('data-duration');
-    const type = this.getAttribute('data-type');
-    const reason = this.getAttribute('data-reason');
-    const status = this.getAttribute('data-status');
-    
-    tooltip.innerHTML = `
-        <strong>${machine}</strong><br>
-        Начало: ${formatDateTime(start)}<br>
-        Окончание: ${formatDateTime(end)}<br>
-        Длительность: ${duration}<br>
-        Тип: ${type}<br>
-        Статус: ${status}<br>
-        Причина: ${reason}
-    `;
-    
-    tooltip.style.display = 'block';
-    tooltip.style.left = (e.pageX + 10) + 'px';
-    tooltip.style.top = (e.pageY + 10) + 'px';
+    tooltipTimeout = setTimeout(function() {
+        let tooltip = document.querySelector('.tooltip') || createTooltip();
+        
+        const machine = bar.getAttribute('data-machine');
+        const start = bar.getAttribute('data-start');
+        const end = bar.getAttribute('data-end');
+        const duration = bar.getAttribute('data-duration');
+        const type = bar.getAttribute('data-type');
+        const reason = bar.getAttribute('data-reason') || '';
+        const status = bar.getAttribute('data-status');
+        
+        tooltip.innerHTML = 
+            '<strong>' + escapeHtml(machine) + '</strong><br>' +
+            'Начало: ' + formatDateTime(start) + '<br>' +
+            'Окончание: ' + formatDateTime(end) + '<br>' +
+            'Длительность: ' + escapeHtml(duration) + '<br>' +
+            'Тип: ' + escapeHtml(type) + '<br>' +
+            'Статус: ' + escapeHtml(status) + '<br>' +
+            'Причина: ' + escapeHtml(reason);
+        
+        tooltip.style.display = 'block';
+        
+        // Используем clientX/clientY для лучшей совместимости
+        const x = e.clientX !== undefined ? e.clientX : e.pageX;
+        const y = e.clientY !== undefined ? e.clientY : e.pageY;
+        
+        tooltip.style.left = (x + 10) + 'px';
+        tooltip.style.top = (y + 10) + 'px';
+        
+        // Проверяем границы экрана и корректируем позицию
+        requestAnimationFrame(function() {
+            const rect = tooltip.getBoundingClientRect();
+            const windowWidth = window.innerWidth || document.documentElement.clientWidth;
+            const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+            
+            if (rect.right > windowWidth) {
+                tooltip.style.left = (x - rect.width - 10) + 'px';
+            }
+            if (rect.bottom > windowHeight) {
+                tooltip.style.top = (y - rect.height - 10) + 'px';
+            }
+        });
+    }, 50); // Небольшая задержка для плавности
+}
+
+// Функция для экранирования HTML (безопасность и совместимость)
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function createTooltip() {
@@ -617,13 +739,26 @@ function createTooltip() {
 }
 
 function hideTooltip() {
+    if (tooltipTimeout) {
+        clearTimeout(tooltipTimeout);
+        tooltipTimeout = null;
+    }
     const tooltip = document.querySelector('.tooltip');
     if (tooltip) tooltip.style.display = 'none';
 }
 
 function formatDateTime(dateTimeStr) {
     const date = new Date(dateTimeStr);
-    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+    // Используем более совместимый способ форматирования
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    
+    return day + '.' + month + '.' + year + ' ' + 
+           (hours < 10 ? '0' : '') + hours + ':' + 
+           (minutes < 10 ? '0' : '') + minutes;
 }
 
 function updateSummary(data) {
