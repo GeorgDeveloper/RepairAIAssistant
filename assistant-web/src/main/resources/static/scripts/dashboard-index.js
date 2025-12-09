@@ -500,19 +500,34 @@ const IndexDashboard = {
             const year = this.currentDate.getFullYear();
             const month = this.currentDate.getMonth() + 1; // JavaScript месяцы начинаются с 0
             
+            // Проверяем, является ли текущий месяц выбранным
+            const isCurrentMonth = this.isCurrentMonth();
+            
             // Формируем URL с параметрами месяца
             const breakDownUrl = `/dashboard/breakDown?year=${year}&month=${month}`;
             const availabilityUrl = `/dashboard/availability?year=${year}&month=${month}`;
             const pmUrl = `/dashboard/pm-plan-fact-tag?year=${year}&month=${month}`;
             const metricsUrl = `/dashboard/current-metrics?year=${year}&month=${month}`;
             
+            // Определяем, какие endpoints использовать для топ поломок
+            let topBreakdownsUrl, topBreakdownsKeyLinesUrl;
+            if (isCurrentMonth) {
+                // Для текущего месяца - данные за неделю
+                topBreakdownsUrl = '/dashboard/top-breakdowns-week';
+                topBreakdownsKeyLinesUrl = '/dashboard/top-breakdowns-week-key-lines';
+            } else {
+                // Для предыдущих месяцев - данные за месяц
+                topBreakdownsUrl = `/dashboard/top-breakdowns-month?year=${year}&month=${month}`;
+                topBreakdownsKeyLinesUrl = `/dashboard/top-breakdowns-month-key-lines?year=${year}&month=${month}`;
+            }
+            
             // Загрузка данных для графиков
-            const [breakDownData, availabilityData, currentMetrics, topBreakdownsWeek, topBreakdownsWeekKeyLines, pmData] = await Promise.all([
+            const [breakDownData, availabilityData, currentMetrics, topBreakdowns, topBreakdownsKeyLines, pmData] = await Promise.all([
                 DashboardAPI.fetchData(breakDownUrl),
                 DashboardAPI.fetchData(availabilityUrl),
                 DashboardAPI.fetchData(metricsUrl),
-                DashboardAPI.fetchData('/dashboard/top-breakdowns-week'),
-                DashboardAPI.fetchData('/dashboard/top-breakdowns-week-key-lines'),
+                DashboardAPI.fetchData(topBreakdownsUrl),
+                DashboardAPI.fetchData(topBreakdownsKeyLinesUrl),
                 DashboardAPI.fetchData(pmUrl)
             ]);
             
@@ -531,6 +546,9 @@ const IndexDashboard = {
             console.log('Availability data points:', availabilityPoints.length);
             console.log('PM data:', pmData?.length || 0);
             
+            // Обновляем заголовки таблиц
+            this.updateTableHeaders(isCurrentMonth);
+            
             // Создание графиков и таблиц
             // Используем setTimeout для обеспечения правильного порядка создания
             setTimeout(() => {
@@ -546,11 +564,27 @@ const IndexDashboard = {
             }, 150);
             
             this.Tables.createMetrics(currentMetrics);
-            this.Tables.createTopBreakdowns(topBreakdownsWeek, 'topBreakdownsWeekTable', true);
-            this.Tables.createTopBreakdowns(topBreakdownsWeekKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
+            // Для недельных и месячных данных используется одинаковый формат (machine_name и machine_downtime_seconds)
+            // Всегда используем формат с двумя колонками (machine_name и machine_downtime)
+            this.Tables.createTopBreakdowns(topBreakdowns, 'topBreakdownsWeekTable', true);
+            this.Tables.createTopBreakdowns(topBreakdownsKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
             
         } catch (error) {
             console.error('Ошибка при инициализации дашборда:', error);
+        }
+    },
+    
+    // Обновление заголовков таблиц в зависимости от выбранного месяца
+    updateTableHeaders(isCurrentMonth) {
+        const keyLinesHeader = document.getElementById('keyLinesHeader');
+        const topBreakdownsHeader = document.getElementById('topBreakdownsHeader');
+        
+        if (keyLinesHeader) {
+            keyLinesHeader.textContent = isCurrentMonth ? 'Ключевые линии (неделя)' : 'Ключевые линии (месяц)';
+        }
+        
+        if (topBreakdownsHeader) {
+            topBreakdownsHeader.textContent = isCurrentMonth ? 'Топ поломок за неделю' : 'Топ поломок за месяц';
         }
     }
 };

@@ -21,6 +21,22 @@ public class DashboardController {
         return monitoringRepository.getTopBreakdownsPerWeekKeyLines();
     }
 
+    @GetMapping("/top-breakdowns-month")
+    @ResponseBody
+    public List<Map<String, Object>> getTopBreakdownsPerMonth(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        return monitoringRepository.getTopBreakdownsPerMonth(year, month);
+    }
+
+    @GetMapping("/top-breakdowns-month-key-lines")
+    @ResponseBody
+    public List<Map<String, Object>> getTopBreakdownsPerMonthKeyLines(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        return monitoringRepository.getTopBreakdownsPerMonthKeyLines(year, month);
+    }
+
     @GetMapping("/top-breakdowns")
     @ResponseBody
     public List<Map<String, Object>> getTopBreakdownsPerDay() {

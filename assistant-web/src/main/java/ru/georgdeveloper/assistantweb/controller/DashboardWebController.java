@@ -96,6 +96,46 @@ public class DashboardWebController {
     }
 
     @SuppressWarnings("unchecked")
+    @GetMapping("/top-breakdowns-month")
+    public List<Map<String, Object>> topBreakdownsMonth(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/dashboard/top-breakdowns-month");
+        boolean hasParams = false;
+        
+        if (year != null) {
+            url.append("?year=").append(year);
+            hasParams = true;
+        }
+        
+        if (month != null) {
+            url.append(hasParams ? "&" : "?").append("month=").append(month);
+        }
+        
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/top-breakdowns-month-key-lines")
+    public List<Map<String, Object>> topBreakdownsMonthKeyLines(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/dashboard/top-breakdowns-month-key-lines");
+        boolean hasParams = false;
+        
+        if (year != null) {
+            url.append("?year=").append(year);
+            hasParams = true;
+        }
+        
+        if (month != null) {
+            url.append(hasParams ? "&" : "?").append("month=").append(month);
+        }
+        
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
+    }
+
+    @SuppressWarnings("unchecked")
     @GetMapping("/top-breakdowns")
     public List<Map<String, Object>> topBreakdownsDay() {
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns", List.class);

@@ -42,6 +42,74 @@ public class MonitoringRepository {
                 "LIMIT 4";
         return jdbcTemplate.queryForList(sql);
     }
+
+    // Топ-5 поломок за месяц (общее)
+    public List<Map<String, Object>> getTopBreakdownsPerMonth(Integer year, Integer month) {
+        String sql;
+        if (year != null && month != null) {
+            sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
+                    "FROM equipment_maintenance_records " +
+                    "WHERE YEAR(start_bd_t1) = ? " +
+                    "AND MONTH(start_bd_t1) = ? " +
+                    "AND failure_type <> 'Другие' " +
+                    "GROUP BY machine_name " +
+                    "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
+                    "LIMIT 4";
+            return jdbcTemplate.queryForList(sql, year, month);
+        } else {
+            // По умолчанию используем предыдущий месяц
+            sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
+                    "FROM equipment_maintenance_records " +
+                    "WHERE YEAR(start_bd_t1) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
+                    "AND MONTH(start_bd_t1) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
+                    "AND failure_type <> 'Другие' " +
+                    "GROUP BY machine_name " +
+                    "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
+                    "LIMIT 4";
+            return jdbcTemplate.queryForList(sql);
+        }
+    }
+
+    // Топ-5 поломок за месяц по ключевым линиям
+    public List<Map<String, Object>> getTopBreakdownsPerMonthKeyLines(Integer year, Integer month) {
+        String sql;
+        if (year != null && month != null) {
+            sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
+                    "FROM equipment_maintenance_records " +
+                    "WHERE YEAR(start_bd_t1) = ? " +
+                    "AND MONTH(start_bd_t1) = ? " +
+                    "AND failure_type <> 'Другие' " +
+                    "AND machine_name IN (" +
+                    "'Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', " +
+                    "'Calender Complex Berstorf - 01', 'Bandina - 01', 'Duplex - 01', " +
+                    "'Calender Comerio Ercole - 01', 'VMI APEX - 01', 'VMI APEX - 02', " +
+                    "'Trafila Quadruplex - 01', 'Bartell Bead Machine - 01', " +
+                    "'TTM fisher belt cutting - 01', 'VMI TPCS 1600-1000'" +
+                    ") " +
+                    "GROUP BY machine_name " +
+                    "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
+                    "LIMIT 4";
+            return jdbcTemplate.queryForList(sql, year, month);
+        } else {
+            // По умолчанию используем предыдущий месяц
+            sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
+                    "FROM equipment_maintenance_records " +
+                    "WHERE YEAR(start_bd_t1) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
+                    "AND MONTH(start_bd_t1) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
+                    "AND failure_type <> 'Другие' " +
+                    "AND machine_name IN (" +
+                    "'Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', " +
+                    "'Calender Complex Berstorf - 01', 'Bandina - 01', 'Duplex - 01', " +
+                    "'Calender Comerio Ercole - 01', 'VMI APEX - 01', 'VMI APEX - 02', " +
+                    "'Trafila Quadruplex - 01', 'Bartell Bead Machine - 01', " +
+                    "'TTM fisher belt cutting - 01', 'VMI TPCS 1600-1000'" +
+                    ") " +
+                    "GROUP BY machine_name " +
+                    "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
+                    "LIMIT 4";
+            return jdbcTemplate.queryForList(sql);
+        }
+    }
     // Топ-5 поломок за сутки (последние 24 часа)
     public List<Map<String, Object>> getTopBreakdownsPerDay() {
         String sql = "SELECT code, machine_name, machine_downtime, cause " +
