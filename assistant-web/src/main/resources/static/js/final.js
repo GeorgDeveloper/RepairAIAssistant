@@ -45,9 +45,43 @@ $(function(){
         return value;
     }
 
+    function calculateYearTotal(rows, metricName, maxCols) {
+        // Для строки "Месяц" возвращаем пустую строку
+        if (metricName === 'Месяц') {
+            return '';
+        }
+        
+        var row = rows.find(function(r) { return r.metric === metricName; });
+        if (!row) return '';
+        
+        var values = [];
+        for (var i = 1; i <= maxCols; i++) {
+            var value = row['m' + i];
+            if (value != null && value !== '') {
+                var num = parseFloat(value);
+                if (!isNaN(num)) {
+                    values.push(num);
+                }
+            }
+        }
+        
+        if (values.length === 0) return '';
+        
+        // Для процентных показателей вычисляем среднее
+        if (metricName.includes('%') || metricName.includes('Доступность') || metricName.includes('BD') || metricName.includes('Факт выполнения ппр')) {
+            var sum = values.reduce(function(a, b) { return a + b; }, 0);
+            var avg = sum / values.length;
+            return avg.toFixed(2);
+        }
+        
+        // Для счетчиков суммируем
+        var total = values.reduce(function(a, b) { return a + b; }, 0);
+        return total;
+    }
+
     function renderTable(rows){
         // rows: [{metric, m1..mN}]
-        var head = '<tr><th>Показатель</th>';
+        var head = '<tr><th>Показатель</th><th>Итог за год</th>';
         var maxCols = 0;
         rows.forEach(function(r){
             var cols = Object.keys(r).filter(function(k){return /^m\d+$/.test(k)}).length; maxCols=Math.max(maxCols, cols);
@@ -57,7 +91,9 @@ $(function(){
         $('#summaryHead').html(head);
 
         var body = rows.map(function(r){
+            var yearTotal = calculateYearTotal(rows, r.metric, maxCols);
             var row = '<tr><th>'+ r.metric +'</th>';
+            row += '<td>' + (yearTotal !== '' ? yearTotal : '') + '</td>';
             for (var i=1;i<=maxCols;i++){ 
                 var value = r['m'+i];
                 var formattedValue = formatNumber(value, r.metric);
