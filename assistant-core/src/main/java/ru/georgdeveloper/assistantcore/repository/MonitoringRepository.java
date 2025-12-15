@@ -368,6 +368,35 @@ public class MonitoringRepository {
         return jdbcTemplate.queryForList(sql);
     }
 
+    // Все заявки на поломки с фильтрацией по датам и участку
+    public List<Map<String, Object>> getEquipmentMaintenanceRecords(String dateFrom, String dateTo, String area) {
+        StringBuilder sql = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        
+        sql.append("SELECT * FROM equipment_maintenance_records WHERE 1=1 ");
+        
+        if (dateFrom != null && !dateFrom.isEmpty()) {
+            sql.append("AND start_bd_t1 >= STR_TO_DATE(?, '%Y-%m-%d') ");
+            params.add(dateFrom);
+        }
+        if (dateTo != null && !dateTo.isEmpty()) {
+            sql.append("AND start_bd_t1 < DATE_ADD(STR_TO_DATE(?, '%Y-%m-%d'), INTERVAL 1 DAY) ");
+            params.add(dateTo);
+        }
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            sql.append("AND area = ? ");
+            params.add(area);
+        }
+        
+        sql.append("ORDER BY id DESC");
+        
+        if (params.isEmpty()) {
+            return jdbcTemplate.queryForList(sql.toString());
+        } else {
+            return jdbcTemplate.queryForList(sql.toString(), params.toArray());
+        }
+    }
+
     // Все записи ППР (pm_maintenance_records)
     public List<Map<String, Object>> getPmMaintenanceRecords() {
         String sql = "SELECT * FROM pm_maintenance_records ORDER BY id DESC";

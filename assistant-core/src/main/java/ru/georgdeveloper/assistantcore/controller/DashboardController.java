@@ -155,7 +155,15 @@ public class DashboardController {
 
     @GetMapping("/equipment-maintenance-records")
     @ResponseBody
-    public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords() {
+    public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords(
+            @RequestParam(required = false) String dateFrom,
+            @RequestParam(required = false) String dateTo,
+            @RequestParam(required = false) String area) {
+        if ((dateFrom != null && !dateFrom.isEmpty()) || 
+            (dateTo != null && !dateTo.isEmpty()) || 
+            (area != null && !area.isEmpty() && !area.equals("all"))) {
+            return monitoringRepository.getEquipmentMaintenanceRecords(dateFrom, dateTo, area);
+        }
         return monitoringRepository.getEquipmentMaintenanceRecords();
     }
 

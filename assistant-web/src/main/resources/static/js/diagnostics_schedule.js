@@ -1546,6 +1546,15 @@ function updateLegend(types) {
             <strong>${type.code}</strong> - ${type.name}
         </div>`;
     });
+    // Добавляем описание цветов статусов
+    html += `<div class="legend-item">
+        <span class="legend-color" style="background-color: #808080;"></span>
+        <strong>Закрыто</strong>
+    </div>`;
+    html += `<div class="legend-item">
+        <span class="legend-color" style="background-color: #FF6B6B;"></span>
+        <strong>Просрочен</strong>
+    </div>`;
     $('#legendContent').html(html);
     $('#legend').show();
 }

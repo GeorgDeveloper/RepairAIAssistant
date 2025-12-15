@@ -176,8 +176,17 @@ public class AssistantController {
     @GetMapping("/dashboard/equipment-maintenance-records")
     @ResponseBody
     public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords(
-            @RequestParam(name = "limit", defaultValue = "500") int limit) {
-        return coreServiceClient.getEquipmentMaintenanceRecords(limit);
+            @RequestParam(name = "limit", required = false) Integer limit,
+            @RequestParam(name = "dateFrom", required = false) String dateFrom,
+            @RequestParam(name = "dateTo", required = false) String dateTo,
+            @RequestParam(name = "area", required = false) String area) {
+        if ((dateFrom != null && !dateFrom.isEmpty()) || 
+            (dateTo != null && !dateTo.isEmpty()) || 
+            (area != null && !area.isEmpty() && !area.equals("all"))) {
+            return coreServiceClient.getEquipmentMaintenanceRecords(dateFrom, dateTo, area);
+        }
+        int actualLimit = (limit != null && limit > 0) ? limit : 500;
+        return coreServiceClient.getEquipmentMaintenanceRecords(actualLimit);
     }
 
     @GetMapping("/dashboard/pm-maintenance-records")

@@ -27,22 +27,18 @@
             <div class="container">
                 <div class="filters">
                     <div class="filter-group">
-                        <label for="yearSelect">Год:</label>
-                        <select id="yearSelect" class="filter-control"><option value="all">Все</option></select>
+                        <label>Дата с</label>
+                        <input id="dateFrom" type="date" class="filter-control" />
                     </div>
                     <div class="filter-group">
-                        <label for="monthSelect">Месяц:</label>
-                        <select id="monthSelect" class="filter-control"><option value="all">Все</option></select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="weekSelect">Неделя:</label>
-                        <select id="weekSelect" class="filter-control"><option value="all">Все</option></select>
+                        <label>Дата по</label>
+                        <input id="dateTo" type="date" class="filter-control" />
                     </div>
                     <div class="filter-group">
                         <label for="areaSelect">Участок:</label>
                         <select id="areaSelect" class="filter-control"><option value="all">Все</option></select>
                     </div>
-                    <button id="loadData" class="btn-apply">Загрузить</button>
+                    <button id="loadData" class="btn-apply">Применить</button>
                 </div>
                 <div class="row">
                     <div class="col">
