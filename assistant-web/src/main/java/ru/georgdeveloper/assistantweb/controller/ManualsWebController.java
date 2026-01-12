@@ -61,6 +61,14 @@ public class ManualsWebController {
         return response.getBody();
     }
 
+    @GetMapping("/view/{id}")
+    public ResponseEntity<byte[]> view(@PathVariable("id") Long id) {
+        ResponseEntity<byte[]> response = restTemplate.getForEntity(coreServiceUrl + "/manuals/view/" + id, byte[].class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.putAll(response.getHeaders());
+        return new ResponseEntity<>(response.getBody(), headers, response.getStatusCode());
+    }
+
     @GetMapping("/download/{id}")
     public ResponseEntity<byte[]> download(@PathVariable("id") Long id) {
         ResponseEntity<byte[]> response = restTemplate.getForEntity(coreServiceUrl + "/manuals/download/" + id, byte[].class);

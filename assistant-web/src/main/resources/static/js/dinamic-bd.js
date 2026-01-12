@@ -172,8 +172,32 @@ function populateMultiSelect(prefix, data, valueField, allText) {
     const existingOptions = dropdown.querySelectorAll('.multi-select-option:not(:first-child)');
     existingOptions.forEach(option => option.remove());
     
-    // Добавляем новые опции
+    // Удаляем дубликаты по значению (с учетом trim и нормализации)
+    const seen = new Set();
+    const uniqueData = [];
+    
     data.forEach(item => {
+        const value = item[valueField];
+        if (value == null) return;
+        
+        // Нормализуем значение: trim и приводим к строке
+        const normalizedValue = String(value).trim();
+        if (normalizedValue === '') return;
+        
+        // Проверяем, не встречалось ли уже это значение (без учета регистра для некоторых полей)
+        const key = prefix === 'failure-type' ? normalizedValue.toLowerCase() : normalizedValue;
+        
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueData.push({
+                ...item,
+                [valueField]: normalizedValue
+            });
+        }
+    });
+    
+    // Добавляем новые опции
+    uniqueData.forEach(item => {
         const option = document.createElement('div');
         option.className = 'multi-select-option';
         const value = item[valueField];
@@ -508,7 +532,26 @@ function generateLabels(data, params) {
 }
 
 function generateDowntimeDatasets(data, labels) {
-    const uniqueTypes = [...new Set(data.map(item => item.failure_type?.trim()).filter(type => type))].sort();
+    // Нормализуем и удаляем дубликаты типов поломок
+    const typeMap = new Map();
+    
+    data.forEach(item => {
+        const rawType = item.failure_type;
+        if (!rawType) return;
+        
+        const normalizedType = String(rawType).trim();
+        if (normalizedType === '') return;
+        
+        // Используем нормализованное значение как ключ (без учета регистра)
+        const key = normalizedType.toLowerCase();
+        
+        // Сохраняем оригинальное нормализованное значение для отображения
+        if (!typeMap.has(key)) {
+            typeMap.set(key, normalizedType);
+        }
+    });
+    
+    const uniqueTypes = Array.from(typeMap.values()).sort();
     const colors = [
         '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
         '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA', '#F1948A', '#85929E', '#D7BDE2', '#A9DFBF',
@@ -518,10 +561,11 @@ function generateDowntimeDatasets(data, labels) {
     
     return uniqueTypes.map((type, index) => {
         const chartData = labels.map(label => {
-            const items = data.filter(item => 
-                item.failure_type?.trim() === type && 
-                item.period_label == label
-            );
+            const items = data.filter(item => {
+                const itemType = item.failure_type ? String(item.failure_type).trim() : '';
+                return itemType.toLowerCase() === type.toLowerCase() && 
+                       item.period_label == label;
+            });
             return items.reduce((sum, item) => sum + (parseFloat(item.total_downtime) || 0), 0);
         });
         
@@ -537,7 +581,26 @@ function generateDowntimeDatasets(data, labels) {
 }
 
 function generateCountDatasets(data, labels) {
-    const uniqueTypes = [...new Set(data.map(item => item.failure_type?.trim()).filter(type => type))].sort();
+    // Нормализуем и удаляем дубликаты типов поломок
+    const typeMap = new Map();
+    
+    data.forEach(item => {
+        const rawType = item.failure_type;
+        if (!rawType) return;
+        
+        const normalizedType = String(rawType).trim();
+        if (normalizedType === '') return;
+        
+        // Используем нормализованное значение как ключ (без учета регистра)
+        const key = normalizedType.toLowerCase();
+        
+        // Сохраняем оригинальное нормализованное значение для отображения
+        if (!typeMap.has(key)) {
+            typeMap.set(key, normalizedType);
+        }
+    });
+    
+    const uniqueTypes = Array.from(typeMap.values()).sort();
     const colors = [
         '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
         '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA', '#F1948A', '#85929E', '#D7BDE2', '#A9DFBF',
@@ -547,10 +610,11 @@ function generateCountDatasets(data, labels) {
     
     return uniqueTypes.map((type, index) => {
         const chartData = labels.map(label => {
-            const items = data.filter(item => 
-                item.failure_type?.trim() === type && 
-                item.period_label == label
-            );
+            const items = data.filter(item => {
+                const itemType = item.failure_type ? String(item.failure_type).trim() : '';
+                return itemType.toLowerCase() === type.toLowerCase() && 
+                       item.period_label == label;
+            });
             return items.reduce((sum, item) => sum + (parseInt(item.failure_count) || 0), 0);
         });
         

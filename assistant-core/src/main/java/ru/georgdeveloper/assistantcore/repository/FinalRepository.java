@@ -1,6 +1,7 @@
 package ru.georgdeveloper.assistantcore.repository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -12,10 +13,13 @@ public class FinalRepository {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Value("${app.final.months-limit:12}")
+    private int defaultMonthsLimit;
+
     public List<Map<String, Object>> getSummaries(List<Integer> years, List<Integer> months, Integer limit) {
         // build filter and fetch up to limit months sorted from left-to-right as requested: from older to newer
         StringBuilder sql = new StringBuilder("SELECT month, availability_percent, bd_percent, breakdowns_count, " +
-                "planned_repairs_percent, planned_repairs_count, total_repairs_count, created_at, " +
+                "planned_repairs_percent,pm_repairs_percent, planned_repairs_count, total_repairs_count, created_at, " +
                 "YEAR(created_at) AS year, CONCAT(month, ' ', YEAR(created_at)) AS month_label " +
                 "FROM availability_stats");
 
@@ -36,7 +40,7 @@ public class FinalRepository {
             sql.append(" WHERE ").append(String.join(" AND ", where));
         }
         sql.append(" ORDER BY created_at DESC, id DESC");
-        sql.append(" LIMIT ").append(limit != null && limit > 0 ? Math.min(limit, 6) : 6);
+        sql.append(" LIMIT ").append(limit != null && limit > 0 ? Math.min(limit, defaultMonthsLimit) : defaultMonthsLimit);
 
         List<Map<String, Object>> records = jdbcTemplate.queryForList(sql.toString(), params.toArray());
         // Keep DESC order: newest -> oldest (right to left in table)
@@ -48,6 +52,7 @@ public class FinalRepository {
         rows.add(metricRow("BD, %", records, "bd_percent"));
         rows.add(metricRow("Поломки, шт", records, "breakdowns_count"));
         rows.add(metricRow("Плановые ремонты, %", records, "planned_repairs_percent"));
+        rows.add(metricRow("Факт выполнения ппр, %", records, "pm_repairs_percent"));
         rows.add(metricRow("Плановые ремонты, шт", records, "planned_repairs_count"));
         rows.add(metricRow("Итого ремонтов, шт", records, "total_repairs_count"));
         return rows;

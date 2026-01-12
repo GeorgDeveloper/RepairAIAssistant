@@ -1,0 +1,167 @@
+/* Styles for PM page */
+.dataTables_wrapper {
+    font-size: 12px;
+    width: 100%;
+    overflow: visible !important;
+}
+
+/* Фиксируем страницу в пределах видимой области */
+html, body { 
+    height: 100%; 
+    overflow: hidden !important; 
+}
+
+/* Основной контент прокручиваемый только внутри по вертикали при необходимости */
+.main-content { 
+    height: calc(100vh - 80px);
+    width: 85%; 
+    overflow-y: auto !important; 
+    overflow-x: visible !important; 
+    padding-right: 100px; 
+}
+
+/* Родители не должны обрезать полосы прокрутки */
+.total-content, .container, .row { 
+    overflow: visible !important; 
+}
+
+/* Force scrollbars inside DataTables area */
+.dataTables_scroll { 
+    overflow: auto !important; 
+}
+
+.dataTables_scrollBody { 
+    overflow-x: scroll !important; 
+    overflow-y: auto !important; 
+    height: calc(60vh - 80px) !important; 
+    max-height: calc(60vh - 80px) !important; 
+}
+
+/* Ensure inner tables are wider than viewport to trigger horizontal scroll */
+.dataTables_scrollHeadInner, .dataTables_scrollBody > table { 
+    min-width: 2200px !important; 
+}
+
+.dataTables_scrollHead, .dataTables_scrollBody {
+    border: 1px solid #ddd;
+}
+
+table.dataTable thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;
+}
+
+table.dataTable tbody td {
+    border-bottom: 1px solid #dee2e6;
+    padding: 8px;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.dataTables_length, .dataTables_filter { 
+    margin-bottom: 10px; 
+}
+
+.dataTables_info { 
+    margin-top: 10px; 
+}
+
+.dataTables_paginate { 
+    margin-top: 10px; 
+    display: block !important; 
+    visibility: visible !important; 
+}
+
+/* Details row styles */
+td.details-control { 
+    cursor: pointer; 
+}
+
+tr.shown td.details-control::before { 
+    content: "− "; 
+    font-weight: bold; 
+}
+
+td.details-control::before { 
+    content: "+ "; 
+    font-weight: bold; 
+}
+
+table.details-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+
+table.details-table th, table.details-table td { 
+    border: 1px solid #e1e1e1; 
+    padding: 6px 8px; 
+    text-align: left; 
+    white-space: normal; 
+}
+
+.filters { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    gap: 15px; 
+    margin: 16px 0 8px 0; 
+    padding: 15px; 
+    background-color: #f5f5f5; 
+    border-radius: 6px; 
+}
+
+.filter-group { 
+    display: flex; 
+    flex-direction: column; 
+}
+
+.filter-group label { 
+    font-weight: 600; 
+    margin-bottom: 5px; 
+    color: #333; 
+}
+
+.filter-control { 
+    padding: 8px 12px; 
+    border: 1px solid #ddd; 
+    border-radius: 4px; 
+    font-size: 14px; 
+}
+
+.btn-apply { 
+    background-color: #e74c3c; 
+    color: white; 
+    border: none; 
+    border-radius: 4px; 
+    padding: 10px 15px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    grid-column: 1 / -1; 
+    margin-top: 10px; 
+}
+
+.btn-apply:hover { 
+    background-color: #c0392b; 
+}
+
+/* Keep pagination visible and not offscreen */
+.dataTables_wrapper .dataTables_paginate { 
+    float: left !important; 
+    display: flex !important; 
+    gap: 6px; 
+}
+
+.dataTables_wrapper .dataTables_info { 
+    float: right !important; 
+}
+
+.dataTables_wrapper .dataTables_length { 
+    float: left !important; 
+}
+
+.dataTables_wrapper .dataTables_filter { 
+    float: right !important; 
+}
+

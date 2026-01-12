@@ -22,25 +22,76 @@ function formatDetailsRow(d) {
 
 $(document).ready(function () {
 
-    function getWeekNumber(dateObj) {
-        const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()))
-        const dayNum = d.getUTCDay() || 7; // 1..7 (Mon..Sun)
-        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-        return weekNo;
+    // Устанавливаем даты по умолчанию (последняя неделя)
+    function setDefaultDates() {
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        
+        // Устанавливаем значения только если поля пустые
+        if (!$('#dateFrom').val()) {
+            $('#dateFrom').val(formatDate(weekAgo));
+        }
+        if (!$('#dateTo').val()) {
+            $('#dateTo').val(formatDate(today));
+        }
     }
+    
+    // Устанавливаем даты по умолчанию перед инициализацией таблицы
+    setDefaultDates();
 
     var table = $('#failuresTable').DataTable({
         ajax: { 
-            url: '/dashboard/equipment-maintenance-records', 
+            url: '/dashboard/equipment-maintenance-records',
+            data: function(d) {
+                // Получаем значения или используем значения по умолчанию
+                let dateFrom = $('#dateFrom').val();
+                let dateTo = $('#dateTo').val();
+                
+                // Если поля пустые, устанавливаем значения по умолчанию
+                if (!dateFrom || !dateTo) {
+                    const today = new Date();
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(today.getDate() - 7);
+                    
+                    const formatDate = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+                    
+                    if (!dateFrom) {
+                        dateFrom = formatDate(weekAgo);
+                        $('#dateFrom').val(dateFrom);
+                    }
+                    if (!dateTo) {
+                        dateTo = formatDate(today);
+                        $('#dateTo').val(dateTo);
+                    }
+                }
+                
+                const area = $('#areaSelect').val();
+                
+                if (dateFrom) {
+                    d.dateFrom = dateFrom;
+                }
+                if (dateTo) {
+                    d.dateTo = dateTo;
+                }
+                if (area && area !== 'all') {
+                    d.area = area;
+                }
+            },
             dataSrc: function(json) {
-                // Фильтруем по текущему году по умолчанию
-                const currentYear = new Date().getFullYear();
-                return json.filter(row => {
-                    const dt = new Date(row.start_bd_t1 || row.date);
-                    return !isNaN(dt.getTime()) && dt.getFullYear() === currentYear;
-                });
+                return json || [];
             }
         },
         autoWidth: false,
@@ -115,82 +166,18 @@ $(document).ready(function () {
         ]
     });
 
-    let allData = []; // Хранилище всех данных
-
-    // Заполнение фильтров после загрузки данных
+    // Заполнение фильтра участков после загрузки данных
     table.on('xhr', function(){
-        allData = table.ajax.json() || [];
-        populateFilters();
-        // Устанавливаем текущий год по умолчанию
-        $('#yearSelect').val(new Date().getFullYear());
-    });
-
-    function populateFilters() {
-        const data = allData;
-        const areas = Array.from(new Set(data.map(r => r.area).filter(Boolean))).sort();
-        const years = Array.from(new Set(data.map(r => { const d = new Date(r.start_bd_t1 || r.date); return isNaN(new Date(d).getTime())? null : new Date(d).getFullYear(); }).filter(Boolean))).sort((a,b)=>a-b);
+        const json = table.ajax.json() || [];
+        const areas = Array.from(new Set(json.map(r => r.area).filter(Boolean))).sort();
         $('#areaSelect').html('<option value="all">Все</option>' + areas.map(a=>`<option value="${a}">${a}</option>`).join(''));
-        $('#yearSelect').html('<option value="all">Все</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join(''));
-        // месяцы
-        const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-        $('#monthSelect').html('<option value="all">Все</option>' + monthNames.map((n,i)=>`<option value="${i+1}">${n}</option>`).join(''));
-        $('#weekSelect').html('<option value="all">Все</option>');
-    }
+    });
 
     // Функция загрузки данных с фильтрацией
     function loadFilteredData() {
-        const year = $('#yearSelect').val();
-        const month = $('#monthSelect').val();
-        const week = $('#weekSelect').val();
-        const area = $('#areaSelect').val();
-
-        let filteredData = allData;
-
-        if (year !== 'all') {
-            filteredData = filteredData.filter(row => {
-                const dt = new Date(row.start_bd_t1 || row.date);
-                return !isNaN(dt.getTime()) && dt.getFullYear() === Number(year);
-            });
-        }
-
-        if (month !== 'all') {
-            filteredData = filteredData.filter(row => {
-                const dt = new Date(row.start_bd_t1 || row.date);
-                return !isNaN(dt.getTime()) && (dt.getMonth() + 1) === Number(month);
-            });
-        }
-
-        if (week !== 'all') {
-            filteredData = filteredData.filter(row => {
-                const dt = new Date(row.start_bd_t1 || row.date);
-                return !isNaN(dt.getTime()) && getWeekNumber(dt) === Number(week);
-            });
-        }
-
-        if (area !== 'all') {
-            filteredData = filteredData.filter(row => row.area === area);
-        }
-
-        table.clear().rows.add(filteredData).draw();
+        table.ajax.reload();
     }
 
-    // Обновляем недели при выборе месяца/года
-    function refreshWeeks() {
-        const year = $('#yearSelect').val();
-        const month = $('#monthSelect').val();
-        if (year === 'all' || month === 'all') { $('#weekSelect').html('<option value="all">Все</option>'); return; }
-        const weeks = new Set();
-        allData.forEach(r => {
-            const d = new Date(r.start_bd_t1 || r.date);
-            if (!isNaN(d.getTime()) && d.getFullYear() === Number(year) && (d.getMonth()+1) === Number(month)) {
-                weeks.add(getWeekNumber(d));
-            }
-        });
-        const opts = Array.from(weeks).sort((a,b)=>a-b).map(w=>`<option value="${w}">${w}</option>`).join('');
-        $('#weekSelect').html('<option value="all">Все</option>' + opts);
-    }
-
-    $('#yearSelect, #monthSelect').on('change', refreshWeeks);
     $('#loadData').on('click', loadFilteredData);
 
     // Recalculate column widths to ensure horizontal scroll is applied

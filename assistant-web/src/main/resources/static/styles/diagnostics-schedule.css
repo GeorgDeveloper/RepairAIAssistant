@@ -1,0 +1,471 @@
+/* Styles for diagnostics schedule page */
+
+/* Растягиваем main-content на ширину контейнера с отступами по 20px от края */
+.total-content .main-content {
+    width: 100%;
+    margin-right: 0;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+.total-content .main-content .container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.schedule-form {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.schedule-form h2 {
+    margin-top: 0;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input[type="number"],
+.form-group input[type="text"],
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.equipment-item {
+    background: white;
+    padding: 15px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.equipment-select-group {
+    display: inline-block;
+    margin-right: 15px;
+    margin-bottom: 10px;
+    vertical-align: top;
+}
+
+.equipment-select-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.equipment-select-group select {
+    min-width: 200px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.diagnostics-types {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.diag-type-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.diag-type-item label {
+    min-width: 180px;
+    font-weight: normal;
+    margin: 0;
+}
+
+.diag-inputs {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.diag-inputs input[type="number"] {
+    width: 100px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.diag-inputs input.diag-count {
+    width: 80px;
+}
+
+.diag-inputs input.diag-duration {
+    width: 140px;
+}
+
+.btn-remove-equipment {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.btn-remove-equipment:hover {
+    background: #c82333;
+}
+
+.form-actions {
+    margin-top: 20px;
+}
+
+.form-actions button {
+    margin-right: 10px;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.schedule-table th,
+.schedule-table td {
+    border: 1px solid #ddd;
+    padding: 5px;
+    text-align: center;
+    min-width: 30px;
+}
+
+.schedule-table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    position: sticky;
+    left: 0;
+    z-index: 10;
+}
+
+.schedule-table th:first-child {
+    position: sticky;
+    left: 0;
+    background-color: #f8f9fa;
+    z-index: 11;
+    min-width: 200px;
+    text-align: left;
+}
+
+.schedule-table td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: white;
+    z-index: 10;
+    text-align: left;
+    font-weight: bold;
+}
+
+.schedule-cell {
+    min-width: 30px;
+    height: 30px;
+    cursor: pointer;
+    position: relative;
+}
+
+.schedule-cell.has-diagnostics {
+    font-weight: bold;
+}
+
+.schedule-cell.weekend {
+    background-color: #f0f0f0;
+}
+
+.schedule-cell.has-diagnostics[draggable="true"] {
+    cursor: grab;
+    user-select: none;
+}
+
+.schedule-cell.has-diagnostics[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.schedule-cell.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.schedule-cell.drag-over-left {
+    border-left: 3px solid #007bff;
+    background-color: #e7f3ff !important;
+}
+
+.schedule-cell.drag-over-right {
+    border-right: 3px solid #007bff;
+    background-color: #e7f3ff !important;
+}
+
+.schedule-cell.drag-over-target {
+    border: 3px solid #28a745;
+    background-color: #d4edda !important;
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+}
+
+.legend-item {
+    display: inline-block;
+    margin-right: 20px;
+    margin-bottom: 10px;
+}
+
+.legend-color {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #ddd;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.stats-table th,
+.stats-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.stats-table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+
+.btn-cancel {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-cancel:hover {
+    background: #c82333;
+}
+
+.btn-small {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-right: 5px;
+    margin-top: 5px;
+}
+
+.btn-small:hover {
+    background: #5a6268;
+}
+
+.btn-nav {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 0 5px;
+}
+
+.btn-nav:hover {
+    background: #5a6268;
+}
+
+.btn-nav:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.equipment-checkbox-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 10px;
+    background: white;
+}
+
+.equipment-checkbox-item {
+    padding: 5px;
+    margin: 2px 0;
+}
+
+.equipment-checkbox-item label {
+    margin-left: 5px;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+.diagnostics-types-config {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f8f9fa;
+}
+
+.diag-type-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.diag-type-checkbox-item label {
+    margin: 0;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+.diagnostics-params {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+}
+
+.diag-param-item {
+    margin-bottom: 10px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.diag-param-item label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+/* Модальное окно для статуса наряда */
+.entry-status-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    overflow: auto;
+}
+
+.entry-status-modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.entry-status-modal-close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.entry-status-modal-close:hover,
+.entry-status-modal-close:focus {
+    color: #000;
+}
+
+.entry-status-modal h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.entry-status-info {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.entry-status-info p {
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.entry-status-info strong {
+    color: #555;
+}
+
+.entry-status-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn-status {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.btn-completed {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-completed:hover {
+    background-color: #5a6268;
+}
+
+.btn-defect {
+    background-color: #DDA0DD;
+    color: white;
+}
+
+.btn-defect:hover {
+    background-color: #c88fc8;
+}
+

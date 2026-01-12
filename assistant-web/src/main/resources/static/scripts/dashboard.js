@@ -61,7 +61,21 @@ const DashboardCharts = {
             title: { text: title },
             axisX: {
                 title: "Время",
-                labelAngle: -45
+                labelAngle: -45,
+                valueFormatString: "YYYY.MM.DD HH.mm",
+                labelFormatter: function(e) {
+                    if (e.value === null || e.value === undefined) return "";
+                    const date = new Date(e.value);
+                    if (isNaN(date.getTime())) return e.value;
+                    
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    
+                    return `${year}.${month}.${day} ${hours}.${minutes}`;
+                }
             },
             axisY: {
                 title: "Значение",
@@ -108,14 +122,35 @@ const DashboardCharts = {
     processChartData(rawData) {
         const groupedData = {};
         
+        // Функция для преобразования timestamp в объект Date
+        const parseTimestamp = (timestamp) => {
+            if (!timestamp) return null;
+            
+            try {
+                const date = new Date(timestamp);
+                if (isNaN(date.getTime())) {
+                    // Если не удалось распарсить как Date, возвращаем null
+                    console.warn('Не удалось распарсить timestamp:', timestamp);
+                    return null;
+                }
+                return date;
+            } catch (e) {
+                console.warn('Ошибка при парсинге timestamp:', timestamp, e);
+                return null;
+            }
+        };
+        
         (rawData || []).forEach(item => {
             if (!groupedData[item.area]) {
                 groupedData[item.area] = [];
             }
-            groupedData[item.area].push({
-                label: item.timestamp,
-                y: item.value
-            });
+            const date = parseTimestamp(item.timestamp);
+            if (date) {
+                groupedData[item.area].push({
+                    x: date,
+                    y: item.value
+                });
+            }
         });
 
         return Object.keys(groupedData).map(area => ({
@@ -213,20 +248,57 @@ const DashboardTables = {
         
         data.forEach(row => {
             const statusClass = getStatusClass(row.status);
+            const duration = this.calculateWorkOrderDuration(row);
+            const downtimeType = row.downtimeType || 'unknown';
+            const rowClass = getDowntimeTypeClass(downtimeType);
             
             tableHTML += `
-                <tr>
+                <tr class="${rowClass}">
                     <td>${row.machineName || ''}</td>
                     <td>${row.type || ''}</td>
                     <td><span class="${statusClass}">${row.status || ''}</span></td>
-                    <td>${row.sDuration || row.duration || '0.00:00'}</td>
+                    <td>${duration}</td>
                 </tr>
             `;
         });
         
         tableHTML += '</tbody></table>';
         document.getElementById(containerId).innerHTML = tableHTML;
-    }
+    },
+    
+    // Функция для расчета продолжительности наряда на работы
+    calculateWorkOrderDuration(row) {
+        const status = (row.status || '').toLowerCase();
+        const isCompleted = status.includes('выполнено') || status.includes('закрыто') || 
+                           status.includes('completed') || status.includes('closed');
+        
+        if (isCompleted) {
+            // Если статус "Выполнено" или "Закрыто", используем sDuration
+            return row.sDuration || row.duration || '0.00:00';
+        } else {
+            // Если статус не завершен, рассчитываем от sDateT1 до текущего времени
+            if (row.sDateT1) {
+                try {
+                    const startDate = new Date(row.sDateT1);
+                    const currentDate = new Date();
+                    const diffMs = currentDate - startDate;
+                    
+                    if (diffMs > 0) {
+                        const diffSeconds = Math.floor(diffMs / 1000);
+                        return DashboardUtils.formatSecondsToHHMMSS(diffSeconds);
+                    } else {
+                        return '0.00:00';
+                    }
+                } catch (error) {
+                    console.warn('Ошибка при парсинге даты sDateT1:', row.sDateT1, error);
+                    return row.sDuration || row.duration || '0.00:00';
+                }
+            } else {
+                return row.sDuration || row.duration || '0.00:00';
+            }
+        }
+    },
+    
 };
 
 // Функция для определения CSS класса статуса
@@ -238,6 +310,8 @@ function getStatusClass(status) {
         return 'status-requested';
     } else if (statusLower.includes('исполнении') || statusLower.includes('progress')) {
         return 'status-in-progress';
+    } else if (statusLower.includes('запланированно') || statusLower.includes('planned') || statusLower.includes('scheduled')) {
+        return 'status-planned';
     } else if (statusLower.includes('условный') || statusLower.includes('conditional')) {
         return 'status-conditional';
     } else if (statusLower.includes('выполнено') || statusLower.includes('completed')) {
@@ -247,6 +321,20 @@ function getStatusClass(status) {
     }
     
     return 'status-conditional';
+}
+
+// Функция для определения CSS класса типа причины простоя
+function getDowntimeTypeClass(downtimeType) {
+    switch (downtimeType) {
+        case 'electrical':
+            return 'downtime-electrical';
+        case 'electronic':
+            return 'downtime-electronic';
+        case 'mechanical':
+            return 'downtime-mechanical';
+        default:
+            return 'downtime-unknown';
+    }
 }
 
 // Dashboard initialization functions
