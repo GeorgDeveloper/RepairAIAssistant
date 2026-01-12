@@ -198,7 +198,12 @@ const IndexDashboard = {
                     labelMaxWidth: isCurrentMonth ? 80 : 60,
                     labelFontSize: isCurrentMonth ? 10 : 9
                 },
-                axisY: { suffix: "%", labelFontSize: 10 },
+                axisY: { 
+                    suffix: "%", 
+                    labelFontSize: 10,
+                    includeZero: true,
+                    minimum: 0
+                },
                 data: [{
                     type: "column",
                     showInLegend: false,

@@ -150,6 +150,6 @@ $(function(){
     loadConfig();
     loadFilters(function(){
         // Загружаем данные только после того, как фильтры загружены и месяцы выбраны
-        loadData();
+    loadData();
     });
 });
