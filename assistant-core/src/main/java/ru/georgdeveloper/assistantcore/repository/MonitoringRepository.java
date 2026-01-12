@@ -12,9 +12,12 @@ import java.util.Map;
 public class MonitoringRepository {
     // Топ-5 поломок за неделю (общее)
     public List<Map<String, Object>> getTopBreakdownsPerWeek() {
+        // Используем режим 3 для WEEK, чтобы соответствовать расчету week_number в БД
+        // Режим 3: неделя начинается с понедельника, неделя 1 - первая неделя с 4+ днями в новом году
+        // Используем прямое сравнение week_number с расчетом недели из start_bd_t1 для надежности
         String sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
                 "FROM equipment_maintenance_records " +
-                "WHERE week_number = (CASE WHEN DAYOFWEEK(CURDATE()) = 2 THEN WEEK(CURDATE()) ELSE WEEK(CURDATE()) + 1 END) " +
+                "WHERE week_number = WEEK(CURDATE(), 3) " +
                 "AND YEAR(start_bd_t1) = YEAR(CURDATE()) " +
                 "AND failure_type <> 'Другие' " +
                 "GROUP BY machine_name " +
@@ -25,9 +28,12 @@ public class MonitoringRepository {
 
     // Топ-5 поломок за неделю по ключевым линиям (используем шаблоны по именам)
     public List<Map<String, Object>> getTopBreakdownsPerWeekKeyLines() {
+        // Используем режим 3 для WEEK, чтобы соответствовать расчету week_number в БД
+        // Режим 3: неделя начинается с понедельника, неделя 1 - первая неделя с 4+ днями в новом году
+        // Используем прямое сравнение week_number с расчетом недели из start_bd_t1 для надежности
         String sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
                 "FROM equipment_maintenance_records " +
-                "WHERE week_number = (CASE WHEN DAYOFWEEK(CURDATE()) = 2 THEN WEEK(CURDATE()) ELSE WEEK(CURDATE()) + 1 END) " +
+                "WHERE week_number = WEEK(CURDATE(), 3) " +
                 "AND YEAR(start_bd_t1) = YEAR(CURDATE()) " +
                 "AND failure_type <> 'Другие' " +
                 "AND machine_name IN (" +
