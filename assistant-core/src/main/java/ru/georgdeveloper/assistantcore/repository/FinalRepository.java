@@ -39,8 +39,16 @@ public class FinalRepository {
         if (!where.isEmpty()) {
             sql.append(" WHERE ").append(String.join(" AND ", where));
         }
-        sql.append(" ORDER BY created_at DESC, id DESC");
-        sql.append(" LIMIT ").append(limit != null && limit > 0 ? Math.min(limit, defaultMonthsLimit) : defaultMonthsLimit);
+        // Сортируем по году и месяцу для правильного порядка отображения
+        // Сначала по году DESC, затем по месяцу DESC (чтобы декабрь был первым, январь последним)
+        sql.append(" ORDER BY YEAR(created_at) DESC, MONTH(created_at) DESC, id DESC");
+        
+        // Применяем LIMIT только если не выбраны конкретные месяцы
+        // Если выбраны конкретные месяцы, возвращаем все выбранные месяцы без ограничения
+        if (months == null || months.isEmpty()) {
+            sql.append(" LIMIT ").append(limit != null && limit > 0 ? Math.min(limit, defaultMonthsLimit) : defaultMonthsLimit);
+        }
+        // Если выбраны конкретные месяцы, не применяем LIMIT - возвращаем все выбранные месяцы
 
         List<Map<String, Object>> records = jdbcTemplate.queryForList(sql.toString(), params.toArray());
         // Keep DESC order: newest -> oldest (right to left in table)

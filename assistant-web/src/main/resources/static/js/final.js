@@ -20,9 +20,11 @@ $(function(){
         var yearsParam = Array.isArray(ys) ? ys : (ys ? [ys] : []);
         var url = '/final/months' + (yearsParam.length? ('?'+ yearsParam.map(function(y){return 'year='+ encodeURIComponent(y)}).join('&')) : '');
         $.getJSON(url, function(months){
+            console.log('Months received for year', ys, ':', months);
             var names = ['','Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
             var mopts = months.map(function(m){ return '<option value="'+ m.month +'">'+ names[m.month] +'</option>'; }).join('');
             $('#monthSelect').html(mopts);
+            console.log('Month options created:', mopts);
             var currentYear = new Date().getFullYear();
             var selectedYear = $('#yearSelect').val();
             if (selectedYear == currentYear.toString()) {
@@ -34,6 +36,7 @@ $(function(){
                 var monthValues = months.map(function(m){ return m.month; });
                 $('#monthSelect').val(monthValues);
             }
+            console.log('Selected months:', $('#monthSelect').val());
             if (callback) callback();
         });
     }
