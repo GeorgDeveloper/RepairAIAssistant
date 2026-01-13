@@ -48,7 +48,15 @@ public class FinalRepository {
         }
         // Если выбраны конкретные месяцы, не применяем LIMIT - возвращаем все выбранные месяцы
 
+        System.out.println("FinalRepository.getSummaries - SQL: " + sql.toString());
+        System.out.println("FinalRepository.getSummaries - Params: years=" + years + ", months=" + months + ", limit=" + limit);
+        
         List<Map<String, Object>> records = jdbcTemplate.queryForList(sql.toString(), params.toArray());
+        
+        System.out.println("FinalRepository.getSummaries - Records count: " + records.size());
+        System.out.println("FinalRepository.getSummaries - Records months: " + 
+            records.stream().map(r -> r.get("month") + " (" + r.get("month_label") + ")").collect(java.util.stream.Collectors.toList()));
+        
         // Keep DESC order: newest -> oldest (right to left in table)
 
         // Transform to rows (metrics as rows, months as columns)
@@ -71,12 +79,19 @@ public class FinalRepository {
     }
 
     public List<Map<String, Object>> getMonths(List<Integer> years) {
+        String sql;
         if (years == null || years.isEmpty()) {
-            return jdbcTemplate.queryForList("SELECT DISTINCT MONTH(created_at) AS month FROM availability_stats ORDER BY month");
+            sql = "SELECT DISTINCT MONTH(created_at) AS month FROM availability_stats ORDER BY month";
+            System.out.println("FinalRepository.getMonths - SQL: " + sql + ", years: null");
+        } else {
+            String in = String.join(",", java.util.Collections.nCopies(years.size(), "?"));
+            sql = "SELECT DISTINCT MONTH(created_at) AS month FROM availability_stats WHERE YEAR(created_at) IN (" + in + ") ORDER BY month";
+            System.out.println("FinalRepository.getMonths - SQL: " + sql + ", years: " + years);
         }
-        String in = String.join(",", java.util.Collections.nCopies(years.size(), "?"));
-        String sql = "SELECT DISTINCT MONTH(created_at) AS month FROM availability_stats WHERE YEAR(created_at) IN (" + in + ") ORDER BY month";
-        return jdbcTemplate.queryForList(sql, years.toArray());
+        List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, years != null && !years.isEmpty() ? years.toArray() : new Object[0]);
+        System.out.println("FinalRepository.getMonths - Result months: " + 
+            result.stream().map(r -> r.get("month").toString()).collect(java.util.stream.Collectors.toList()));
+        return result;
     }
 
     // helpers from previous version removed as unused
