@@ -33,17 +33,13 @@ public class FinalRepository {
         }
         if (months != null && !months.isEmpty()) {
             String in = String.join(",", java.util.Collections.nCopies(months.size(), "?"));
-            // Используем поле month напрямую, так как оно уже содержит номер месяца
-            where.add("month IN (" + in + ")");
+            where.add("MONTH(created_at) IN (" + in + ")");
             params.addAll(months);
         }
         if (!where.isEmpty()) {
             sql.append(" WHERE ").append(String.join(" AND ", where));
         }
-        // Сортируем по году и месяцу для правильного порядка отображения
-        // Сначала по году DESC, затем по месяцу DESC (чтобы декабрь был первым, январь последним)
-        // Используем поле month напрямую и year из created_at
-        sql.append(" ORDER BY YEAR(created_at) DESC, month DESC, id DESC");
+        sql.append(" ORDER BY created_at DESC, id DESC");
         
         // Применяем LIMIT только если не выбраны конкретные месяцы
         // Если выбраны конкретные месяцы, возвращаем все выбранные месяцы без ограничения
@@ -76,12 +72,10 @@ public class FinalRepository {
 
     public List<Map<String, Object>> getMonths(List<Integer> years) {
         if (years == null || years.isEmpty()) {
-            // Используем поле month напрямую, так как оно уже содержит номер месяца
-            return jdbcTemplate.queryForList("SELECT DISTINCT month FROM availability_stats ORDER BY month");
+            return jdbcTemplate.queryForList("SELECT DISTINCT MONTH(created_at) AS month FROM availability_stats ORDER BY month");
         }
         String in = String.join(",", java.util.Collections.nCopies(years.size(), "?"));
-        // Используем поле month напрямую и фильтруем по году из created_at
-        String sql = "SELECT DISTINCT month FROM availability_stats WHERE YEAR(created_at) IN (" + in + ") ORDER BY month";
+        String sql = "SELECT DISTINCT MONTH(created_at) AS month FROM availability_stats WHERE YEAR(created_at) IN (" + in + ") ORDER BY month";
         return jdbcTemplate.queryForList(sql, years.toArray());
     }
 
