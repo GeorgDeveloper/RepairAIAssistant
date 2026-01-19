@@ -94,6 +94,12 @@ public class DataSyncService {
     private void syncAreaData(DataSyncProperties.Area area) {
         logger.debug("Синхронизация данных для области: {}", area.getName());
 
+        // Специальная обработка для Plant - агрегируем данные всех участков
+        if ("Plant".equals(area.getName())) {
+            syncPlantData(area);
+            return;
+        }
+
         // 1. Определяем диапазон дат (с 08:00 текущего дня до 08:00 следующего дня)
         LocalDateTime[] dateRange = calculateDateRange();
         String searchDate = dateRange[0].format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
@@ -120,6 +126,65 @@ public class DataSyncService {
 
         logger.debug("Область {} синхронизирована: downtime={}, wt={}, incremental_wt={}, percentage={}, availability={}", 
                    area.getName(), downtime, workingTime, incrementalWorkingTime, downtimePercentage, availability);
+    }
+
+    /**
+     * Синхронизация данных для Plant - агрегирует данные всех участков
+     * Примечание: Modules не учитываются, так как они уже включены в FinishigArea (УЗО)
+     */
+    private void syncPlantData(DataSyncProperties.Area plantArea) {
+        logger.debug("Синхронизация данных для Plant (агрегация всех участков, исключая Modules)");
+
+        // 1. Определяем диапазон дат (с 08:00 текущего дня до 08:00 следующего дня)
+        LocalDateTime[] dateRange = calculateDateRange();
+        String searchDate = dateRange[0].format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+
+        // 2. Получаем список всех участков (кроме Plant и Modules)
+        // Modules не учитываются, так как они уже включены в FinishigArea (УЗО)
+        List<DataSyncProperties.Area> allAreas = dataSyncProperties.getAreas();
+        List<DataSyncProperties.Area> individualAreas = new ArrayList<>();
+        for (DataSyncProperties.Area a : allAreas) {
+            if (!"Plant".equals(a.getName()) && !"Modules".equals(a.getName())) {
+                individualAreas.add(a);
+            }
+        }
+
+        // 3. Агрегируем время простоя и рабочее время всех участков
+        double totalDowntime = 0.0;
+        double totalWorkingTime = 0.0;
+        double totalIncrementalWorkingTime = 0.0;
+
+        for (DataSyncProperties.Area individualArea : individualAreas) {
+            // Получаем рабочее время участка
+            Double areaWorkingTime = getWorkingTime(individualArea, searchDate);
+            if (areaWorkingTime == null) {
+                areaWorkingTime = individualArea.getDefaultWt();
+            }
+
+            // Получаем время простоя участка
+            Double areaDowntime = getDowntimeFromSqlServer(individualArea, dateRange[0], dateRange[1]);
+
+            // Рассчитываем инкрементальное рабочее время участка
+            Double areaIncrementalWorkingTime = calculateIncrementalWorkingTime(areaWorkingTime, dateRange[0]);
+
+            // Суммируем
+            totalDowntime += (areaDowntime != null ? areaDowntime : 0.0);
+            totalWorkingTime += (areaWorkingTime != null ? areaWorkingTime : 0.0);
+            totalIncrementalWorkingTime += (areaIncrementalWorkingTime != null ? areaIncrementalWorkingTime : 0.0);
+
+            logger.debug("Участок {}: downtime={}, wt={}, incremental_wt={}", 
+                        individualArea.getName(), areaDowntime, areaWorkingTime, areaIncrementalWorkingTime);
+        }
+
+        // 4. Рассчитываем метрики для Plant на основе агрегированных данных
+        Double downtimePercentage = calculateDowntimePercentage(totalDowntime, totalIncrementalWorkingTime);
+        Double availability = calculateAvailability(downtimePercentage);
+
+        // 5. Сохраняем в MySQL
+        saveMetricsToMysql(plantArea.getName(), totalDowntime, totalIncrementalWorkingTime, downtimePercentage, availability);
+
+        logger.info("Plant синхронизирован (агрегация {} участков): downtime={}, wt={}, incremental_wt={}, percentage={}, availability={}", 
+                   individualAreas.size(), totalDowntime, totalWorkingTime, totalIncrementalWorkingTime, downtimePercentage, availability);
     }
 
     /**
