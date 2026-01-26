@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -23,6 +24,59 @@ import java.util.*;
 public class PreventiveMaintenanceTransferService {
 
     private static final Logger logger = LoggerFactory.getLogger(PreventiveMaintenanceTransferService.class);
+
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Europe/Moscow");
+
+    /**
+     * Опорная дата для "периода обновления" в MySQL.
+     * Используем первую непустую из плановых/фактических дат, чтобы корректно ограничивать обновления по годам.
+     */
+    private static final String MYSQL_PM_DATE_REF =
+        "COALESCE(scheduled_date, scheduled_proposed_date, date_start_work_order, date_stop_work_order)";
+
+    private static final class PeriodRange {
+        private final Timestamp startInclusive;
+        private final Timestamp endExclusive;
+
+        private PeriodRange(Timestamp startInclusive, Timestamp endExclusive) {
+            this.startInclusive = startInclusive;
+            this.endExclusive = endExclusive;
+        }
+    }
+
+    /**
+     * Период обновления: прошлый год + текущий год (Europe/Moscow).
+     * [01.01.(year-1) 00:00 .. 01.01.(year+1) 00:00)
+     */
+    private PeriodRange getUpdatePeriodRange() {
+        int year = LocalDate.now(BUSINESS_ZONE).getYear();
+        LocalDateTime start = LocalDate.of(year - 1, 1, 1).atStartOfDay();
+        LocalDateTime end = LocalDate.of(year + 1, 1, 1).atStartOfDay();
+        return new PeriodRange(Timestamp.valueOf(start), Timestamp.valueOf(end));
+    }
+
+    /**
+     * Период первичного добавления: только текущий год (Europe/Moscow).
+     * [01.01.year .. 01.01.(year+1))
+     */
+    private PeriodRange getImportCurrentYearRange() {
+        int year = LocalDate.now(BUSINESS_ZONE).getYear();
+        LocalDateTime start = LocalDate.of(year, 1, 1).atStartOfDay();
+        LocalDateTime end = LocalDate.of(year + 1, 1, 1).atStartOfDay();
+        return new PeriodRange(Timestamp.valueOf(start), Timestamp.valueOf(end));
+    }
+
+    /**
+     * Размер батча для SQL Server запросов с IN (...).
+     * Важно: SQL Server имеет лимит ~2100 параметров на запрос.
+     */
+    private static final int SQLSERVER_IN_BATCH_SIZE = 2000;
+
+    /**
+     * Размер батча для массовых UPDATE в MySQL (JdbcTemplate.batchUpdate).
+     * Подбирается для разумного баланса памяти/скорости.
+     */
+    private static final int MYSQL_BATCH_UPDATE_SIZE = 1000;
 
     @Autowired
     @Qualifier("sqlServerJdbcTemplate")
@@ -42,6 +96,37 @@ public class PreventiveMaintenanceTransferService {
         "Scheduled", "Запланированно"
     );
 
+    private static <T> List<List<T>> partition(List<T> list, int batchSize) {
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (batchSize <= 0) {
+            throw new IllegalArgumentException("batchSize must be > 0");
+        }
+        List<List<T>> result = new ArrayList<>((list.size() + batchSize - 1) / batchSize);
+        for (int i = 0; i < list.size(); i += batchSize) {
+            result.add(list.subList(i, Math.min(i + batchSize, list.size())));
+        }
+        return result;
+    }
+
+    private static String placeholders(int count) {
+        if (count <= 0) {
+            throw new IllegalArgumentException("count must be > 0");
+        }
+        return String.join(",", Collections.nCopies(count, "?"));
+    }
+
+    private void mysqlBatchUpdateChunked(String sql, List<Object[]> batchArgs) {
+        if (batchArgs == null || batchArgs.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < batchArgs.size(); i += MYSQL_BATCH_UPDATE_SIZE) {
+            List<Object[]> chunk = batchArgs.subList(i, Math.min(i + MYSQL_BATCH_UPDATE_SIZE, batchArgs.size()));
+            mysqlJdbcTemplate.batchUpdate(sql, chunk);
+        }
+    }
+
     /**
      * Ежедневный перенос данных в 6:00 утра
      */
@@ -53,6 +138,7 @@ public class PreventiveMaintenanceTransferService {
             logger.info("=== Начало ежедневного переноса данных о плановых работах... Trigger at {} (zone Europe/Moscow)", triggerTime);
             
             // Выполняем все шаги обработки
+            importPmWorkOrdersForCurrentYear();
             updateDifferentStatuses();
             updateDateStartWorkOrder();
             updateDateStopWorkOrder();
@@ -72,6 +158,81 @@ public class PreventiveMaintenanceTransferService {
             
         } catch (Exception e) {
             logger.error("Критическая ошибка при переносе данных о плановых работах: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Первичное заполнение: добавляет в MySQL новые ППР-наряды за текущий год (Europe/Moscow),
+     * которых ещё нет в таблице pm_maintenance_records.
+     *
+     * Источник: SQL Server WOM_WorkOrder (фильтры по ScheduledTime и CodeName LIKE '%PM%').
+     *
+     * Важно: этот шаг добавляет только IDCode (остальные поля будут заполнены последующими шагами обновления).
+     */
+    @Transactional
+    public void importPmWorkOrdersForCurrentYear() {
+        try {
+            PeriodRange period = getImportCurrentYearRange();
+            int year = LocalDate.now(BUSINESS_ZONE).getYear();
+
+            logger.info("Начало первичного заполнения pm_maintenance_records за {} год ({} .. {})",
+                year, period.startInclusive, period.endExclusive);
+
+            // 1) Берём все IDCode, которые уже есть в MySQL
+            List<String> existingIdcodes = mysqlJdbcTemplate.queryForList(
+                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL",
+                String.class
+            );
+            Set<String> existingSet = new HashSet<>(Math.max(16, existingIdcodes.size() * 2));
+            existingSet.addAll(existingIdcodes);
+
+            // 2) Берём все PM IDCode за текущий год из SQL Server
+            String sql = """
+                SELECT DISTINCT wo.IDCode, wo.ScheduledTime, wo.ScheduledTimeProposed
+                FROM WOM_WorkOrder wo
+                WHERE wo.ScheduledTime >= ? AND wo.ScheduledTime < ?
+                  AND wo.CodeName LIKE '%PM%'
+                  AND wo.IDCode IS NOT NULL
+                """;
+
+            List<Map<String, Object>> rows = sqlServerJdbcTemplate.queryForList(sql, period.startInclusive, period.endExclusive);
+            logger.info("Найдено {} PM-нарядов в SQL Server за {} год", rows.size(), year);
+
+            // 3) Вставляем отсутствующие
+            List<Object[]> insertArgs = new ArrayList<>();
+            Set<String> alreadyPrepared = new HashSet<>();
+            int skippedExisting = 0;
+            for (Map<String, Object> row : rows) {
+                String idcode = (String) row.get("IDCode");
+                if (idcode == null || idcode.isBlank()) {
+                    continue;
+                }
+                if (existingSet.contains(idcode)) {
+                    skippedExisting++;
+                    continue;
+                }
+                if (!alreadyPrepared.add(idcode)) {
+                    continue;
+                }
+
+                // Сразу кладём плановые даты, чтобы новые записи попадали в "период обновления" и фильтры UI.
+                Timestamp scheduled = (Timestamp) row.get("ScheduledTime");
+                Timestamp proposed = (Timestamp) row.get("ScheduledTimeProposed");
+
+                insertArgs.add(new Object[]{idcode, scheduled, proposed});
+            }
+
+            if (!insertArgs.isEmpty()) {
+                mysqlBatchUpdateChunked(
+                    "INSERT INTO pm_maintenance_records (IDCode, scheduled_date, scheduled_proposed_date) VALUES (?, ?, ?)",
+                    insertArgs
+                );
+            }
+
+            logger.info("Первичное заполнение завершено: добавлено {} новых записей, пропущено (уже были) {}", insertArgs.size(), skippedExisting);
+        } catch (Exception e) {
+            logger.error("Ошибка при первичном заполнении pm_maintenance_records: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -101,40 +262,39 @@ public class PreventiveMaintenanceTransferService {
     }
 
     /**
-     * Получение последнего статуса из SQL Server для указанного IDCode
+     * Получение последних статусов из SQL Server батчами (оптимально для больших объемов).
      */
-    private String getLatestStatusFromSqlServer(String idcode) {
-        String sql = """
-            WITH LatestStatus AS (
-                SELECT 
-                    sh.WOM_WorkOrder_IDCode, 
-                    ws.CodeName, 
-                    sh.TransitionDate, 
-                    ROW_NUMBER() OVER (PARTITION BY sh.WOM_WorkOrder_IDCode 
-                                     ORDER BY sh.TransitionDate DESC) as rn 
-                FROM WOM_StatusHistory sh 
-                INNER JOIN WOM_WorkOrderStatus ws ON sh.Status = ws.ID 
-                WHERE sh.WOM_WorkOrder_IDCode = ?
-            ) 
-            SELECT CodeName 
-            FROM LatestStatus 
-            WHERE rn = 1
-            """;
-
-        try {
-            List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcode);
-            
-            if (!results.isEmpty()) {
-                String englishStatus = (String) results.get(0).get("CodeName");
-                return translateStatus(englishStatus);
-            } else {
-                logger.warn("Не найден статус в SQL Server для IDCode: {}", idcode);
-                return null;
-            }
-        } catch (Exception e) {
-            logger.error("Ошибка при получении статуса из SQL Server для IDCode {}: {}", idcode, e.getMessage());
-            return null;
+    private Map<String, String> getLatestStatusesFromSqlServerBatch(List<String> idcodesBatch) {
+        if (idcodesBatch == null || idcodesBatch.isEmpty()) {
+            return Collections.emptyMap();
         }
+
+        String inPlaceholders = placeholders(idcodesBatch.size());
+        String sql = ("""
+            WITH LatestStatus AS (
+                SELECT
+                    sh.WOM_WorkOrder_IDCode AS IDCode,
+                    ws.CodeName AS CodeName,
+                    sh.TransitionDate,
+                    ROW_NUMBER() OVER (PARTITION BY sh.WOM_WorkOrder_IDCode
+                                     ORDER BY sh.TransitionDate DESC) AS rn
+                FROM WOM_StatusHistory sh
+                INNER JOIN WOM_WorkOrderStatus ws ON sh.Status = ws.ID
+                WHERE sh.WOM_WorkOrder_IDCode IN (%s)
+            )
+            SELECT IDCode, CodeName
+            FROM LatestStatus
+            WHERE rn = 1
+            """).formatted(inPlaceholders);
+
+        List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcodesBatch.toArray());
+        Map<String, String> idcodeToStatus = new HashMap<>(Math.max(16, results.size()));
+        for (Map<String, Object> row : results) {
+            String idcode = (String) row.get("IDCode");
+            String englishStatus = (String) row.get("CodeName");
+            idcodeToStatus.put(idcode, translateStatus(englishStatus));
+        }
+        return idcodeToStatus;
     }
 
     /**
@@ -144,6 +304,8 @@ public class PreventiveMaintenanceTransferService {
     public void updateDifferentStatuses() {
         try {
             logger.info("Начало обновления отличающихся статусов...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             List<String> finalStatuses = Arrays.asList("Закрыто", "Выполнено");
             String placeholders = String.join(",", Collections.nCopies(finalStatuses.size(), "?"));
@@ -152,10 +314,13 @@ public class PreventiveMaintenanceTransferService {
             String selectSql = "SELECT id, IDCode, status " +
                               "FROM pm_maintenance_records " +
                               "WHERE IDCode IS NOT NULL " +
-                              "AND status IS NOT NULL " +
-                              "AND status NOT IN (" + placeholders + ")";
+                              "AND (status IS NULL OR status NOT IN (" + placeholders + ")) " +
+                              "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?";
             
-            List<Map<String, Object>> mysqlRecords = mysqlJdbcTemplate.queryForList(selectSql, finalStatuses.toArray());
+            List<Object> params = new ArrayList<>(finalStatuses);
+            params.add(period.startInclusive);
+            params.add(period.endExclusive);
+            List<Map<String, Object>> mysqlRecords = mysqlJdbcTemplate.queryForList(selectSql, params.toArray());
             
             logger.info("Найдено {} записей для проверки (исключая финальные статусы)", mysqlRecords.size());
             
@@ -164,44 +329,54 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Проверяем и обновляем записи
+            // Батч-обработка: получаем статусы из SQL Server пакетами (лимит 2100 параметров)
             int updatedCount = 0;
             int sameStatusCount = 0;
             int noStatusCount = 0;
             int errorCount = 0;
-            
-            for (Map<String, Object> record : mysqlRecords) {
-                Integer recordId = (Integer) record.get("id");
-                String idcode = (String) record.get("IDCode");
-                String currentStatus = (String) record.get("status");
-                
-                try {
-                    String sqlserverStatus = getLatestStatusFromSqlServer(idcode);
-                    
-                    if (sqlserverStatus == null) {
-                        noStatusCount++;
-                        logger.debug("Не найден статус в SQL Server для IDCode: {}", idcode);
-                        continue;
+
+            List<Object[]> updateArgs = new ArrayList<>();
+
+            for (List<Map<String, Object>> recordsBatch : partition(mysqlRecords, SQLSERVER_IN_BATCH_SIZE)) {
+                List<String> idcodesBatch = new ArrayList<>(recordsBatch.size());
+                for (Map<String, Object> record : recordsBatch) {
+                    String idcode = (String) record.get("IDCode");
+                    if (idcode != null) {
+                        idcodesBatch.add(idcode);
                     }
-                    
-                    if (!currentStatus.equals(sqlserverStatus)) {
-                        String updateSql = "UPDATE pm_maintenance_records SET status = ? WHERE id = ?";
-                        mysqlJdbcTemplate.update(updateSql, sqlserverStatus, recordId);
-                        
-                        updatedCount++;
-                        logger.info("Обновлен статус для ID {}, IDCode {}: '{}' -> '{}'", 
-                                  recordId, idcode, currentStatus, sqlserverStatus);
-                    } else {
-                        sameStatusCount++;
-                        logger.debug("Статусы совпадают для ID {}, IDCode {}: '{}'", 
-                                   recordId, idcode, currentStatus);
-                    }
-                    
-                } catch (Exception e) {
-                    errorCount++;
-                    logger.error("Ошибка при обработке записи ID {}, IDCode {}: {}", 
-                               recordId, idcode, e.getMessage());
                 }
+
+                Map<String, String> latestStatuses = getLatestStatusesFromSqlServerBatch(idcodesBatch);
+
+                for (Map<String, Object> record : recordsBatch) {
+                    Integer recordId = (Integer) record.get("id");
+                    String idcode = (String) record.get("IDCode");
+                    String currentStatus = (String) record.get("status");
+
+                    try {
+                        String sqlserverStatus = latestStatuses.get(idcode);
+                        if (sqlserverStatus == null) {
+                            noStatusCount++;
+                            logger.debug("Не найден статус в SQL Server для IDCode: {}", idcode);
+                            continue;
+                        }
+
+                        if (!Objects.equals(currentStatus, sqlserverStatus)) {
+                            updateArgs.add(new Object[]{sqlserverStatus, recordId});
+                            updatedCount++;
+                        } else {
+                            sameStatusCount++;
+                        }
+                    } catch (Exception e) {
+                        errorCount++;
+                        logger.error("Ошибка при обработке записи ID {}, IDCode {}: {}",
+                            recordId, idcode, e.getMessage());
+                    }
+                }
+            }
+
+            if (!updateArgs.isEmpty()) {
+                mysqlBatchUpdateChunked("UPDATE pm_maintenance_records SET status = ? WHERE id = ?", updateArgs);
             }
             
             logger.info("==================================================");
@@ -225,11 +400,17 @@ public class PreventiveMaintenanceTransferService {
     public void updateDateStartWorkOrder() {
         try {
             logger.info("Начало переноса даты начала работ...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Получаем IDCode из MySQL
             List<String> mysqlIdcodes = mysqlJdbcTemplate.queryForList(
-                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL", 
-                String.class);
+                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                String.class,
+                period.startInclusive,
+                period.endExclusive
+            );
             
             logger.info("Найдено {} уникальных IDCode в MySQL", mysqlIdcodes.size());
             
@@ -238,19 +419,19 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Получаем даты из SQL Server
+            // Получаем даты из SQL Server батчами (лимит 2100 параметров)
             Map<String, Timestamp> idcodeToDate = new HashMap<>();
-            String placeholders = String.join(",", Collections.nCopies(mysqlIdcodes.size(), "?"));
-            
-            String sql = "SELECT wo.IDCode, wo.ActualStartTime " +
-                        "FROM WOM_WorkOrder wo " +
-                        "WHERE wo.IDCode IN (" + placeholders + ") " +
-                        "AND wo.ActualStartTime IS NOT NULL";
-            
-            List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, mysqlIdcodes.toArray());
-            
-            for (Map<String, Object> row : results) {
-                idcodeToDate.put((String) row.get("IDCode"), (Timestamp) row.get("ActualStartTime"));
+            for (List<String> idcodesBatch : partition(mysqlIdcodes, SQLSERVER_IN_BATCH_SIZE)) {
+                String inPlaceholders = placeholders(idcodesBatch.size());
+                String sql = "SELECT wo.IDCode, wo.ActualStartTime " +
+                    "FROM WOM_WorkOrder wo " +
+                    "WHERE wo.IDCode IN (" + inPlaceholders + ") " +
+                    "AND wo.ActualStartTime IS NOT NULL";
+
+                List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcodesBatch.toArray());
+                for (Map<String, Object> row : results) {
+                    idcodeToDate.put((String) row.get("IDCode"), (Timestamp) row.get("ActualStartTime"));
+                }
             }
             
             logger.info("Найдено {} записей с датами начала работ в SQL Server", idcodeToDate.size());
@@ -260,22 +441,29 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Обновляем данные в MySQL
+            // Обновляем данные в MySQL (batchUpdate)
             int updatedCount = 0;
             List<Map<String, Object>> records = mysqlJdbcTemplate.queryForList(
-                "SELECT id, IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL");
-            
+                "SELECT id, IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                period.startInclusive,
+                period.endExclusive
+            );
+
+            List<Object[]> updateArgs = new ArrayList<>();
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
                 String idcodeValue = (String) record.get("IDCode");
-                
-                if (idcodeToDate.containsKey(idcodeValue)) {
-                    Timestamp startDate = idcodeToDate.get(idcodeValue);
-                    mysqlJdbcTemplate.update(
-                        "UPDATE pm_maintenance_records SET date_start_work_order = ? WHERE id = ?",
-                        startDate, recordId);
+
+                Timestamp startDate = idcodeToDate.get(idcodeValue);
+                if (startDate != null) {
+                    updateArgs.add(new Object[]{startDate, recordId});
                     updatedCount++;
                 }
+            }
+
+            if (!updateArgs.isEmpty()) {
+                mysqlBatchUpdateChunked("UPDATE pm_maintenance_records SET date_start_work_order = ? WHERE id = ?", updateArgs);
             }
             
             logger.info("✓ Успешно обновлено {} записей в MySQL", updatedCount);
@@ -294,11 +482,17 @@ public class PreventiveMaintenanceTransferService {
     public void updateDateStopWorkOrder() {
         try {
             logger.info("Начало переноса даты окончания работ...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Получаем IDCode из MySQL
             List<String> mysqlIdcodes = mysqlJdbcTemplate.queryForList(
-                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL", 
-                String.class);
+                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                String.class,
+                period.startInclusive,
+                period.endExclusive
+            );
             
             logger.info("Найдено {} уникальных IDCode в MySQL", mysqlIdcodes.size());
             
@@ -307,19 +501,19 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Получаем даты из SQL Server
+            // Получаем даты из SQL Server батчами (лимит 2100 параметров)
             Map<String, Timestamp> idcodeToDate = new HashMap<>();
-            String placeholders = String.join(",", Collections.nCopies(mysqlIdcodes.size(), "?"));
-            
-            String sql = "SELECT wo.IDCode, wo.ActualEndTime " +
-                        "FROM WOM_WorkOrder wo " +
-                        "WHERE wo.IDCode IN (" + placeholders + ") " +
-                        "AND wo.ActualEndTime IS NOT NULL";
-            
-            List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, mysqlIdcodes.toArray());
-            
-            for (Map<String, Object> row : results) {
-                idcodeToDate.put((String) row.get("IDCode"), (Timestamp) row.get("ActualEndTime"));
+            for (List<String> idcodesBatch : partition(mysqlIdcodes, SQLSERVER_IN_BATCH_SIZE)) {
+                String inPlaceholders = placeholders(idcodesBatch.size());
+                String sql = "SELECT wo.IDCode, wo.ActualEndTime " +
+                    "FROM WOM_WorkOrder wo " +
+                    "WHERE wo.IDCode IN (" + inPlaceholders + ") " +
+                    "AND wo.ActualEndTime IS NOT NULL";
+
+                List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcodesBatch.toArray());
+                for (Map<String, Object> row : results) {
+                    idcodeToDate.put((String) row.get("IDCode"), (Timestamp) row.get("ActualEndTime"));
+                }
             }
             
             logger.info("Найдено {} записей с датами окончания работ в SQL Server", idcodeToDate.size());
@@ -329,22 +523,29 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Обновляем данные в MySQL
+            // Обновляем данные в MySQL (batchUpdate)
             int updatedCount = 0;
             List<Map<String, Object>> records = mysqlJdbcTemplate.queryForList(
-                "SELECT id, IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL");
-            
+                "SELECT id, IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                period.startInclusive,
+                period.endExclusive
+            );
+
+            List<Object[]> updateArgs = new ArrayList<>();
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
                 String idcodeValue = (String) record.get("IDCode");
-                
-                if (idcodeToDate.containsKey(idcodeValue)) {
-                    Timestamp endDate = idcodeToDate.get(idcodeValue);
-                    mysqlJdbcTemplate.update(
-                        "UPDATE pm_maintenance_records SET date_stop_work_order = ? WHERE id = ?",
-                        endDate, recordId);
+
+                Timestamp endDate = idcodeToDate.get(idcodeValue);
+                if (endDate != null) {
+                    updateArgs.add(new Object[]{endDate, recordId});
                     updatedCount++;
                 }
+            }
+
+            if (!updateArgs.isEmpty()) {
+                mysqlBatchUpdateChunked("UPDATE pm_maintenance_records SET date_stop_work_order = ? WHERE id = ?", updateArgs);
             }
             
             logger.info("✓ Успешно обновлено {} записей в MySQL", updatedCount);
@@ -363,6 +564,8 @@ public class PreventiveMaintenanceTransferService {
     public void calculatePreventiveMaintenanceDurationMin() {
         try {
             logger.info("Начало расчета длительности профилактического обслуживания...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Расчет для записей с новыми датами (без длительности)
             String query1 = "UPDATE pm_maintenance_records " +
@@ -371,9 +574,10 @@ public class PreventiveMaintenanceTransferService {
                           "WHERE date_start_work_order IS NOT NULL " +
                           "AND date_stop_work_order IS NOT NULL " +
                           "AND preventive_maintenance_duration_min IS NULL " +
-                          "AND date_stop_work_order >= date_start_work_order";
+                          "AND date_stop_work_order >= date_start_work_order " +
+                          "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?";
             
-            int newCalculated = mysqlJdbcTemplate.update(query1);
+            int newCalculated = mysqlJdbcTemplate.update(query1, period.startInclusive, period.endExclusive);
             
             // Пересчет для записей с измененными датами
             String query2 = "UPDATE pm_maintenance_records " +
@@ -382,17 +586,19 @@ public class PreventiveMaintenanceTransferService {
                           "WHERE date_start_work_order IS NOT NULL " +
                           "AND date_stop_work_order IS NOT NULL " +
                           "AND preventive_maintenance_duration_min IS NOT NULL " +
-                          "AND preventive_maintenance_duration_min != TIMESTAMPDIFF(MINUTE, date_start_work_order, date_stop_work_order)";
+                          "AND preventive_maintenance_duration_min != TIMESTAMPDIFF(MINUTE, date_start_work_order, date_stop_work_order) " +
+                          "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?";
             
-            int recalculated = mysqlJdbcTemplate.update(query2);
+            int recalculated = mysqlJdbcTemplate.update(query2, period.startInclusive, period.endExclusive);
             
             // Обнуление для записей где даты стали NULL
             String query3 = "UPDATE pm_maintenance_records " +
                           "SET preventive_maintenance_duration_min = NULL " +
                           "WHERE preventive_maintenance_duration_min IS NOT NULL " +
-                          "AND (date_start_work_order IS NULL OR date_stop_work_order IS NULL)";
+                          "AND (date_start_work_order IS NULL OR date_stop_work_order IS NULL) " +
+                          "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?";
             
-            int nullified = mysqlJdbcTemplate.update(query3);
+            int nullified = mysqlJdbcTemplate.update(query3, period.startInclusive, period.endExclusive);
             
             logger.info("📊 РЕЗУЛЬТАТЫ РАСЧЕТА ДЛИТЕЛЬНОСТИ:");
             logger.info("  ✅ Новых рассчитано: {}", newCalculated);
@@ -413,11 +619,17 @@ public class PreventiveMaintenanceTransferService {
     public void transferCommentsSafe() {
         try {
             logger.info("Начало безопасного переноса комментариев...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Получаем IDCode из MySQL
             List<String> mysqlIdcodes = mysqlJdbcTemplate.queryForList(
-                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL", 
-                String.class);
+                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                String.class,
+                period.startInclusive,
+                period.endExclusive
+            );
             
             logger.info("Найдено {} уникальных IDCode в MySQL", mysqlIdcodes.size());
             
@@ -426,18 +638,18 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Получаем комментарии из SQL Server
+            // Получаем комментарии из SQL Server батчами (лимит 2100 параметров)
             Map<String, String> idcodeToComment = new HashMap<>();
-            String placeholders = String.join(",", Collections.nCopies(mysqlIdcodes.size(), "?"));
-            
-            String sql = "SELECT wo.IDCode, wo.Comment " +
-                        "FROM WOM_WorkOrder wo " +
-                        "WHERE wo.IDCode IN (" + placeholders + ")";
-            
-            List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, mysqlIdcodes.toArray());
-            
-            for (Map<String, Object> row : results) {
-                idcodeToComment.put((String) row.get("IDCode"), (String) row.get("Comment"));
+            for (List<String> idcodesBatch : partition(mysqlIdcodes, SQLSERVER_IN_BATCH_SIZE)) {
+                String inPlaceholders = placeholders(idcodesBatch.size());
+                String sql = "SELECT wo.IDCode, wo.Comment " +
+                    "FROM WOM_WorkOrder wo " +
+                    "WHERE wo.IDCode IN (" + inPlaceholders + ")";
+
+                List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcodesBatch.toArray());
+                for (Map<String, Object> row : results) {
+                    idcodeToComment.put((String) row.get("IDCode"), (String) row.get("Comment"));
+                }
             }
             
             logger.info("Найдено {} записей в SQL Server", idcodeToComment.size());
@@ -446,9 +658,15 @@ public class PreventiveMaintenanceTransferService {
             int newComments = 0;
             int updatedComments = 0;
             int unchangedComments = 0;
+
+            List<Object[]> updateArgs = new ArrayList<>();
             
             List<Map<String, Object>> records = mysqlJdbcTemplate.queryForList(
-                "SELECT id, IDCode, comment FROM pm_maintenance_records WHERE IDCode IS NOT NULL");
+                "SELECT id, IDCode, comment FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                period.startInclusive,
+                period.endExclusive
+            );
             
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
@@ -459,24 +677,12 @@ public class PreventiveMaintenanceTransferService {
                     String newComment = idcodeToComment.get(idcode);
                     
                     // Безопасное сравнение с учетом NULL
-                    if (currentComment == null && newComment != null) {
-                        mysqlJdbcTemplate.update(
-                            "UPDATE pm_maintenance_records SET comment = ? WHERE id = ?",
-                            newComment, recordId);
-                        newComments++;
-                    } else if (currentComment != null && newComment == null) {
-                        mysqlJdbcTemplate.update(
-                            "UPDATE pm_maintenance_records SET comment = NULL WHERE id = ?",
-                            recordId);
-                        updatedComments++;
-                    } else if (currentComment != null && newComment != null) {
-                        if (!currentComment.equals(newComment)) {
-                            mysqlJdbcTemplate.update(
-                                "UPDATE pm_maintenance_records SET comment = ? WHERE id = ?",
-                                newComment, recordId);
-                            updatedComments++;
+                    if (!Objects.equals(currentComment, newComment)) {
+                        updateArgs.add(new Object[]{newComment, recordId}); // newComment может быть NULL
+                        if (currentComment == null && newComment != null) {
+                            newComments++;
                         } else {
-                            unchangedComments++;
+                            updatedComments++;
                         }
                     } else {
                         unchangedComments++;
@@ -484,6 +690,10 @@ public class PreventiveMaintenanceTransferService {
                 } else {
                     unchangedComments++;
                 }
+            }
+
+            if (!updateArgs.isEmpty()) {
+                mysqlBatchUpdateChunked("UPDATE pm_maintenance_records SET comment = ? WHERE id = ?", updateArgs);
             }
             
             logger.info("📊 РЕЗУЛЬТАТЫ ПЕРЕНОСА КОММЕНТАРИЕВ:");
@@ -505,11 +715,17 @@ public class PreventiveMaintenanceTransferService {
     public void transferMaintainersSafe() {
         try {
             logger.info("Начало переноса ремонтников...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Получаем IDCode из MySQL
             List<String> mysqlIdcodes = mysqlJdbcTemplate.queryForList(
-                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL", 
-                String.class);
+                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                String.class,
+                period.startInclusive,
+                period.endExclusive
+            );
             
             logger.info("Найдено {} уникальных IDCode в MySQL", mysqlIdcodes.size());
             
@@ -518,18 +734,18 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Получаем ремонтников из SQL Server
+            // Получаем ремонтников из SQL Server батчами (лимит 2100 параметров)
             Map<String, String> idcodeToMaintainers = new HashMap<>();
-            String placeholders = String.join(",", Collections.nCopies(mysqlIdcodes.size(), "?"));
-            
-            String sql = "SELECT swt.IDCode, swt.Maintainers " +
-                        "FROM SYS_Flat_WOWorkingTime swt " +
-                        "WHERE swt.IDCode IN (" + placeholders + ")";
-            
-            List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, mysqlIdcodes.toArray());
-            
-            for (Map<String, Object> row : results) {
-                idcodeToMaintainers.put((String) row.get("IDCode"), (String) row.get("Maintainers"));
+            for (List<String> idcodesBatch : partition(mysqlIdcodes, SQLSERVER_IN_BATCH_SIZE)) {
+                String inPlaceholders = placeholders(idcodesBatch.size());
+                String sql = "SELECT swt.IDCode, swt.Maintainers " +
+                    "FROM SYS_Flat_WOWorkingTime swt " +
+                    "WHERE swt.IDCode IN (" + inPlaceholders + ")";
+
+                List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcodesBatch.toArray());
+                for (Map<String, Object> row : results) {
+                    idcodeToMaintainers.put((String) row.get("IDCode"), (String) row.get("Maintainers"));
+                }
             }
             
             logger.info("Найдено {} записей в SQL Server", idcodeToMaintainers.size());
@@ -543,9 +759,15 @@ public class PreventiveMaintenanceTransferService {
             int newMaintainers = 0;
             int updatedMaintainers = 0;
             int unchangedMaintainers = 0;
+
+            List<Object[]> updateArgs = new ArrayList<>();
             
             List<Map<String, Object>> records = mysqlJdbcTemplate.queryForList(
-                "SELECT id, IDCode, maintainers FROM pm_maintenance_records WHERE IDCode IS NOT NULL");
+                "SELECT id, IDCode, maintainers FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                period.startInclusive,
+                period.endExclusive
+            );
             
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
@@ -556,24 +778,12 @@ public class PreventiveMaintenanceTransferService {
                     String newMaintainersValue = idcodeToMaintainers.get(idcode);
                     
                     // Безопасное сравнение с учетом NULL
-                    if (currentMaintainers == null && newMaintainersValue != null) {
-                        mysqlJdbcTemplate.update(
-                            "UPDATE pm_maintenance_records SET maintainers = ? WHERE id = ?",
-                            newMaintainersValue, recordId);
-                        newMaintainers++;
-                    } else if (currentMaintainers != null && newMaintainersValue == null) {
-                        mysqlJdbcTemplate.update(
-                            "UPDATE pm_maintenance_records SET maintainers = NULL WHERE id = ?",
-                            recordId);
-                        updatedMaintainers++;
-                    } else if (currentMaintainers != null && newMaintainersValue != null) {
-                        if (!currentMaintainers.equals(newMaintainersValue)) {
-                            mysqlJdbcTemplate.update(
-                                "UPDATE pm_maintenance_records SET maintainers = ? WHERE id = ?",
-                                newMaintainersValue, recordId);
-                            updatedMaintainers++;
+                    if (!Objects.equals(currentMaintainers, newMaintainersValue)) {
+                        updateArgs.add(new Object[]{newMaintainersValue, recordId}); // значение может быть NULL
+                        if (currentMaintainers == null && newMaintainersValue != null) {
+                            newMaintainers++;
                         } else {
-                            unchangedMaintainers++;
+                            updatedMaintainers++;
                         }
                     } else {
                         unchangedMaintainers++;
@@ -581,6 +791,10 @@ public class PreventiveMaintenanceTransferService {
                 } else {
                     unchangedMaintainers++;
                 }
+            }
+
+            if (!updateArgs.isEmpty()) {
+                mysqlBatchUpdateChunked("UPDATE pm_maintenance_records SET maintainers = ? WHERE id = ?", updateArgs);
             }
             
             logger.info("📊 РЕЗУЛЬТАТЫ ПЕРЕНОСА РЕМОНТНИКОВ:");
@@ -604,11 +818,17 @@ public class PreventiveMaintenanceTransferService {
     public void transferScheduledProposedDate() {
         try {
             logger.info("Начало переноса предлагаемой планируемой даты...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Получаем IDCode из MySQL
             List<String> mysqlIdcodes = mysqlJdbcTemplate.queryForList(
-                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL", 
-                String.class);
+                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                String.class,
+                period.startInclusive,
+                period.endExclusive
+            );
             
             logger.info("Найдено {} уникальных IDCode в MySQL", mysqlIdcodes.size());
             
@@ -617,19 +837,19 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Получаем предлагаемые даты из SQL Server
+            // Получаем предлагаемые даты из SQL Server батчами (лимит 2100 параметров)
             Map<String, Timestamp> idcodeToProposedDate = new HashMap<>();
-            String placeholders = String.join(",", Collections.nCopies(mysqlIdcodes.size(), "?"));
-            
-            String sql = "SELECT wo.IDCode, wo.ScheduledTimeProposed " +
-                        "FROM WOM_WorkOrder wo " +
-                        "WHERE wo.IDCode IN (" + placeholders + ") " +
-                        "AND wo.ScheduledTimeProposed IS NOT NULL";
-            
-            List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, mysqlIdcodes.toArray());
-            
-            for (Map<String, Object> row : results) {
-                idcodeToProposedDate.put((String) row.get("IDCode"), (Timestamp) row.get("ScheduledTimeProposed"));
+            for (List<String> idcodesBatch : partition(mysqlIdcodes, SQLSERVER_IN_BATCH_SIZE)) {
+                String inPlaceholders = placeholders(idcodesBatch.size());
+                String sql = "SELECT wo.IDCode, wo.ScheduledTimeProposed " +
+                    "FROM WOM_WorkOrder wo " +
+                    "WHERE wo.IDCode IN (" + inPlaceholders + ") " +
+                    "AND wo.ScheduledTimeProposed IS NOT NULL";
+
+                List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcodesBatch.toArray());
+                for (Map<String, Object> row : results) {
+                    idcodeToProposedDate.put((String) row.get("IDCode"), (Timestamp) row.get("ScheduledTimeProposed"));
+                }
             }
             
             logger.info("Найдено {} записей с предлагаемыми датами в SQL Server", idcodeToProposedDate.size());
@@ -645,8 +865,14 @@ public class PreventiveMaintenanceTransferService {
             int unchangedDates = 0;
             
             List<Map<String, Object>> records = mysqlJdbcTemplate.queryForList(
-                "SELECT id, IDCode, scheduled_proposed_date FROM pm_maintenance_records WHERE IDCode IS NOT NULL");
-            
+                "SELECT id, IDCode, scheduled_proposed_date FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                period.startInclusive,
+                period.endExclusive
+            );
+
+            List<Object[]> updateArgs = new ArrayList<>();
+
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
                 String idcode = (String) record.get("IDCode");
@@ -657,20 +883,11 @@ public class PreventiveMaintenanceTransferService {
                     
                     // Безопасное сравнение дат (игнорируя время)
                     if (currentDate == null && newDateValue != null) {
-                        mysqlJdbcTemplate.update(
-                            "UPDATE pm_maintenance_records SET scheduled_proposed_date = ? WHERE id = ?",
-                            newDateValue, recordId);
+                        updateArgs.add(new Object[]{newDateValue, recordId});
                         newDates++;
-                    } else if (currentDate != null && newDateValue == null) {
-                        mysqlJdbcTemplate.update(
-                            "UPDATE pm_maintenance_records SET scheduled_proposed_date = NULL WHERE id = ?",
-                            recordId);
-                        updatedDates++;
                     } else if (currentDate != null && newDateValue != null) {
                         if (!formatDate(currentDate).equals(formatDate(newDateValue))) {
-                            mysqlJdbcTemplate.update(
-                                "UPDATE pm_maintenance_records SET scheduled_proposed_date = ? WHERE id = ?",
-                                newDateValue, recordId);
+                            updateArgs.add(new Object[]{newDateValue, recordId});
                             updatedDates++;
                         } else {
                             unchangedDates++;
@@ -681,6 +898,10 @@ public class PreventiveMaintenanceTransferService {
                 } else {
                     unchangedDates++;
                 }
+            }
+
+            if (!updateArgs.isEmpty()) {
+                mysqlBatchUpdateChunked("UPDATE pm_maintenance_records SET scheduled_proposed_date = ? WHERE id = ?", updateArgs);
             }
             
             logger.info("📊 РЕЗУЛЬТАТЫ ПЕРЕНОСА ПРЕДЛАГАЕМЫХ ДАТ:");
@@ -704,11 +925,17 @@ public class PreventiveMaintenanceTransferService {
     public void transferScheduledDate() {
         try {
             logger.info("Начало переноса планируемой даты...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Получаем IDCode из MySQL
             List<String> mysqlIdcodes = mysqlJdbcTemplate.queryForList(
-                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL", 
-                String.class);
+                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                String.class,
+                period.startInclusive,
+                period.endExclusive
+            );
             
             logger.info("Найдено {} уникальных IDCode в MySQL", mysqlIdcodes.size());
             
@@ -717,19 +944,19 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Получаем планируемые даты из SQL Server
+            // Получаем планируемые даты из SQL Server батчами (лимит 2100 параметров)
             Map<String, Timestamp> idcodeToScheduledDate = new HashMap<>();
-            String placeholders = String.join(",", Collections.nCopies(mysqlIdcodes.size(), "?"));
-            
-            String sql = "SELECT wo.IDCode, wo.ScheduledTime " +
-                        "FROM WOM_WorkOrder wo " +
-                        "WHERE wo.IDCode IN (" + placeholders + ") " +
-                        "AND wo.ScheduledTime IS NOT NULL";
-            
-            List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, mysqlIdcodes.toArray());
-            
-            for (Map<String, Object> row : results) {
-                idcodeToScheduledDate.put((String) row.get("IDCode"), (Timestamp) row.get("ScheduledTime"));
+            for (List<String> idcodesBatch : partition(mysqlIdcodes, SQLSERVER_IN_BATCH_SIZE)) {
+                String inPlaceholders = placeholders(idcodesBatch.size());
+                String sql = "SELECT wo.IDCode, wo.ScheduledTime " +
+                    "FROM WOM_WorkOrder wo " +
+                    "WHERE wo.IDCode IN (" + inPlaceholders + ") " +
+                    "AND wo.ScheduledTime IS NOT NULL";
+
+                List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcodesBatch.toArray());
+                for (Map<String, Object> row : results) {
+                    idcodeToScheduledDate.put((String) row.get("IDCode"), (Timestamp) row.get("ScheduledTime"));
+                }
             }
             
             logger.info("Найдено {} записей с планируемыми датами в SQL Server", idcodeToScheduledDate.size());
@@ -745,8 +972,14 @@ public class PreventiveMaintenanceTransferService {
             int unchangedDates = 0;
             
             List<Map<String, Object>> records = mysqlJdbcTemplate.queryForList(
-                "SELECT id, IDCode, scheduled_date FROM pm_maintenance_records WHERE IDCode IS NOT NULL");
-            
+                "SELECT id, IDCode, scheduled_date FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                period.startInclusive,
+                period.endExclusive
+            );
+
+            List<Object[]> updateArgs = new ArrayList<>();
+
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
                 String idcode = (String) record.get("IDCode");
@@ -757,20 +990,11 @@ public class PreventiveMaintenanceTransferService {
                     
                     // Безопасное сравнение дат (игнорируя время)
                     if (currentDate == null && newDateValue != null) {
-                        mysqlJdbcTemplate.update(
-                            "UPDATE pm_maintenance_records SET scheduled_date = ? WHERE id = ?",
-                            newDateValue, recordId);
+                        updateArgs.add(new Object[]{newDateValue, recordId});
                         newDates++;
-                    } else if (currentDate != null && newDateValue == null) {
-                        mysqlJdbcTemplate.update(
-                            "UPDATE pm_maintenance_records SET scheduled_date = NULL WHERE id = ?",
-                            recordId);
-                        updatedDates++;
                     } else if (currentDate != null && newDateValue != null) {
                         if (!formatDate(currentDate).equals(formatDate(newDateValue))) {
-                            mysqlJdbcTemplate.update(
-                                "UPDATE pm_maintenance_records SET scheduled_date = ? WHERE id = ?",
-                                newDateValue, recordId);
+                            updateArgs.add(new Object[]{newDateValue, recordId});
                             updatedDates++;
                         } else {
                             unchangedDates++;
@@ -779,8 +1003,18 @@ public class PreventiveMaintenanceTransferService {
                         unchangedDates++;
                     }
                 } else {
-                    unchangedDates++;
+                    // Поведение как в улучшенном скрипте: если в SQL Server нет планируемой даты, а в MySQL она есть — очищаем.
+                    if (currentDate != null) {
+                        updateArgs.add(new Object[]{null, recordId});
+                        updatedDates++;
+                    } else {
+                        unchangedDates++;
+                    }
                 }
+            }
+
+            if (!updateArgs.isEmpty()) {
+                mysqlBatchUpdateChunked("UPDATE pm_maintenance_records SET scheduled_date = ? WHERE id = ?", updateArgs);
             }
             
             logger.info("📊 РЕЗУЛЬТАТЫ ПЕРЕНОСА ПЛАНИРУЕМЫХ ДАТ:");
@@ -804,23 +1038,27 @@ public class PreventiveMaintenanceTransferService {
     public void calculateDeltaSchedulingDays() {
         try {
             logger.info("Начало расчета разницы в днях между планируемой и предлагаемой датами...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Вычисляем разницу в днях и обновляем записи
             String query1 = "UPDATE pm_maintenance_records " +
                           "SET delta_scheduling_days = " +
                           "DATEDIFF(scheduled_date, scheduled_proposed_date) " +
                           "WHERE scheduled_date IS NOT NULL " +
-                          "AND scheduled_proposed_date IS NOT NULL";
+                          "AND scheduled_proposed_date IS NOT NULL " +
+                          "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?";
             
-            int calculatedCount = mysqlJdbcTemplate.update(query1);
+            int calculatedCount = mysqlJdbcTemplate.update(query1, period.startInclusive, period.endExclusive);
             
             // Обнуляем разницу для записей, где одна из дат стала NULL
             String query2 = "UPDATE pm_maintenance_records " +
                           "SET delta_scheduling_days = NULL " +
                           "WHERE delta_scheduling_days IS NOT NULL " +
-                          "AND (scheduled_date IS NULL OR scheduled_proposed_date IS NULL)";
+                          "AND (scheduled_date IS NULL OR scheduled_proposed_date IS NULL) " +
+                          "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?";
             
-            int nullifiedCount = mysqlJdbcTemplate.update(query2);
+            int nullifiedCount = mysqlJdbcTemplate.update(query2, period.startInclusive, period.endExclusive);
             
             logger.info("📊 РЕЗУЛЬТАТЫ РАСЧЕТА РАЗНИЦЫ ДАТ:");
             logger.info("  ✅ Рассчитано записей: {}", calculatedCount);
@@ -838,7 +1076,11 @@ public class PreventiveMaintenanceTransferService {
                     "SUM(CASE WHEN delta_scheduling_days < 0 THEN 1 ELSE 0 END) as negative_delta, " +
                     "SUM(CASE WHEN delta_scheduling_days = 0 THEN 1 ELSE 0 END) as zero_delta " +
                     "FROM pm_maintenance_records " +
-                    "WHERE delta_scheduling_days IS NOT NULL");
+                    "WHERE delta_scheduling_days IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                    period.startInclusive,
+                    period.endExclusive
+                );
                 
                 logger.info("📈 СТАТИСТИКА РАЗНИЦЫ В ДНЯХ:");
                 logger.info("  Всего рассчитано: {} записей", stats.get("total_calculated"));
@@ -864,23 +1106,27 @@ public class PreventiveMaintenanceTransferService {
     public void calculatePmReportDelayDays() {
         try {
             logger.info("Начало расчета задержки отчета ППР...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Вычисляем разницу в днях между датой начала и планируемой датой
             String query1 = "UPDATE pm_maintenance_records " +
                           "SET pm_report_delay_days = " +
                           "DATEDIFF(date_start_work_order, scheduled_date) " +
                           "WHERE date_start_work_order IS NOT NULL " +
-                          "AND scheduled_date IS NOT NULL";
+                          "AND scheduled_date IS NOT NULL " +
+                          "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?";
             
-            int calculatedCount = mysqlJdbcTemplate.update(query1);
+            int calculatedCount = mysqlJdbcTemplate.update(query1, period.startInclusive, period.endExclusive);
             
             // Обнуляем задержку для записей, где одна из дат стала NULL
             String query2 = "UPDATE pm_maintenance_records " +
                           "SET pm_report_delay_days = NULL " +
                           "WHERE pm_report_delay_days IS NOT NULL " +
-                          "AND (date_start_work_order IS NULL OR scheduled_date IS NULL)";
+                          "AND (date_start_work_order IS NULL OR scheduled_date IS NULL) " +
+                          "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?";
             
-            int nullifiedCount = mysqlJdbcTemplate.update(query2);
+            int nullifiedCount = mysqlJdbcTemplate.update(query2, period.startInclusive, period.endExclusive);
             
             logger.info("📊 РЕЗУЛЬТАТЫ РАСЧЕТА ЗАДЕРЖКИ ППР:");
             logger.info("  ✅ Рассчитано записей: {}", calculatedCount);
@@ -898,7 +1144,11 @@ public class PreventiveMaintenanceTransferService {
                     "SUM(CASE WHEN pm_report_delay_days < 0 THEN 1 ELSE 0 END) as early_count, " +
                     "SUM(CASE WHEN pm_report_delay_days = 0 THEN 1 ELSE 0 END) as on_time_count " +
                     "FROM pm_maintenance_records " +
-                    "WHERE pm_report_delay_days IS NOT NULL");
+                    "WHERE pm_report_delay_days IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                    period.startInclusive,
+                    period.endExclusive
+                );
                 
                 logger.info("📈 СТАТИСТИКА ЗАДЕРЖКИ ОТЧЕТОВ:");
                 logger.info("  Всего рассчитано: {} записей", stats.get("total_calculated"));
@@ -924,11 +1174,17 @@ public class PreventiveMaintenanceTransferService {
     public void transferEstimatedDuration() {
         try {
             logger.info("Начало переноса предполагаемой продолжительности...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Получаем IDCode из MySQL
             List<String> mysqlIdcodes = mysqlJdbcTemplate.queryForList(
-                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL", 
-                String.class);
+                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                String.class,
+                period.startInclusive,
+                period.endExclusive
+            );
             
             logger.info("Найдено {} уникальных IDCode в MySQL", mysqlIdcodes.size());
             
@@ -937,19 +1193,19 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Получаем предполагаемую продолжительность из SQL Server
+            // Получаем предполагаемую продолжительность из SQL Server батчами (лимит 2100 параметров)
             Map<String, Integer> idcodeToDuration = new HashMap<>();
-            String placeholders = String.join(",", Collections.nCopies(mysqlIdcodes.size(), "?"));
-            
-            String sql = "SELECT wo.IDCode, wo.Duration " +
-                        "FROM WOM_WorkOrder wo " +
-                        "WHERE wo.IDCode IN (" + placeholders + ") " +
-                        "AND wo.Duration IS NOT NULL";
-            
-            List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, mysqlIdcodes.toArray());
-            
-            for (Map<String, Object> row : results) {
-                idcodeToDuration.put((String) row.get("IDCode"), ((Number) row.get("Duration")).intValue());
+            for (List<String> idcodesBatch : partition(mysqlIdcodes, SQLSERVER_IN_BATCH_SIZE)) {
+                String inPlaceholders = placeholders(idcodesBatch.size());
+                String sql = "SELECT wo.IDCode, wo.Duration " +
+                    "FROM WOM_WorkOrder wo " +
+                    "WHERE wo.IDCode IN (" + inPlaceholders + ") " +
+                    "AND wo.Duration IS NOT NULL";
+
+                List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcodesBatch.toArray());
+                for (Map<String, Object> row : results) {
+                    idcodeToDuration.put((String) row.get("IDCode"), ((Number) row.get("Duration")).intValue());
+                }
             }
             
             logger.info("Найдено {} записей с предполагаемой продолжительностью в SQL Server", idcodeToDuration.size());
@@ -963,9 +1219,15 @@ public class PreventiveMaintenanceTransferService {
             int newDurations = 0;
             int updatedDurations = 0;
             int unchangedDurations = 0;
+
+            List<Object[]> updateArgs = new ArrayList<>();
             
             List<Map<String, Object>> records = mysqlJdbcTemplate.queryForList(
-                "SELECT id, IDCode, wo_estimated_duration_min FROM pm_maintenance_records WHERE IDCode IS NOT NULL");
+                "SELECT id, IDCode, wo_estimated_duration_min FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                period.startInclusive,
+                period.endExclusive
+            );
             
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
@@ -977,24 +1239,12 @@ public class PreventiveMaintenanceTransferService {
                     Integer newDurationValue = idcodeToDuration.get(idcode);
                     
                     // Безопасное сравнение продолжительности
-                    if (currentDuration == null && newDurationValue != null) {
-                        mysqlJdbcTemplate.update(
-                            "UPDATE pm_maintenance_records SET wo_estimated_duration_min = ? WHERE id = ?",
-                            newDurationValue, recordId);
-                        newDurations++;
-                    } else if (currentDuration != null && newDurationValue == null) {
-                        mysqlJdbcTemplate.update(
-                            "UPDATE pm_maintenance_records SET wo_estimated_duration_min = NULL WHERE id = ?",
-                            recordId);
-                        updatedDurations++;
-                    } else if (currentDuration != null && newDurationValue != null) {
-                        if (!currentDuration.equals(newDurationValue)) {
-                            mysqlJdbcTemplate.update(
-                                "UPDATE pm_maintenance_records SET wo_estimated_duration_min = ? WHERE id = ?",
-                                newDurationValue, recordId);
-                            updatedDurations++;
+                    if (!Objects.equals(currentDuration, newDurationValue)) {
+                        updateArgs.add(new Object[]{newDurationValue, recordId});
+                        if (currentDuration == null && newDurationValue != null) {
+                            newDurations++;
                         } else {
-                            unchangedDurations++;
+                            updatedDurations++;
                         }
                     } else {
                         unchangedDurations++;
@@ -1002,6 +1252,10 @@ public class PreventiveMaintenanceTransferService {
                 } else {
                     unchangedDurations++;
                 }
+            }
+
+            if (!updateArgs.isEmpty()) {
+                mysqlBatchUpdateChunked("UPDATE pm_maintenance_records SET wo_estimated_duration_min = ? WHERE id = ?", updateArgs);
             }
             
             logger.info("📊 РЕЗУЛЬТАТЫ ПЕРЕНОСА ПРЕДПОЛАГАЕМОЙ ПРОДОЛЖИТЕЛЬНОСТИ:");
@@ -1025,11 +1279,17 @@ public class PreventiveMaintenanceTransferService {
     public void transferOperationsNokDetailed() {
         try {
             logger.info("Начало детального переноса информации о невыполненных операциях...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Получаем IDCode из MySQL
             List<String> mysqlIdcodes = mysqlJdbcTemplate.queryForList(
-                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL", 
-                String.class);
+                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                String.class,
+                period.startInclusive,
+                period.endExclusive
+            );
             
             logger.info("Найдено {} уникальных IDCode в MySQL", mysqlIdcodes.size());
             
@@ -1038,42 +1298,49 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Получаем количество невыполненных операций для каждого IDCode из SQL Server
+            // Получаем количество невыполненных операций для каждого IDCode из SQL Server батчами
             Map<String, Integer> idcodeToNokCount = new HashMap<>();
-            String placeholders = String.join(",", Collections.nCopies(mysqlIdcodes.size(), "?"));
-            
-            String sql = "SELECT wo.WOM_WorkOrder_IDCode, COUNT(*) as nok_count " +
-                        "FROM WOM_WOOperation wo " +
-                        "WHERE wo.WOM_WorkOrder_IDCode IN (" + placeholders + ") " +
-                        "AND wo.IsNotDone = 1 " +
-                        "GROUP BY wo.WOM_WorkOrder_IDCode";
-            
-            List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, mysqlIdcodes.toArray());
-            
-            for (Map<String, Object> row : results) {
-                idcodeToNokCount.put((String) row.get("WOM_WorkOrder_IDCode"), 
-                                   ((Number) row.get("nok_count")).intValue());
+            for (List<String> idcodesBatch : partition(mysqlIdcodes, SQLSERVER_IN_BATCH_SIZE)) {
+                String inPlaceholders = placeholders(idcodesBatch.size());
+                String sql = "SELECT wo.WOM_WorkOrder_IDCode AS IDCode, COUNT(*) AS nok_count " +
+                    "FROM WOM_WOOperation wo " +
+                    "WHERE wo.WOM_WorkOrder_IDCode IN (" + inPlaceholders + ") " +
+                    "AND wo.IsNotDone = 1 " +
+                    "GROUP BY wo.WOM_WorkOrder_IDCode";
+
+                List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcodesBatch.toArray());
+                for (Map<String, Object> row : results) {
+                    idcodeToNokCount.put((String) row.get("IDCode"),
+                        ((Number) row.get("nok_count")).intValue());
+                }
             }
             
             logger.info("Найдено {} записей с невыполненными операциями в SQL Server", idcodeToNokCount.size());
             
-            // Обновляем данные в MySQL
+            // Обновляем данные в MySQL (batchUpdate)
             int updatedCount = 0;
             int totalNokOperations = 0;
             
             List<Map<String, Object>> records = mysqlJdbcTemplate.queryForList(
-                "SELECT id, IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL");
-            
+                "SELECT id, IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                period.startInclusive,
+                period.endExclusive
+            );
+
+            List<Object[]> updateArgs = new ArrayList<>(records.size());
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
                 String idcodeValue = (String) record.get("IDCode");
-                
+
                 int nokCount = idcodeToNokCount.getOrDefault(idcodeValue, 0);
-                mysqlJdbcTemplate.update(
-                    "UPDATE pm_maintenance_records SET operations_nok = ? WHERE id = ?",
-                    nokCount, recordId);
+                updateArgs.add(new Object[]{nokCount, recordId});
                 updatedCount++;
                 totalNokOperations += nokCount;
+            }
+
+            if (!updateArgs.isEmpty()) {
+                mysqlBatchUpdateChunked("UPDATE pm_maintenance_records SET operations_nok = ? WHERE id = ?", updateArgs);
             }
             
             logger.info("📊 РЕЗУЛЬТАТЫ ДЕТАЛЬНОГО ПЕРЕНОСА:");
@@ -1097,11 +1364,17 @@ public class PreventiveMaintenanceTransferService {
     public void transferOperationsOk() {
         try {
             logger.info("Начало переноса информации о успешно выполненных операциях...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Получаем IDCode из MySQL
             List<String> mysqlIdcodes = mysqlJdbcTemplate.queryForList(
-                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL", 
-                String.class);
+                "SELECT DISTINCT IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                String.class,
+                period.startInclusive,
+                period.endExclusive
+            );
             
             logger.info("Найдено {} уникальных IDCode в MySQL", mysqlIdcodes.size());
             
@@ -1110,42 +1383,49 @@ public class PreventiveMaintenanceTransferService {
                 return;
             }
             
-            // Получаем информацию о успешно выполненных операциях из SQL Server
+            // Получаем информацию о успешно выполненных операциях из SQL Server батчами
             Map<String, Integer> idcodeToOkCount = new HashMap<>();
-            String placeholders = String.join(",", Collections.nCopies(mysqlIdcodes.size(), "?"));
-            
-            String sql = "SELECT wo.WOM_WorkOrder_IDCode, COUNT(*) as ok_count " +
-                        "FROM WOM_WOOperation wo " +
-                        "WHERE wo.WOM_WorkOrder_IDCode IN (" + placeholders + ") " +
-                        "AND wo.IsDone = 1 " +
-                        "GROUP BY wo.WOM_WorkOrder_IDCode";
-            
-            List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, mysqlIdcodes.toArray());
-            
-            for (Map<String, Object> row : results) {
-                idcodeToOkCount.put((String) row.get("WOM_WorkOrder_IDCode"), 
-                                  ((Number) row.get("ok_count")).intValue());
+            for (List<String> idcodesBatch : partition(mysqlIdcodes, SQLSERVER_IN_BATCH_SIZE)) {
+                String inPlaceholders = placeholders(idcodesBatch.size());
+                String sql = "SELECT wo.WOM_WorkOrder_IDCode AS IDCode, COUNT(*) AS ok_count " +
+                    "FROM WOM_WOOperation wo " +
+                    "WHERE wo.WOM_WorkOrder_IDCode IN (" + inPlaceholders + ") " +
+                    "AND wo.IsDone = 1 " +
+                    "GROUP BY wo.WOM_WorkOrder_IDCode";
+
+                List<Map<String, Object>> results = sqlServerJdbcTemplate.queryForList(sql, idcodesBatch.toArray());
+                for (Map<String, Object> row : results) {
+                    idcodeToOkCount.put((String) row.get("IDCode"),
+                        ((Number) row.get("ok_count")).intValue());
+                }
             }
             
             logger.info("Найдено {} записей с успешно выполненными операциями в SQL Server", idcodeToOkCount.size());
             
-            // Обновляем данные в MySQL
+            // Обновляем данные в MySQL (batchUpdate)
             int updatedCount = 0;
             int totalOkOperations = 0;
             
             List<Map<String, Object>> records = mysqlJdbcTemplate.queryForList(
-                "SELECT id, IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL");
-            
+                "SELECT id, IDCode FROM pm_maintenance_records WHERE IDCode IS NOT NULL " +
+                    "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?",
+                period.startInclusive,
+                period.endExclusive
+            );
+
+            List<Object[]> updateArgs = new ArrayList<>(records.size());
             for (Map<String, Object> record : records) {
                 Integer recordId = (Integer) record.get("id");
                 String idcodeValue = (String) record.get("IDCode");
-                
+
                 int okCount = idcodeToOkCount.getOrDefault(idcodeValue, 0);
-                mysqlJdbcTemplate.update(
-                    "UPDATE pm_maintenance_records SET operations_ok = ? WHERE id = ?",
-                    okCount, recordId);
+                updateArgs.add(new Object[]{okCount, recordId});
                 updatedCount++;
                 totalOkOperations += okCount;
+            }
+
+            if (!updateArgs.isEmpty()) {
+                mysqlBatchUpdateChunked("UPDATE pm_maintenance_records SET operations_ok = ? WHERE id = ?", updateArgs);
             }
             
             logger.info("📊 РЕЗУЛЬТАТЫ ПЕРЕНОСА УСПЕШНО ВЫПОЛНЕННЫХ ОПЕРАЦИЙ:");
@@ -1169,23 +1449,27 @@ public class PreventiveMaintenanceTransferService {
     public void calculateOperationsAll() {
         try {
             logger.info("Начало расчета общего количества операций...");
+
+            PeriodRange period = getUpdatePeriodRange();
             
             // Вычисляем сумму operations_ok и operations_nok
             String updateQuery = "UPDATE pm_maintenance_records " +
                               "SET operations_all = " +
                               "COALESCE(operations_ok, 0) + COALESCE(operations_nok, 0) " +
-                              "WHERE operations_ok IS NOT NULL OR operations_nok IS NOT NULL";
+                              "WHERE (operations_ok IS NOT NULL OR operations_nok IS NOT NULL) " +
+                              "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?";
             
-            int calculatedCount = mysqlJdbcTemplate.update(updateQuery);
+            int calculatedCount = mysqlJdbcTemplate.update(updateQuery, period.startInclusive, period.endExclusive);
             
             // Обнуляем общее количество для записей, где обе колонки NULL
             String nullifyQuery = "UPDATE pm_maintenance_records " +
                                 "SET operations_all = NULL " +
                                 "WHERE operations_all IS NOT NULL " +
                                 "AND operations_ok IS NULL " +
-                                "AND operations_nok IS NULL";
+                                "AND operations_nok IS NULL " +
+                                "AND " + MYSQL_PM_DATE_REF + " >= ? AND " + MYSQL_PM_DATE_REF + " < ?";
             
-            int nullifiedCount = mysqlJdbcTemplate.update(nullifyQuery);
+            int nullifiedCount = mysqlJdbcTemplate.update(nullifyQuery, period.startInclusive, period.endExclusive);
             
             logger.info("📊 РЕЗУЛЬТАТЫ РАСЧЕТА ОБЩЕГО КОЛИЧЕСТВА ОПЕРАЦИЙ:");
             logger.info("  ✅ Рассчитано записей: {}", calculatedCount);
