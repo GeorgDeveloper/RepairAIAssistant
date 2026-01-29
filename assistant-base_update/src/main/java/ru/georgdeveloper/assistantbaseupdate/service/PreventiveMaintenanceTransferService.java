@@ -4,12 +4,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.BatchUpdateException;
 import java.sql.Date;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -117,15 +120,116 @@ public class PreventiveMaintenanceTransferService {
         return String.join(",", Collections.nCopies(count, "?"));
     }
 
+    /**
+     * Выполняет batch update с обработкой deadlock и retry механизмом.
+     * Сортирует записи по id (если это UPDATE по id) для предотвращения deadlock.
+     */
     private void mysqlBatchUpdateChunked(String sql, List<Object[]> batchArgs) {
         if (batchArgs == null || batchArgs.isEmpty()) {
             return;
         }
-        for (int i = 0; i < batchArgs.size(); i += MYSQL_BATCH_UPDATE_SIZE) {
-            List<Object[]> chunk = batchArgs.subList(i, Math.min(i + MYSQL_BATCH_UPDATE_SIZE, batchArgs.size()));
-            mysqlJdbcTemplate.batchUpdate(sql, chunk);
+        
+        // Сортируем записи по id (последний параметр обычно id) для предотвращения deadlock
+        // Это гарантирует, что все транзакции блокируют строки в одинаковом порядке
+        List<Object[]> sortedArgs = new ArrayList<>(batchArgs);
+        if (sql.contains("WHERE id = ?") && !batchArgs.isEmpty() && batchArgs.get(0).length > 1) {
+            // Сортируем по последнему параметру (id)
+            sortedArgs.sort((a, b) -> {
+                Object idA = a[a.length - 1];
+                Object idB = b[b.length - 1];
+                if (idA instanceof Comparable && idB instanceof Comparable) {
+                    @SuppressWarnings("unchecked")
+                    Comparable<Object> compA = (Comparable<Object>) idA;
+                    return compA.compareTo(idB);
+                }
+                return 0;
+            });
+        }
+        
+        for (int i = 0; i < sortedArgs.size(); i += MYSQL_BATCH_UPDATE_SIZE) {
+            List<Object[]> chunk = sortedArgs.subList(i, Math.min(i + MYSQL_BATCH_UPDATE_SIZE, sortedArgs.size()));
+            executeBatchUpdateWithRetry(sql, chunk, i / MYSQL_BATCH_UPDATE_SIZE + 1);
         }
     }
+    
+    /**
+     * Выполняет batch update с retry механизмом для обработки deadlock
+     */
+    private void executeBatchUpdateWithRetry(String sql, List<Object[]> chunk, int chunkNumber) {
+        int maxRetries = 3;
+        long retryDelay = 100; // Начальная задержка 100мс
+        
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                mysqlJdbcTemplate.batchUpdate(sql, chunk);
+                return; // Успешно выполнено
+            } catch (CannotAcquireLockException e) {
+                if (attempt == maxRetries) {
+                    logger.error("Критическая ошибка deadlock при batch update (chunk {}): исчерпаны все попытки ({}). SQL: {}", 
+                                chunkNumber, maxRetries, sql, e);
+                    throw new RuntimeException("Deadlock после " + maxRetries + " попыток", e);
+                }
+                logger.warn("Deadlock при batch update (chunk {}, попытка {}/{}), повтор через {} мс. SQL: {}", 
+                           chunkNumber, attempt, maxRetries, retryDelay, sql);
+                sleepWithInterruptHandling(retryDelay);
+                retryDelay *= 2; // Экспоненциальная задержка для следующей попытки
+            } catch (Exception e) {
+                // Проверяем, является ли это deadlock исключением
+                if (isDeadlockException(e)) {
+                    if (attempt == maxRetries) {
+                        logger.error("Критическая ошибка deadlock при batch update (chunk {}): исчерпаны все попытки ({}). SQL: {}", 
+                                    chunkNumber, maxRetries, sql, e);
+                        throw new RuntimeException("Deadlock после " + maxRetries + " попыток", e);
+                    }
+                    logger.warn("Deadlock при batch update (chunk {}, попытка {}/{}), повтор через {} мс. SQL: {}", 
+                               chunkNumber, attempt, maxRetries, retryDelay, sql);
+                    sleepWithInterruptHandling(retryDelay);
+                    retryDelay *= 2; // Экспоненциальная задержка для следующей попытки
+                } else {
+                    // Это не deadlock, пробрасываем исключение дальше
+                    throw e;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Выполняет задержку с обработкой прерывания
+     */
+    private void sleepWithInterruptHandling(long delayMs) {
+        try {
+            Thread.sleep(delayMs);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Прервано во время ожидания повтора при deadlock", ie);
+        }
+    }
+    
+    /**
+     * Проверяет, является ли исключение deadlock
+     */
+    private boolean isDeadlockException(Exception e) {
+        String message = e.getMessage();
+        if (message != null && message.contains("Deadlock")) {
+            return true;
+        }
+        
+        // Проверяем вложенные исключения
+        Throwable cause = e.getCause();
+        while (cause != null) {
+            if (cause instanceof BatchUpdateException || 
+                cause instanceof SQLException) {
+                String causeMessage = cause.getMessage();
+                if (causeMessage != null && causeMessage.contains("Deadlock")) {
+                    return true;
+                }
+            }
+            cause = cause.getCause();
+        }
+        
+        return false;
+    }
+    
 
     /**
      * Ежедневный перенос данных в 6:00 утра
