@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.sql.BatchUpdateException;
 import java.sql.Date;
@@ -241,6 +242,13 @@ public class PreventiveMaintenanceTransferService {
             LocalDateTime triggerTime = LocalDateTime.now(ZoneId.of("Europe/Moscow"));
             logger.info("=== Начало ежедневного переноса данных о плановых работах... Trigger at {} (zone Europe/Moscow)", triggerTime);
             
+            // Проверяем, что находимся в активной транзакции
+            if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+                logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА: Нет активной транзакции для @Scheduled метода!");
+                throw new RuntimeException("No active transaction for scheduled method - check SchedulerConfig");
+            }
+            logger.debug("✓ Транзакция активна, threadName={}", Thread.currentThread().getName());
+            
             // Выполняем все шаги обработки
             importPmWorkOrdersForCurrentYear();
             updateDifferentStatuses();
@@ -258,6 +266,13 @@ public class PreventiveMaintenanceTransferService {
             transferOperationsOk();
             calculateOperationsAll();
             
+            // Проверяем, что транзакция всё ещё активна перед выходом (данные будут зафиксированы при выходе из метода)
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                logger.info("✓ Транзакция активна - данные будут зафиксированы в БД при завершении метода");
+            } else {
+                logger.warn("⚠️  ВНИМАНИЕ: Транзакция была закрыта во время выполнения!");
+            }
+            
             logger.info("=== Ежедневный перенос данных о плановых работах завершен успешно");
             
         } catch (Exception e) {
@@ -274,7 +289,6 @@ public class PreventiveMaintenanceTransferService {
      *
      * Важно: этот шаг добавляет только IDCode (остальные поля будут заполнены последующими шагами обновления).
      */
-    @Transactional
     public void importPmWorkOrdersForCurrentYear() {
         try {
             PeriodRange period = getImportCurrentYearRange();
@@ -404,7 +418,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Обновление отличающихся статусов
      */
-    @Transactional
     public void updateDifferentStatuses() {
         try {
             logger.info("Начало обновления отличающихся статусов...");
@@ -500,7 +513,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Перенос даты начала работ
      */
-    @Transactional
     public void updateDateStartWorkOrder() {
         try {
             logger.info("Начало переноса даты начала работ...");
@@ -582,7 +594,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Перенос даты окончания работ
      */
-    @Transactional
     public void updateDateStopWorkOrder() {
         try {
             logger.info("Начало переноса даты окончания работ...");
@@ -664,7 +675,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Расчет длительности профилактического обслуживания
      */
-    @Transactional
     public void calculatePreventiveMaintenanceDurationMin() {
         try {
             logger.info("Начало расчета длительности профилактического обслуживания...");
@@ -719,7 +729,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Безопасный перенос комментариев
      */
-    @Transactional
     public void transferCommentsSafe() {
         try {
             logger.info("Начало безопасного переноса комментариев...");
@@ -815,7 +824,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Безопасный перенос ремонтников
      */
-    @Transactional
     public void transferMaintainersSafe() {
         try {
             logger.info("Начало переноса ремонтников...");
@@ -918,7 +926,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Перенос предлагаемой планируемой даты
      */
-    @Transactional
     public void transferScheduledProposedDate() {
         try {
             logger.info("Начало переноса предлагаемой планируемой даты...");
@@ -1025,7 +1032,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Перенос планируемой даты
      */
-    @Transactional
     public void transferScheduledDate() {
         try {
             logger.info("Начало переноса планируемой даты...");
@@ -1138,7 +1144,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Расчет разницы в днях между планируемой и предлагаемой датами
      */
-    @Transactional
     public void calculateDeltaSchedulingDays() {
         try {
             logger.info("Начало расчета разницы в днях между планируемой и предлагаемой датами...");
@@ -1206,7 +1211,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Расчет задержки отчета ППР
      */
-    @Transactional
     public void calculatePmReportDelayDays() {
         try {
             logger.info("Начало расчета задержки отчета ППР...");
@@ -1274,7 +1278,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Перенос предполагаемой продолжительности
      */
-    @Transactional
     public void transferEstimatedDuration() {
         try {
             logger.info("Начало переноса предполагаемой продолжительности...");
@@ -1379,7 +1382,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Детальный перенос информации о невыполненных операциях
      */
-    @Transactional
     public void transferOperationsNokDetailed() {
         try {
             logger.info("Начало детального переноса информации о невыполненных операциях...");
@@ -1464,7 +1466,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Перенос информации о успешно выполненных операциях
      */
-    @Transactional
     public void transferOperationsOk() {
         try {
             logger.info("Начало переноса информации о успешно выполненных операциях...");
@@ -1549,7 +1550,6 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Расчет общего количества операций
      */
-    @Transactional
     public void calculateOperationsAll() {
         try {
             logger.info("Начало расчета общего количества операций...");
