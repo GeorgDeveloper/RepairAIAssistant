@@ -29,6 +29,11 @@ html, body {
 
 .summary-table td { 
     background: #fff; 
+    text-align: right; 
+}
+
+.summary-table td:first-child { 
+    text-align: left; 
 }
 
 .filters { 

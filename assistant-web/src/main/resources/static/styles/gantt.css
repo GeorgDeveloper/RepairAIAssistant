@@ -81,15 +81,22 @@
     border-radius: 6px;
     position: relative;
     background: white;
+    /* Оптимизация для плавной прокрутки */
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
 }
 
 .gantt-header {
+    display: -webkit-box; /* Для старых браузеров */
+    display: -ms-flexbox; /* Для IE */
     display: flex;
     border-bottom: 1px solid #ddd;
     background-color: #f5f5f5;
+    position: -webkit-sticky; /* Для Safari */
     position: sticky;
     top: 0;
     z-index: 10;
+    will-change: transform;
 }
 
 .machine-name {
@@ -98,36 +105,98 @@
     padding: 10px;
     font-weight: 600;
     border-right: 1px solid #ddd;
+    position: -webkit-sticky; /* Для Safari */
     position: sticky;
     left: 0;
     background-color: #f5f5f5;
     z-index: 5;
+    /* Оптимизация для sticky позиционирования */
+    will-change: transform;
 }
 
 .time-slots {
+    display: -webkit-box; /* Для старых браузеров */
+    display: -ms-flexbox; /* Для IE */
     display: flex;
     min-width: 1440px;
+    /* Оптимизация рендеринга */
+    will-change: contents;
 }
 
 .time-slot {
+    -webkit-box-flex: 0;
+    -ms-flex: none;
     flex: none;
     min-width: 60px;
     padding: 10px 5px;
     text-align: center;
     border-right: 1px solid #ddd;
     font-size: 12px;
+    -webkit-box-sizing: border-box;
     box-sizing: border-box;
+    /* Предотвращение размытия текста */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .gantt-body {
     position: relative;
+    /* Оптимизация для большого количества элементов */
+    contain: layout style paint;
+    will-change: contents;
+}
+
+.area-header {
+    display: flex;
+    border-bottom: 2px solid #333;
+    position: relative;
+    height: 40px;
+    background-color: #e8f4f8;
+    font-weight: bold;
+}
+
+.area-header:hover {
+    background-color: #d1e7dd;
+}
+
+.area-header.collapsed {
+    background-color: #f8d7da;
+    border-bottom: 2px solid #dc3545;
+}
+
+.area-header.collapsed:hover {
+    background-color: #f5c6cb;
+}
+
+.area-name {
+    min-width: 250px;
+    max-width: 250px;
+    padding: 10px;
+    font-weight: 600;
+    border-right: 1px solid #ddd;
+    position: -webkit-sticky; /* Для Safari */
+    position: sticky;
+    left: 0;
+    background-color: inherit;
+    z-index: 5;
+    display: -webkit-box; /* Для старых браузеров */
+    display: -ms-flexbox; /* Для IE */
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    will-change: transform;
 }
 
 .machine-row {
+    display: -webkit-box; /* Для старых браузеров */
+    display: -ms-flexbox; /* Для IE */
     display: flex;
     border-bottom: 1px solid #ddd;
     position: relative;
     height: 50px;
+    /* Оптимизация рендеринга */
+    contain: layout style;
 }
 
 .machine-row:hover {
@@ -142,8 +211,17 @@
     background-color: #3498db;
     opacity: 0.8;
     cursor: pointer;
+    -webkit-transition: opacity 0.3s;
     transition: opacity 0.3s;
     z-index: 2;
+    /* Оптимизация для плавной анимации */
+    will-change: opacity, transform;
+    /* Использование GPU ускорения */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    /* Предотвращение размытия */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .repair-bar:hover {
@@ -152,21 +230,59 @@
 }
 
 .tooltip {
-    position: absolute;
-    background-color: rgba(0, 0, 0, 0.8);
+    position: fixed; /* Используем fixed для лучшей совместимости */
+    background-color: rgba(0, 0, 0, 0.9);
     color: white;
     padding: 8px;
     border-radius: 4px;
     font-size: 12px;
-    z-index: 100;
+    z-index: 10000;
     pointer-events: none;
     max-width: 300px;
+    /* Оптимизация рендеринга */
+    will-change: transform, opacity;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    /* Для старых браузеров без поддержки rgba */
+    background-color: #000000;
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+.toggle-icon {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    transition: transform 0.2s ease;
+}
+
+.toggle-icon:hover {
+    color: #007bff;
+    transform: scale(1.1);
 }
 
 .legend {
     display: flex;
-    gap: 20px;
+    gap: 30px;
     margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.legend-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.legend-section h4 {
+    margin: 0;
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.legend-items {
+    display: flex;
+    gap: 15px;
     flex-wrap: wrap;
 }
 
@@ -180,6 +296,43 @@
     width: 20px;
     height: 20px;
     border-radius: 3px;
+}
+
+.area-controls {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.area-control-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+}
+
+.area-control-button:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.area-control-button.collapsed {
+    background-color: #e2e3e5;
+    opacity: 0.7;
+}
+
+.area-control-icon {
+    font-size: 12px;
+    font-weight: bold;
+    color: #495057;
+    min-width: 12px;
 }
 
 .summary {

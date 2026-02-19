@@ -6,6 +6,8 @@ app:
   name: Repair AI Assistant
   version: 1.0.0
   description: Система технической поддержки с ИИ
+  final:
+    months-limit: 12  # Максимальное количество месяцев для отображения в итогах
 
 # Настройки серверов
 server:
@@ -30,7 +32,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: dbaPass
+    password: DbaPass123!
     driver-class-name: com.mysql.cj.jdbc.Driver
   http:
     encoding:
@@ -46,8 +48,8 @@ spring:
     #     dialect: org.hibernate.dialect.MySQLDialect
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 # Настройки ИИ
 ai:
@@ -125,7 +127,11 @@ data-sync:
   enabled: true
   schedule: "0 */3 * * * ?"  # Каждые 3 минуты
   sql_server:
-    url: jdbc:sqlserver://172.21.219.149:1433;databaseName=CMMS;encrypt=false;trustServerCertificate=true
+    # Основной URL (пробуется первым)
+    url: jdbc:sqlserver://pindapp466-39ru:1433;databaseName=CMMS;encrypt=false;trustServerCertificate=true
+    # Альтернативные URL (пробуются по очереди, если основной недоступен)
+    fallback_urls:
+      - jdbc:sqlserver://172.21.219.149:1433;databaseName=CMMS;encrypt=false;trustServerCertificate=true
     username: cmms_readonly
     password: NGTrep014
     driver: com.microsoft.sqlserver.jdbc.SQLServerDriver
@@ -133,7 +139,7 @@ data-sync:
   mysql:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: dbaPass
+    password: DbaPass123!
     driver: com.mysql.cj.jdbc.Driver
   areas:
     - name: Plant
@@ -153,12 +159,12 @@ data-sync:
       default_wt: 74880.0
       filter_column: PlantDepartmentGeographicalCodeName
       filter_value: CuringArea
-    - name: FinishingArea
+    - name: FinishigArea
       working_time_table: working_time_of_finishig_area
       wt_column: wt_fa_min
       default_wt: 23040.0
       filter_column: PlantDepartmentGeographicalCodeName
-      filter_value: FinishingArea
+      filter_value: FinishigArea
     - name: SemifinishingArea
       working_time_table: working_time_of_semifinishing_area
       wt_column: wt_sa_min
@@ -175,8 +181,8 @@ data-sync:
       working_time_table: working_time_of_modules
       wt_column: wt_ma_min
       default_wt: 23040.0
-      filter_column: PlantDepartmentGeographicalCodeName
-      filter_value: Modules
+      filter_column: null
+      filter_value: null
   # Конфигурация ключевых линий
   main_lines:
     - name: "Mixer GK 270 T-C 2.1"
@@ -195,14 +201,14 @@ data-sync:
       area: "SemifinishingArea"
       machine_filter: "Duplex"
     - name: "Calender Comerio Ercole - 01"
-      area: "SemifinishingArea"
+      area: "NewMixingArea"
       machine_filter: "Comerio"
     - name: "VMI APEX - 01"
-      area: "BuildingArea"
-      machine_filter: "VMI APEX"
+      area: "SemifinishingArea"
+      machine_filter: "VMI APEX - 01"
     - name: "VMI APEX - 02"
-      area: "BuildingArea"
-      machine_filter: "VMI APEX"
+      area: "SemifinishingArea"
+      machine_filter: "VMI APEX - 02"
     - name: "Trafila Quadruplex - 01"
       area: "SemifinishingArea"
       machine_filter: "Trafila"
@@ -210,8 +216,8 @@ data-sync:
       area: "SemifinishingArea"
       machine_filter: "Bartell"
     - name: "TTM fisher belt cutting - 01"
-      area: "FinishingArea"
-      machine_filter: "TTM"
+      area: "SemifinishingArea"
+      machine_filter: "TTM fisher"
     - name: "VMI TPCS 1600-1000"
-      area: "BuildingArea"
+      area: "SemifinishingArea"
       machine_filter: "VMI TPCS"

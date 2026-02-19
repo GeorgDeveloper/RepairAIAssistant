@@ -15,4 +15,4 @@ core:
 # URL модуля обновления базы данных (assistant-base_update) для API нарядов
 base-update:
   service:
-    url: http://localhost:${server.base-update.port:8084}
+    url: http://localhost:${server.base_update.port:8084}

@@ -17,6 +17,8 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import ru.georgdeveloper.assistanttelegram.config.BotProperties;
 import ru.georgdeveloper.assistanttelegram.handler.CommandHandler;
 import ru.georgdeveloper.assistanttelegram.handler.MessageHandler;
+import ru.georgdeveloper.assistanttelegram.handler.DocumentHandler;
+import ru.georgdeveloper.assistanttelegram.handler.ReportHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,12 +47,18 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
     private final BotProperties botProperties;
     private final CommandHandler commandHandler;
     private final MessageHandler messageHandler;
+    private final DocumentHandler documentHandler;
+    private final ReportHandler reportHandler;
     
-    public RepairAssistantBot(BotProperties botProperties, CommandHandler commandHandler, MessageHandler messageHandler) {
+    public RepairAssistantBot(BotProperties botProperties, CommandHandler commandHandler, MessageHandler messageHandler, DocumentHandler documentHandler, ReportHandler reportHandler) {
         super(botProperties.getToken());
         this.botProperties = botProperties;
         this.commandHandler = commandHandler;
         this.messageHandler = messageHandler;
+        this.documentHandler = documentHandler;
+        this.reportHandler = reportHandler;
+        // Set bot reference in DocumentHandler to break circular dependency
+        this.documentHandler.setBot(this);
     }
     
     /**
@@ -83,17 +91,31 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
      */
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
+        if (update.hasMessage()) {
             Long chatId = update.getMessage().getChatId();
-            String response;
-            if (commandHandler.isCommand(messageText)) {
-                response = commandHandler.processCommand(messageText, chatId);
-                sendTextMessage(chatId, response);
-            } else {
+            
+            if (update.getMessage().hasText()) {
+                String messageText = update.getMessage().getText();
+                String response;
+                if (commandHandler.isCommand(messageText)) {
+                    response = commandHandler.processCommand(messageText, chatId);
+                    if (messageText.equals("/start")) {
+                        sendTextMessageWithKeyboard(chatId, response, commandHandler.getMainMenuKeyboard());
+                    } else {
+                        sendTextMessage(chatId, response);
+                    }
+                } else {
+                    sendTypingAction(chatId);
+                    response = messageHandler.processMessage(messageText, chatId, () -> sendTypingAction(chatId));
+                    sendTextMessageWithFeedback(chatId, messageText, response);
+                }
+            } else if (update.getMessage().hasDocument()) {
+                // Handle document messages
+                String fileId = update.getMessage().getDocument().getFileId();
+                String fileName = update.getMessage().getDocument().getFileName();
                 sendTypingAction(chatId);
-                response = messageHandler.processMessage(messageText, chatId, () -> sendTypingAction(chatId));
-                sendTextMessageWithFeedback(chatId, messageText, response);
+                String response = documentHandler.processDocument(fileId, fileName, chatId);
+                sendTextMessage(chatId, response);
             }
         } else if (update.hasCallbackQuery()) {
             handleCallback(update.getCallbackQuery());
@@ -138,6 +160,16 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
     private void handleCallback(CallbackQuery callbackQuery) {
         String data = callbackQuery.getData();
         Long chatId = callbackQuery.getMessage().getChatId();
+        
+        // Защита от дублирования сообщений
+        long currentTime = System.currentTimeMillis();
+        Long lastTime = lastCallbackTime.get(chatId);
+        if (lastTime != null && (currentTime - lastTime) < CALLBACK_COOLDOWN) {
+            logger.debug("Игнорируем дублирующий callback для чата {}", chatId);
+            return;
+        }
+        lastCallbackTime.put(chatId, currentTime);
+        
         if (data.startsWith("feedback_correct::")) {
             String feedbackId = data.substring("feedback_correct::".length());
             FeedbackPair pair = FeedbackMemory.get(feedbackId);
@@ -164,11 +196,42 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
             }
         } else if (data.equals("feedback_new")) {
             sendTextMessage(chatId, "Диалог сброшен. Можете задать новый вопрос.");
+        } else if (data.equals("chat_with_assistant")) {
+            sendTextMessage(chatId, "💬 Режим чата с ассистентом активирован!\n\n" +
+                           "Теперь вы можете задавать вопросы о ремонте оборудования. " +
+                           "Я помогу вам с анализом неисправностей, поиском решений и рекомендациями.");
+        } else if (data.equals("request_report")) {
+            sendTextMessageWithKeyboard(chatId, reportHandler.getReportMenuMessage(), reportHandler.getReportMenuKeyboard());
+        } else if (data.equals("daily_report")) {
+            sendTypingAction(chatId);
+            String report = reportHandler.generateDailyReport();
+            sendTextMessageWithKeyboard(chatId, report, reportHandler.getBackToReportsKeyboard());
+        } else if (data.equals("current_report")) {
+            sendTypingAction(chatId);
+            String report = reportHandler.generateCurrentReport();
+            sendTextMessageWithKeyboard(chatId, report, reportHandler.getBackToReportsKeyboard());
+        } else if (data.equals("back_to_main")) {
+            sendTextMessageWithKeyboard(chatId, commandHandler.handleStart(chatId), commandHandler.getMainMenuKeyboard());
+        }
+        
+        // Отвечаем на callback query, чтобы убрать индикатор загрузки
+        try {
+            org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery answerCallbackQuery = 
+                new org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery();
+            answerCallbackQuery.setCallbackQueryId(callbackQuery.getId());
+            execute(answerCallbackQuery);
+        } catch (TelegramApiException e) {
+            logger.error("Ошибка при ответе на callback query: {}", e.getMessage(), e);
         }
     }
 
     // Временное хранилище соответствий feedbackId -> запрос/ответ
     private static final Map<String, FeedbackPair> FeedbackMemory = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    // Защита от дублирования сообщений
+    private static final Map<Long, Long> lastCallbackTime = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long CALLBACK_COOLDOWN = 2000; // 2 секунды
+    
     private static class FeedbackPair {
         final String userQuery;
         final String answer;
@@ -217,6 +280,12 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
      * @param text Текст сообщения для отправки
      */
     private void sendTextMessage(Long chatId, String text) {
+        // Разбиваем длинные сообщения на части
+        if (text.length() > 4000) {
+            sendLongMessage(chatId, text);
+            return;
+        }
+        
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText(text);
@@ -227,6 +296,55 @@ public class RepairAssistantBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             // Логирование ошибок для отладки
             logger.error("Ошибка отправки сообщения в Telegram: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Отправляет длинное сообщение частями
+     */
+    private void sendLongMessage(Long chatId, String text) {
+        int maxLength = 4000;
+        int start = 0;
+        
+        while (start < text.length()) {
+            int end = Math.min(start + maxLength, text.length());
+            String part = text.substring(start, end);
+            
+            SendMessage message = new SendMessage();
+            message.setChatId(chatId.toString());
+            message.setText(part);
+            
+            try {
+                execute(message);
+                Thread.sleep(100); // Небольшая задержка между сообщениями
+            } catch (TelegramApiException e) {
+                logger.error("Ошибка отправки части сообщения: {}", e.getMessage(), e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            
+            start = end;
+        }
+    }
+    
+    /**
+     * Отправляет текстовое сообщение с клавиатурой пользователю.
+     * 
+     * @param chatId ID чата для отправки сообщения
+     * @param text Текст сообщения для отправки
+     * @param keyboard Клавиатура для отображения
+     */
+    private void sendTextMessageWithKeyboard(Long chatId, String text, InlineKeyboardMarkup keyboard) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.toString());
+        message.setText(text);
+        message.setReplyMarkup(keyboard);
+        
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            logger.error("Ошибка отправки сообщения с клавиатурой: {}", e.getMessage(), e);
         }
     }
 }

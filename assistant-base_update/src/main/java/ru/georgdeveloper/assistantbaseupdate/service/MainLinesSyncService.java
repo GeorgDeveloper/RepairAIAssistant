@@ -8,25 +8,32 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ru.georgdeveloper.assistantbaseupdate.config.DataSyncProperties;
+import ru.georgdeveloper.assistantbaseupdate.util.ShiftCalculator;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.List;
 
 /**
  * Сервис синхронизации данных ключевых линий между SQL Server и MySQL.
  * 
  * Выполняет синхронизацию каждые 3 минуты согласно расписанию.
  * Логика синхронизации:
- * 1. Получение данных о времени простоя из SQL Server (REP_BreakdownReport) по конкретным машинам
- * 2. Получение рабочего времени из MySQL (working_time_of_*)
- * 3. Расчет метрик (процент простоя, доступность) для каждой ключевой линии
- * 4. Сохранение результатов в MySQL (main_lines_online)
+ * 1. Определение текущей смены (24-часовая: 08:00-08:00)
+ * 2. Получение данных о времени простоя из SQL Server за текущую смену по конкретным машинам
+ * 3. Использование рабочего времени по умолчанию (1440 минут = 24 часа)
+ * 4. Расчет инкрементального рабочего времени на основе времени с начала смены
+ * 5. Расчет метрик (процент простоя, доступность) для каждой ключевой линии относительно времени смены
+ * 6. Сохранение результатов в MySQL (main_lines_online)
+ * 
+ * Важно: Простой учитывается с начала текущей смены (08:00).
+ * Это обеспечивает корректный расчет показателей ключевых линий в реальном времени.
  */
 @Service
 public class MainLinesSyncService {
 
     private static final Logger logger = LoggerFactory.getLogger(MainLinesSyncService.class);
+
+    private static final Double DEFAULT_WORKING_TIME = 1440.0; // 24 часа в минутах
 
     @Autowired
     private DataSyncProperties dataSyncProperties;
@@ -38,7 +45,6 @@ public class MainLinesSyncService {
     @Autowired
     @Qualifier("mysqlJdbcTemplate")
     private JdbcTemplate mysqlJdbcTemplate;
-
 
     /**
      * Планируемая задача синхронизации данных ключевых линий каждые 3 минуты
@@ -90,98 +96,42 @@ public class MainLinesSyncService {
 
         // 1. Определяем диапазон дат (с 08:00 текущего дня до 08:00 следующего дня)
         LocalDateTime[] dateRange = calculateDateRange();
-        String searchDate = dateRange[0].format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
 
-        // 2. Получаем рабочее время из MySQL для области этой линии
-        Double workingTime = getWorkingTimeForArea(mainLine.getArea(), searchDate);
-        if (workingTime == null) {
-            // Используем значение по умолчанию для области
-            workingTime = getDefaultWorkingTimeForArea(mainLine.getArea());
-            logger.debug("Используется значение по умолчанию для области {}: {} мин", mainLine.getArea(), workingTime);
-        }
+        // 2. Используем рабочее время по умолчанию
+        Double workingTime = DEFAULT_WORKING_TIME;
+        logger.debug("Используется рабочее время по умолчанию: {} мин", workingTime);
 
         // 3. Получаем время простоя из SQL Server для конкретной машины
-        Double downtime = getDowntimeFromSqlServerForMachine(mainLine, dateRange[0], dateRange[1]);
+        Double downtime = getDowntimeFromSqlServer(mainLine, dateRange[0], dateRange[1]);
 
         // 4. Рассчитываем инкрементальное рабочее время
-        Double incrementalWorkingTime = calculateIncrementalWorkingTime(workingTime, dateRange[0]);
+        Double incrementalWorkingTime = calculateIncrementalWorkingTime(workingTime);
         
         // 5. Рассчитываем метрики
         Double downtimePercentage = calculateDowntimePercentage(downtime, incrementalWorkingTime);
         Double availability = calculateAvailability(downtimePercentage);
 
         // 6. Сохраняем в MySQL
-        saveMainLineMetricsToMysql(mainLine.getName(), mainLine.getArea(), downtime, incrementalWorkingTime, downtimePercentage, availability);
+        saveToDatabase(mainLine.getName(), mainLine.getArea(), downtime, incrementalWorkingTime, downtimePercentage, availability);
 
-        logger.debug("Ключевая линия {} синхронизирована: downtime={}, wt={}, incremental_wt={}, percentage={}, availability={}", 
-                   mainLine.getName(), downtime, workingTime, incrementalWorkingTime, downtimePercentage, availability);
+        logger.debug("Ключевая линия {} синхронизирована: downtime={}, incremental_wt={}, percentage={}, availability={}", 
+                   mainLine.getName(), downtime, incrementalWorkingTime, downtimePercentage, availability);
     }
 
     /**
-     * Определяет диапазон дат для запроса (с 08:00 текущего дня до 08:00 следующего дня)
+     * Определяет диапазон дат для запроса (текущая смена)
      */
     private LocalDateTime[] calculateDateRange() {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startDate;
-
-        if (now.getHour() >= 8) {
-            // Если сейчас 08:00 или позже, начало диапазона - сегодня 08:00
-            startDate = now.withHour(8).withMinute(0).withSecond(0).withNano(0);
-        } else {
-            // Если сейчас раньше 08:00, начало диапазона - вчера 08:00
-            startDate = now.minusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0);
-        }
-
-        LocalDateTime endDate = startDate.plusDays(1);
-        return new LocalDateTime[]{startDate, endDate};
+        return ShiftCalculator.getCurrentShiftRange(now);
     }
 
     /**
-     * Получает рабочее время из MySQL для указанной области и даты
+     * Получает время простоя из SQL Server для конкретной машины.
+     * Учитывает простой с начала текущей смены, включая перенос из предыдущей смены.
      */
-    private Double getWorkingTimeForArea(String area, String searchDate) {
-        // Находим конфигурацию области
-        DataSyncProperties.Area areaConfig = dataSyncProperties.getAreas().stream()
-                .filter(a -> a.getName().equals(area))
-                .findFirst()
-                .orElse(null);
-
-        if (areaConfig == null) {
-            logger.warn("Конфигурация для области {} не найдена", area);
-            return null;
-        }
-
-        String sql = String.format("SELECT %s FROM %s WHERE date = ?", 
-                                  areaConfig.getWtColumn(), areaConfig.getWorkingTimeTable());
-        
-        try {
-            Double result = mysqlJdbcTemplate.queryForObject(sql, Double.class, searchDate);
-            logger.debug("Найдено рабочее время для области {} на дату {}: {} мин", 
-                        area, searchDate, result);
-            return result;
-        } catch (Exception e) {
-            logger.debug("Данные для области {} на дату {} не найдены", area, searchDate);
-            return null;
-        }
-    }
-
-    /**
-     * Получает значение по умолчанию для рабочего времени области
-     */
-    private Double getDefaultWorkingTimeForArea(String area) {
-        DataSyncProperties.Area areaConfig = dataSyncProperties.getAreas().stream()
-                .filter(a -> a.getName().equals(area))
-                .findFirst()
-                .orElse(null);
-
-        return areaConfig != null ? areaConfig.getDefaultWt() : 23040.0; // Значение по умолчанию
-    }
-
-    /**
-     * Получает время простоя из SQL Server для конкретной машины
-     */
-    private Double getDowntimeFromSqlServerForMachine(DataSyncProperties.MainLine mainLine, 
-                                                     LocalDateTime startDate, LocalDateTime endDate) {
+    private Double getDowntimeFromSqlServer(DataSyncProperties.MainLine mainLine, 
+                                           LocalDateTime startDate, LocalDateTime endDate) {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT SUM(Duration) as total_duration ");
         sql.append("FROM REP_BreakdownReport ");
@@ -199,6 +149,8 @@ public class MainLinesSyncService {
                                                                startDate, endDate, startDate, endDate, 
                                                                mainLine.getArea(), machineFilter);
             
+            logger.debug("Простой для ключевой линии {} за период {} - {}: {} мин", 
+                        mainLine.getName(), startDate, endDate, result);
             return result != null ? result : 0.0;
         } catch (Exception e) {
             logger.error("Ошибка получения данных простоя из SQL Server для ключевой линии {}: {}", 
@@ -208,33 +160,15 @@ public class MainLinesSyncService {
     }
 
     /**
-     * Рассчитывает инкрементальное рабочее время на основе текущего времени
+     * Рассчитывает инкрементальное рабочее время на основе времени с начала текущей смены
      */
-    private Double calculateIncrementalWorkingTime(Double fullWorkingTime, LocalDateTime startDate) {
+    private Double calculateIncrementalWorkingTime(Double fullWorkingTime) {
         if (fullWorkingTime == null || fullWorkingTime == 0) {
             return fullWorkingTime;
         }
         
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime currentStart = startDate;
-        LocalDateTime currentEnd = startDate.plusDays(1);
-        
-        // Если текущее время вне диапазона 08:00-08:00, возвращаем полное значение
-        if (now.isBefore(currentStart) || now.isAfter(currentEnd)) {
-            return fullWorkingTime;
-        }
-        
-        // Вычисляем количество прошедших 3-минутных интервалов с 08:00
-        long minutesFromStart = java.time.Duration.between(currentStart, now).toMinutes();
-        long intervals = minutesFromStart / 3 + 1; // +1 чтобы начинать с 1
-        
-        // Общее количество интервалов в сутках (24 часа * 60 минут / 3 минуты = 480)
-        long totalIntervals = 480;
-        
-        // Рассчитываем инкремент на интервал
-        double increment = fullWorkingTime / totalIntervals;
-        
-        return Math.round(increment * intervals * 100.0) / 100.0;
+        return ShiftCalculator.calculateIncrementalWorkingTime(fullWorkingTime, now);
     }
     
     /**
@@ -245,7 +179,7 @@ public class MainLinesSyncService {
             return 0.0;
         }
         if (workingTime == null || workingTime == 0) {
-            return null; // NULL для MySQL
+            return 0.0;
         }
         return Math.round((downtime / workingTime) * 100 * 100.0) / 100.0; // Округление до 2 знаков
     }
@@ -255,7 +189,7 @@ public class MainLinesSyncService {
      */
     private Double calculateAvailability(Double downtimePercentage) {
         if (downtimePercentage == null) {
-            return null; // NULL для MySQL
+            return 100.0;
         }
         return Math.round((100 - downtimePercentage) * 100.0) / 100.0; // Округление до 2 знаков
     }
@@ -264,8 +198,8 @@ public class MainLinesSyncService {
      * Сохраняет метрики ключевой линии в MySQL
      */
     @org.springframework.transaction.annotation.Transactional
-    private void saveMainLineMetricsToMysql(String lineName, String area, Double downtime, Double workingTime,
-                                          Double downtimePercentage, Double availability) {
+    private void saveToDatabase(String lineName, String area, Double downtime, Double workingTime,
+                              Double downtimePercentage, Double availability) {
         // Удаляем только записи старше 24 часов для данной линии
         mysqlJdbcTemplate.update(
             "DELETE FROM main_lines_online WHERE line_name = ? AND last_update < DATE_SUB(NOW(), INTERVAL 24 HOUR)",

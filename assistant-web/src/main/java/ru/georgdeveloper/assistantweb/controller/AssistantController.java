@@ -65,6 +65,26 @@ public class AssistantController {
         return "dinamic_bd";
     }
 
+    @GetMapping("/dinamic_pm")
+    public String dinamicPm() {
+        return "dinamic_pm";
+    }
+
+    @GetMapping("/pm_tag_bd")
+    public String pmTagBd() {
+        return "pm_tag_bd";
+    }
+
+    @GetMapping("/tag")
+    public String tag() {
+        return "tag";
+    }
+
+    @GetMapping("/dinamic_type")
+    public String dinamicType() {
+        return "dinamic_type";
+    }
+
     @GetMapping("/top_causes")
     public String topCauses() {
         return "top_causes";
@@ -100,6 +120,36 @@ public class AssistantController {
         return "failures";
     }
 
+    @GetMapping("/pm")
+    public String pm() {
+        return "pm";
+    }
+
+    @GetMapping("/diagnostics-report")
+    public String diagnosticsReport() {
+        return "diagnostics_report";
+    }
+
+    @GetMapping("/create-diagnostics-report")
+    public String createDiagnosticsReport() {
+        return "create_diagnostics_report";
+    }
+
+    @GetMapping("/diagnostics-schedule")
+    public String diagnosticsSchedule() {
+        return "diagnostics_schedule";
+    }
+
+    @GetMapping("/dinamic_diagnostics")
+    public String dinamicDiagnostics() {
+        return "dinamic_diagnostics";
+    }
+
+    @GetMapping("/dinamic_diagnostics_reports")
+    public String dinamicDiagnosticsReports() {
+        return "dinamic_diagnostics_reports";
+    }
+
     @GetMapping("/final")
     public String finalPage() {
         return "final";
@@ -126,8 +176,31 @@ public class AssistantController {
     @GetMapping("/dashboard/equipment-maintenance-records")
     @ResponseBody
     public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords(
+            @RequestParam(name = "limit", required = false) Integer limit,
+            @RequestParam(name = "dateFrom", required = false) String dateFrom,
+            @RequestParam(name = "dateTo", required = false) String dateTo,
+            @RequestParam(name = "area", required = false) String area) {
+        if ((dateFrom != null && !dateFrom.isEmpty()) || 
+            (dateTo != null && !dateTo.isEmpty()) || 
+            (area != null && !area.isEmpty() && !area.equals("all"))) {
+            return coreServiceClient.getEquipmentMaintenanceRecords(dateFrom, dateTo, area);
+        }
+        int actualLimit = (limit != null && limit > 0) ? limit : 500;
+        return coreServiceClient.getEquipmentMaintenanceRecords(actualLimit);
+    }
+
+    @GetMapping("/dashboard/pm-maintenance-records")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getPmMaintenanceRecords(
             @RequestParam(name = "limit", defaultValue = "500") int limit) {
-        return coreServiceClient.getEquipmentMaintenanceRecords(limit);
+        return coreServiceClient.getPmMaintenanceRecords(limit);
+    }
+
+    @GetMapping("/dashboard/diagnostics-reports")
+    @ResponseBody
+    public java.util.List<java.util.Map<String, Object>> getDiagnosticsReports(
+            @RequestParam(name = "limit", defaultValue = "500") int limit) {
+        return coreServiceClient.getDiagnosticsReports(limit);
     }
 
     public static class FeedbackDto {

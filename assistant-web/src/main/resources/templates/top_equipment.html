@@ -7,7 +7,7 @@
     <title>Топ поломок</title>
     <link rel="stylesheet" href="/static/styles/style.css">
     <link rel="stylesheet" href="/static/styles/top-equipment.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/lib/chart.min.js"></script>
 </head>
 
 <body>
@@ -37,10 +37,6 @@
                         <input id="dateTo" type="date" class="filter-control">
                     </div>
                     <div class="filter-group">
-                        <label>Неделя</label>
-                        <select id="week" class="filter-control"></select>
-                    </div>
-                    <div class="filter-group">
                         <label>Участок</label>
                         <select id="area" class="filter-control"></select>
                     </div>
@@ -58,7 +54,7 @@
                         <div id="error" class="error">Ошибка загрузки данных</div>
                     </div>
                     <div class="legend-container">
-                        <div class="legend-header">Топ оборудования (Σ простоя, кол-во вызовов)</div>
+                        <div class="legend-header">Топ оборудования (Время простоя, кол-во вызовов)</div>
                         <button id="toggleAllLegend" class="btn-toggle-all">Отключить все</button>
                         <div id="legend"></div>
                     </div>

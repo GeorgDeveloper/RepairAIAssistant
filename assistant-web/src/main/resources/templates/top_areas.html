@@ -7,7 +7,7 @@
     <title>Топ по участкам</title>
     <link rel="stylesheet" href="/static/styles/style.css">
     <link rel="stylesheet" href="/static/styles/top-areas.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/lib/chart.min.js"></script>
 </head>
 
 <body>
@@ -37,10 +37,6 @@
                         <input id="dateTo" type="date" class="filter-control">
                     </div>
                     <div class="filter-group">
-                        <label>Неделя</label>
-                        <select id="week" class="filter-control"></select>
-                    </div>
-                    <div class="filter-group">
                         <label>Тип поломки (фильтр)</label>
                         <select id="failureType" class="filter-control"></select>
                     </div>
@@ -54,7 +50,7 @@
                         <div id="error" class="error">Ошибка загрузки данных</div>
                     </div>
                     <div class="legend-container">
-                        <div class="legend-header">Топ участков (Σ простоя, кол-во вызовов)</div>
+                        <div class="legend-header">Топ участков (Время простоя, Кол-во вызовов)</div>
                         <button id="toggleAllLegend" class="btn-toggle-all">Отключить все</button>
                         <div id="legend"></div>
                     </div>

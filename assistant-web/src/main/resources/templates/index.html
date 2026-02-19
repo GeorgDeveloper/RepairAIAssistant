@@ -16,6 +16,11 @@
 
     <div class="total-content">
         <div class="header">
+            <div class="month-navigation">
+                <button id="prevMonthBtn" class="nav-btn" title="Предыдущий месяц">‹</button>
+                <span id="currentMonthDisplay" class="month-display"></span>
+                <button id="nextMonthBtn" class="nav-btn" title="Следующий месяц">›</button>
+            </div>
             <div class="user_logo">
                 Привет, <a href="#">user</a>
             </div>
@@ -23,7 +28,7 @@
 
         <div class="main-content">
 
-            <div class="dashboard-grid">
+            <div class="dashboard-grid-index">
                 <div class="left-pane">
                     <div class="top-charts">
                         <div id="resizable2" class="chart-container">
@@ -50,9 +55,9 @@
                             <div id="metricsTable"></div>
 
                             <br><br>
-                            <h3>Ключевые линии (неделя)</h3>
+                            <h3 id="keyLinesHeader">Ключевые линии (неделя)</h3>
                             <div id="topBreakdownsWeekKeyLinesTable"></div>
-                            <h3>Топ поломок за неделю</h3>
+                            <h3 id="topBreakdownsHeader">Топ поломок за неделю</h3>
                             <div id="topBreakdownsWeekTable"></div>
                         </div>
                         <!-- <div class="chart-container-metrics">
@@ -67,16 +72,29 @@
 
     <!-- Modal Popup for Indicator Table -->
     <div id="indicatorModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content box-histotri-date">
             <span class="close">&times;</span>
             <h2>Показатели за <span id="selectedDate"></span></h2>
             <div id="indicatorTableContainer"></div>
         </div>
     </div>
 
+    <!-- Modal Popup for Breakdown Details -->
+    <div id="breakdownDetailsModal" class="modal">
+        <div class="modal-content breakdown-details-modal">
+            <span class="close">&times;</span>
+            <h2>Детализация нарядов</h2>
+            <div class="breakdown-info">
+                <p><strong>Дата:</strong> <span id="breakdownDate"></span></p>
+                <p><strong>Область:</strong> <span id="breakdownArea"></span></p>
+            </div>
+            <div id="breakdownDetailsContainer"></div>
+        </div>
+    </div>
+
     <script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
     <script src="https://canvasjs.com/assets/script/jquery-ui.1.11.2.min.js"></script>
-    <script src="https://cdn.canvasjs.com/jquery.canvasjs.min.js"></script>
+    <script src="/static/lib/jquery.canvasjs.min.js"></script>
     <script src="static/scripts/dashboard.js"></script>
     <script src="static/scripts/dashboard-index.js"></script>
 </body>
