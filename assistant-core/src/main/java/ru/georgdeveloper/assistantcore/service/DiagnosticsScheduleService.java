@@ -6,13 +6,20 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.georgdeveloper.assistantcore.model.*;
 import ru.georgdeveloper.assistantcore.repository.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class DiagnosticsScheduleService {
+
+    private static final Logger log = LoggerFactory.getLogger(DiagnosticsScheduleService.class);
 
     @Autowired
     private DiagnosticsScheduleRepository scheduleRepository;
@@ -1162,6 +1169,70 @@ public class DiagnosticsScheduleService {
         }
 
         return bestDate;
+    }
+
+    /**
+     * Возвращает процент выполнения диагностики (Всего %) за месяц по графику.
+     * Используется для отображения на странице Итоги (/final).
+     */
+    public double getCompletionPercentageForMonth(Long scheduleId, int month) {
+        DiagnosticsSchedule schedule = scheduleRepository.findById(scheduleId)
+                .orElse(null);
+        if (schedule == null) return 0;
+        LocalDate startDate = LocalDate.of(schedule.getYear(), month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+        List<DiagnosticsScheduleEntry> entries = entryRepository
+                .findByScheduleIdAndScheduledDateBetween(scheduleId, startDate, endDate);
+        long total = entries.size();
+        if (total == 0) return 0;
+        long completed = entries.stream().filter(DiagnosticsScheduleEntry::getIsCompleted).count();
+        return completed * 100.0 / total;
+    }
+
+    /** Извлекает год из значения, возвращаемого JDBC (Number или java.sql.Date/java.util.Date). */
+    private static Integer extractYear(Object yearObj) {
+        if (yearObj == null) return null;
+        if (yearObj instanceof Number) return ((Number) yearObj).intValue();
+        if (yearObj instanceof java.sql.Date) return ((java.sql.Date) yearObj).toLocalDate().getYear();
+        if (yearObj instanceof Date) {
+            return (int) ((Date) yearObj).toInstant().atZone(ZoneId.systemDefault()).getYear();
+        }
+        return null;
+    }
+
+    /**
+     * Возвращает проценты выполнения диагностики для списка (год, месяц) в том же порядке.
+     * Для каждого года берётся график по году; если графика нет — в список подставляется 0.
+     */
+    public List<Double> getCompletionPercentagesForOrderedYearMonths(List<Map<String, Object>> orderedYearMonths) {
+        if (orderedYearMonths == null || orderedYearMonths.isEmpty()) return Collections.emptyList();
+        List<Double> result = new ArrayList<>(orderedYearMonths.size());
+        Integer prevYear = null;
+        Long scheduleId = null;
+        for (Map<String, Object> ym : orderedYearMonths) {
+            Integer year = extractYear(ym.get("year"));
+            // month_val — число 1–12 из MONTH(created_at)
+            Object monthObj = ym.get("month_val") != null ? ym.get("month_val") : ym.get("month");
+            Integer month = monthObj instanceof Number ? ((Number) monthObj).intValue() : null;
+            if (year == null || month == null || month < 1 || month > 12) {
+                result.add(0.0);
+                continue;
+            }
+            if (!year.equals(prevYear)) {
+                prevYear = year;
+                scheduleId = scheduleRepository.findByYear(year).map(DiagnosticsSchedule::getId).orElse(null);
+                if (scheduleId == null) {
+                    log.warn("FinalService/Диагностика %: график диагностики не найден для года {}", year);
+                }
+            }
+            if (scheduleId == null) {
+                result.add(0.0);
+                continue;
+            }
+            double pct = getCompletionPercentageForMonth(scheduleId, month);
+            result.add(pct);
+        }
+        return result;
     }
 
     /**

@@ -188,6 +188,24 @@ const IndexDashboard = {
                 });
             }
             
+            // Для графика Availability: минимум оси Y не учитывает 0%; если нет значений в [0, 70%] — строим от 70% до 105%
+            let axisYAvailability = {};
+            if (chartType === "availability") {
+                const valuesForRange = coloredDataPoints
+                    .map(p => p.y)
+                    .filter(y => y != null && y > 0);
+                const effectiveMin = valuesForRange.length > 0 ? Math.min(...valuesForRange) : null;
+                const axisMinimum = (effectiveMin == null || effectiveMin >= 90)
+                    ? 90
+                    : Math.floor(effectiveMin / 5) * 5; // округление вниз до 5% для аккуратной сетки
+                axisYAvailability = {
+                    maximum: 105,
+                    interval: 5,
+                    minimum: axisMinimum,
+                    includeZero: false
+                };
+            }
+            
             const options = {
                 animationEnabled: true,
                 title: { text: title, fontSize: 14 },
@@ -201,8 +219,9 @@ const IndexDashboard = {
                 axisY: { 
                     suffix: "%", 
                     labelFontSize: 10,
-                    includeZero: true,
-                    minimum: 0
+                    includeZero: chartType === "availability" ? axisYAvailability.includeZero : true,
+                    minimum: chartType === "availability" ? axisYAvailability.minimum : 0,
+                    ...(chartType === "availability" ? { maximum: axisYAvailability.maximum, interval: axisYAvailability.interval } : {})
                 },
                 data: [{
                     type: "column",
@@ -349,9 +368,9 @@ const IndexDashboard = {
                     horizontalAlign: "right",
                     dockInsidePlotArea: true
                 }],
-                axisX: { title: "Дата", labelAngle: -45, margin: 10, labelFontSize: isCurrentMonth ? 10 : 9, interval: isCurrentMonth ? 2 : 1 },
-                axisY: { title: "Количество", includeZero: true, margin: 10, labelFontSize: 10 },
-                legend: { verticalAlign: "bottom" },
+                axisX: { labelAngle: -45, margin: 45, labelFontSize: isCurrentMonth ? 10 : 9, interval: isCurrentMonth ? 2 : 1 },
+                axisY: { includeZero: true, margin: 10, labelFontSize: 10, interval: 2 },
+                legend: { dockInsidePlotArea: true, verticalAlign: "top", horizontalAlign: "left" },
                 data: [
                     { type: "line", name: "Plan", showInLegend: true, color: "#e31a1c", markerSize: 4, dataPoints: planPoints },
                     { type: "line", name: "Fact", showInLegend: true, color: "#33a02c", markerSize: 4, dataPoints: factPoints },

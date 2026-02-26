@@ -94,6 +94,36 @@ public class FinalRepository {
         return result;
     }
 
+    /**
+     * Возвращает список пар (year, month) в том же порядке, что и записи в getSummaries.
+     * Нужно для подстановки показателя «Диагностика %» из графика диагностики.
+     */
+    public List<Map<String, Object>> getOrderedYearMonths(List<Integer> years, List<Integer> months, Integer limit) {
+        // Числовой месяц MONTH(created_at) для запроса к графику диагностики; порядок строк тот же (ORDER BY created_at)
+        StringBuilder sql = new StringBuilder("SELECT YEAR(created_at) AS year, MONTH(created_at) AS month_val " +
+                "FROM availability_stats");
+        List<Object> params = new ArrayList<>();
+        List<String> where = new ArrayList<>();
+        if (years != null && !years.isEmpty()) {
+            String in = String.join(",", java.util.Collections.nCopies(years.size(), "?"));
+            where.add("YEAR(created_at) IN (" + in + ")");
+            params.addAll(years);
+        }
+        if (months != null && !months.isEmpty()) {
+            String in = String.join(",", java.util.Collections.nCopies(months.size(), "?"));
+            where.add("MONTH(created_at) IN (" + in + ")");
+            params.addAll(months);
+        }
+        if (!where.isEmpty()) {
+            sql.append(" WHERE ").append(String.join(" AND ", where));
+        }
+        sql.append(" ORDER BY created_at DESC, id DESC");
+        if (months == null || months.isEmpty()) {
+            sql.append(" LIMIT ").append(limit != null && limit > 0 ? Math.min(limit, defaultMonthsLimit) : defaultMonthsLimit);
+        }
+        return jdbcTemplate.queryForList(sql.toString(), params.toArray());
+    }
+
     // helpers from previous version removed as unused
 
     private Map<String, Object> metricRow(String metricName, List<Map<String, Object>> records, String field) {
