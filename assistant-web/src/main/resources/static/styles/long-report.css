@@ -1,41 +1,247 @@
-.pm-row { 
-    display: grid; 
-    grid-template-columns: 1fr 1fr; 
-    grid-gap: 16px; 
+/* Limit total-content height to viewport height on long-report page */
+.long-report-page {
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
-.pm-row .table-container, .pm-row .chart-container { 
-    height: 100%; 
+.long-report-page .main-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
 }
 
-#resizablePm { 
-    height: 100% !important; 
+/* Content header styling */
+.content-header {
+    margin-bottom: 20px;
 }
 
+.content-header h1 {
+    margin: 0;
+    font-size: 1.8em;
+    color: #333;
+}
+
+/* Button styling to match unified style */
+.btn-apply {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.btn-apply:hover {
+    background-color: #c0392b;
+}
+
+/* Table styling to match other pages */
+.dataTables_wrapper {
+    font-size: 12px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    box-sizing: border-box;
+}
+
+.long-report-page .row,
+.long-report-page .col {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#solutionsTable {
+    width: 100% !important;
+    max-width: 100%;
+    table-layout: auto;
+    word-wrap: break-word;
+    box-sizing: border-box;
+}
+
+table.dataTable thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;
+}
+
+table.dataTable tbody td {
+    border-bottom: 1px solid #dee2e6;
+    padding: 8px;
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Word wrap for Примечания (7th column) and Меры (8th column) */
+table.dataTable tbody td:nth-child(7),
+table.dataTable tbody td:nth-child(8) {
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 200px;
+    min-width: 150px;
+}
+
+table.dataTable thead th:nth-child(7),
+table.dataTable thead th:nth-child(8) {
+    white-space: normal;
+    max-width: 200px;
+    min-width: 150px;
+}
+
+.dataTables_length, .dataTables_filter {
+    margin-bottom: 10px;
+}
+
+.dataTables_info {
+    margin-top: 10px;
+}
+
+.dataTables_paginate {
+    margin-top: 10px;
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Action buttons in table */
+.edit-button, .delete-button {
+    padding: 6px 12px;
+    margin: 2px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.edit-button {
+    background-color: #3498db;
+    color: white;
+}
+
+.edit-button:hover {
+    background-color: #2980b9;
+}
+
+.delete-button {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.delete-button:hover {
+    background-color: #c0392b;
+}
+
+/* Modal styling */
 .modal {
-    display: none; 
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(0, 0, 0, 0.8); 
-    justify-content: center; 
-    align-items: center; 
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
     z-index: 1000;
 }
 
 .modal-content {
-    background: white; 
-    padding: 20px; 
-    border-radius: 8px; 
-    width: 50%; 
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    width: 50%;
     max-width: 600px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.5em;
+}
+
+/* Form styling */
+#addSolutionForm {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#addSolutionForm input[type="text"],
+#addSolutionForm select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#addSolutionForm textarea {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 100px;
+    font-family: Arial, sans-serif;
 }
 
 #notes_on_the_operation_of_the_equipment,
 #measures_taken,
 #comments {
-    height: 100px; 
+    min-height: 100px;
     overflow-y: auto;
+}
+
+#addSolutionForm input[type="text"]:focus,
+#addSolutionForm select:focus,
+#addSolutionForm textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+#addSolutionForm button[type="submit"] {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+#addSolutionForm button[type="submit"]:hover {
+    background-color: #c0392b;
+}
+
+#addSolutionForm button[type="button"] {
+    background-color: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+#addSolutionForm button[type="button"]:hover {
+    background-color: #7f8c8d;
 }

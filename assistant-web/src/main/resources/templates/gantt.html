@@ -4,10 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Диаграмма Ганта - Breakdown ремонты</title>
     <link rel="stylesheet" href="/static/styles/style.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+    <link href="/static/select2/select2.min.css" rel="stylesheet" />
+    <link href="/static/flatpickr/flatpickr.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles/gantt.css">
 </head>
 
@@ -97,17 +98,33 @@
                 </div>
                 
                 <div class="legend">
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #3498db;"></div>
-                        <span>Механика</span>
+                    <div class="legend-section">
+                        <h4>Типы поломок:</h4>
+                        <div class="legend-items">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #3498db;"></div>
+                                <span>Механика</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #e74c3c;"></div>
+                                <span>Электроника</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #f39c12;"></div>
+                                <span>Электрика</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #2ecc71;"></div>
+                                <span>Другие</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #e74c3c;"></div>
-                        <span>Электрика/Электроника</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: #2ecc71;"></div>
-                        <span>Другие</span>
+                    
+                    <div class="legend-section">
+                        <h4>Участки (кликните для сворачивания):</h4>
+                        <div class="area-controls" id="area-controls">
+                            <!-- Кнопки участков будут добавлены динамически -->
+                        </div>
                     </div>
                 </div>
                 
@@ -132,10 +149,10 @@
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
+    <script src="/static/jquery/jquery-3.6.0.min.js"></script>
+    <script src="/static/select2/select2.min.js"></script>
+    <script src="/static/flatpickr/flatpickr.min.js"></script>
+    <script src="/static/flatpickr/ru.js"></script>
     <script src="/static/js/gantt.js"></script>
 
 </body>

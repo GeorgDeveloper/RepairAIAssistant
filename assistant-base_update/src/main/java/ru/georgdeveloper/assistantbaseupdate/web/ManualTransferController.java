@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.georgdeveloper.assistantbaseupdate.service.DataTransferService;
 import ru.georgdeveloper.assistantbaseupdate.service.TagTransferService;
+import ru.georgdeveloper.assistantbaseupdate.service.PreventiveMaintenanceTransferService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,6 +24,9 @@ public class ManualTransferController {
 
     @Autowired
     private TagTransferService tagTransferService;
+
+    @Autowired
+    private PreventiveMaintenanceTransferService preventiveMaintenanceTransferService;
 
     @PostMapping("/bd")
     public ResponseEntity<String> runBdTransfer(
@@ -58,6 +62,12 @@ public class ManualTransferController {
 
         tagTransferService.runTagTransfer(start, end);
         return ResponseEntity.ok("Tag transfer started for interval [" + start + " .. " + end + "]");
+    }
+
+    @PostMapping("/pm")
+    public ResponseEntity<String> runPreventiveMaintenanceTransfer() {
+        preventiveMaintenanceTransferService.runTransfer();
+        return ResponseEntity.ok("Preventive maintenance transfer started");
     }
 }
 

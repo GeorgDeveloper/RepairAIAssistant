@@ -12,11 +12,13 @@ function setupEventListeners() {
     // Настройка множественного выбора для года
     setupMultiSelect('year', function() {
         loadMonths();
+        updateWeekSelectState();
     });
     
     // Настройка множественного выбора для месяца
     setupMultiSelect('month', function() {
         loadWeeks();
+        updateWeekSelectState();
     });
     
     // Настройка множественного выбора для недели
@@ -170,6 +172,7 @@ async function loadYears() {
         updateButtonText('year');
     }
     await loadMonths();
+    updateWeekSelectState();
 }
 
 async function loadMonths() {
@@ -179,9 +182,13 @@ async function loadMonths() {
         const existingOptions = dropdown.querySelectorAll('.multi-select-option:not(:first-child)');
         existingOptions.forEach(option => option.remove());
         updateButtonText('month');
+        updateWeekSelectState();
         return;
     }
-    const res = await fetch(`/bdav/months?year=${years.join(',')}`);
+    // Формируем URL с несколькими параметрами year
+    const params = new URLSearchParams();
+    years.forEach(year => params.append('year', year));
+    const res = await fetch(`/bdav/months?${params.toString()}`);
     const data = await res.json();
     const names = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
     const monthsWithNames = data.map(item => ({
@@ -190,6 +197,7 @@ async function loadMonths() {
     }));
     populateMultiSelect('month', monthsWithNames, 'monthName', 'Все');
     await loadWeeks();
+    updateWeekSelectState();
 }
 
 async function loadWeeks() {
@@ -204,6 +212,21 @@ async function loadWeeks() {
         return;
     }
     
+    // Проверяем, выбрано ли несколько годов или месяцев
+    const multipleYears = years.length > 1;
+    const multipleMonths = months.length > 1;
+    
+    if (multipleYears || multipleMonths) {
+        // Если выбрано несколько годов или месяцев, очищаем недели
+        const dropdown = document.getElementById('week-dropdown');
+        const existingOptions = dropdown.querySelectorAll('.multi-select-option:not(:first-child)');
+        existingOptions.forEach(option => option.remove());
+        // Устанавливаем "Все" как выбранное
+        document.getElementById('week-all').checked = true;
+        updateButtonText('week');
+        return;
+    }
+    
     // Преобразуем названия месяцев обратно в номера
     const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
     const monthNumbers = months.map(monthName => {
@@ -211,9 +234,51 @@ async function loadWeeks() {
         return index + 1;
     });
     
-    const res = await fetch(`/bdav/weeks?year=${years.join(',')}&month=${monthNumbers.join(',')}`);
+    // Формируем URL с несколькими параметрами year и month
+    const params = new URLSearchParams();
+    years.forEach(year => params.append('year', year));
+    monthNumbers.forEach(month => params.append('month', month.toString()));
+    const res = await fetch(`/bdav/weeks?${params.toString()}`);
     const data = await res.json();
     populateMultiSelect('week', data, 'week', 'Все');
+}
+
+function updateWeekSelectState() {
+    const years = getSelectedValues('year');
+    const months = getSelectedValues('month');
+    const weekMultiselect = document.getElementById('week-multiselect');
+    const weekButton = document.getElementById('week-button');
+    const weekDropdown = document.getElementById('week-dropdown');
+    
+    // Проверяем, выбрано ли несколько годов или месяцев
+    const multipleYears = !years.includes('all') && years.length > 1;
+    const multipleMonths = !months.includes('all') && months.length > 1;
+    const shouldDisable = multipleYears || multipleMonths;
+    
+    if (shouldDisable) {
+        // Отключаем выбор недель
+        weekMultiselect.style.opacity = '0.5';
+        weekMultiselect.style.pointerEvents = 'none';
+        weekButton.disabled = true;
+        
+        // Очищаем выбранные недели и устанавливаем "Все"
+        const weekAllCheckbox = document.getElementById('week-all');
+        if (weekAllCheckbox) {
+            weekAllCheckbox.checked = true;
+            const otherCheckboxes = weekDropdown.querySelectorAll('input[type="checkbox"]:not(#week-all)');
+            otherCheckboxes.forEach(cb => cb.checked = false);
+            updateButtonText('week');
+        }
+        
+        // Очищаем список недель, если он был загружен
+        const existingOptions = weekDropdown.querySelectorAll('.multi-select-option:not(:first-child)');
+        existingOptions.forEach(option => option.remove());
+    } else {
+        // Включаем выбор недель
+        weekMultiselect.style.opacity = '1';
+        weekMultiselect.style.pointerEvents = 'auto';
+        weekButton.disabled = false;
+    }
 }
 
 async function applyFilters() {

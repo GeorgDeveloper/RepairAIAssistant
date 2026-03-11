@@ -57,12 +57,14 @@ public class TopEquipmentWebController {
                                                  @RequestParam(required = false) String dateFrom,
                                                  @RequestParam(required = false) String dateTo,
                                                  @RequestParam(required = false) String week,
-                                                 @RequestParam(required = false) String area) {
+                                                 @RequestParam(required = false) String area,
+                                                 @RequestParam(required = false) String failureType) {
         StringBuilder url = new StringBuilder(coreServiceUrl + "/top-equipment/drilldown/causes?machine=" + machine);
         if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
         if (area != null) url.append("&area=").append(area);
+        if (failureType != null) url.append("&failureType=").append(failureType);
         return getList(url.toString());
     }
 
@@ -72,12 +74,14 @@ public class TopEquipmentWebController {
                                                      @RequestParam(required = false) String dateFrom,
                                                      @RequestParam(required = false) String dateTo,
                                                      @RequestParam(required = false) String week,
-                                                     @RequestParam(required = false) String area) {
+                                                     @RequestParam(required = false) String area,
+                                                     @RequestParam(required = false) String failureType) {
         StringBuilder url = new StringBuilder(coreServiceUrl + "/top-equipment/drilldown/mechanisms?machine=" + machine + "&cause=" + cause);
         if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
         if (area != null) url.append("&area=").append(area);
+        if (failureType != null) url.append("&failureType=").append(failureType);
         return getList(url.toString());
     }
 
@@ -88,12 +92,30 @@ public class TopEquipmentWebController {
                                                  @RequestParam(required = false) String dateFrom,
                                                  @RequestParam(required = false) String dateTo,
                                                  @RequestParam(required = false) String week,
-                                                 @RequestParam(required = false) String area) {
+                                                 @RequestParam(required = false) String area,
+                                                 @RequestParam(required = false) String failureType) {
         StringBuilder url = new StringBuilder(coreServiceUrl + "/top-equipment/drilldown/events?machine=" + machine + "&cause=" + cause + "&mechanism=" + mechanism);
         if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
         if (area != null) url.append("&area=").append(area);
+        if (failureType != null) url.append("&failureType=").append(failureType);
+        return getList(url.toString());
+    }
+
+    @GetMapping("/drilldown/all-events")
+    public List<Map<String, Object>> drillAllEvents(@RequestParam String machine,
+                                                     @RequestParam(required = false) String dateFrom,
+                                                     @RequestParam(required = false) String dateTo,
+                                                     @RequestParam(required = false) String week,
+                                                     @RequestParam(required = false) String area,
+                                                     @RequestParam(required = false) String failureType) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/top-equipment/drilldown/all-events?machine=" + machine);
+        if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
+        if (dateTo != null) url.append("&dateTo=").append(dateTo);
+        if (week != null) url.append("&week=").append(week);
+        if (area != null) url.append("&area=").append(area);
+        if (failureType != null) url.append("&failureType=").append(failureType);
         return getList(url.toString());
     }
 

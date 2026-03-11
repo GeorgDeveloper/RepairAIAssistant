@@ -76,6 +76,7 @@ public class DataSyncProperties {
      */
     public static class SqlServer {
         private String url;
+        private List<String> fallbackUrls;
         private String username;
         private String password;
         private String driver;
@@ -88,6 +89,14 @@ public class DataSyncProperties {
 
         public void setUrl(String url) {
             this.url = url;
+        }
+
+        public List<String> getFallbackUrls() {
+            return fallbackUrls;
+        }
+
+        public void setFallbackUrls(List<String> fallbackUrls) {
+            this.fallbackUrls = fallbackUrls;
         }
 
         public String getUsername() {

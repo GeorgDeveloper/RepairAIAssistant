@@ -47,6 +47,20 @@
                     <div class="new-right-stack">
                         <div class="chart-container-metrics">
                             <h3>Текущие наряды на работы</h3>
+                            <div class="downtime-legend">
+                                <span class="legend-item">
+                                    <span class="legend-color downtime-electrical"></span>
+                                    Электрика
+                                </span>
+                                <span class="legend-item">
+                                    <span class="legend-color downtime-electronic"></span>
+                                    Электроника
+                                </span>
+                                <span class="legend-item">
+                                    <span class="legend-color downtime-mechanical"></span>
+                                    Механика
+                                </span>
+                            </div>
                             <div id="workOrdersTable"></div>
                         </div>
                     </div>
@@ -57,7 +71,7 @@
 
     <script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
     <script src="https://canvasjs.com/assets/script/jquery-ui.1.11.2.min.js"></script>
-    <script src="https://cdn.canvasjs.com/jquery.canvasjs.min.js"></script>
+    <script src="/static/lib/jquery.canvasjs.min.js"></script>
     <script src="static/scripts/dashboard.js"></script>
     <script src="static/scripts/dashboard-main.js"></script>
 </body>

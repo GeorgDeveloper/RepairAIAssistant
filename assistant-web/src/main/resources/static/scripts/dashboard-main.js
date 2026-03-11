@@ -2,6 +2,8 @@
 const MainDashboard = {
     // Функция для создания таблицы с показателями
     createMetricsTable(bdData, availabilityData) {
+        console.log('BD Data for metrics table:', bdData);
+        console.log('Availability Data for metrics table:', availabilityData);
         const currentDate = new Date().toLocaleDateString('ru-RU');
         // Соответствие отображаемого названия области ключу area из БД
         const areasMap = [
@@ -9,18 +11,33 @@ const MainDashboard = {
             { label: 'Сборка 1', key: 'SemifinishingArea' },
             { label: 'Сборка 2', key: 'BuildingArea' },
             { label: 'Вулканизация', key: 'CuringArea' },
-            { label: 'УЗО', key: 'FinishingArea' },
+            { label: 'УЗО', key: 'FinishigArea' },
             { label: 'Модули', key: 'Modules' },
             { label: 'Завод', key: 'Plant' }
         ];
 
         // Получаем последние значения из данных графиков по ключу area
         const getCurrentValue = (data, areaKey) => {
-            if (!data || !Array.isArray(data)) return 0;
+            if (!data || !Array.isArray(data)) {
+                console.log(`getCurrentValue: Нет данных для области ${areaKey}`);
+                return 0;
+            }
             const areaData = data.filter(item => item.area === areaKey);
-            if (areaData.length === 0) return 0;
-            const last = areaData[areaData.length - 1];
+            console.log(`getCurrentValue: Данные для области ${areaKey}:`, areaData);
+            if (areaData.length === 0) {
+                console.log(`getCurrentValue: Нет записей для области ${areaKey}`);
+                return 0;
+            }
+            // Сортируем по timestamp и берем последнее значение
+            const sortedData = areaData.sort((a, b) => {
+                const timeA = a.timestamp ? new Date(a.timestamp) : new Date(0);
+                const timeB = b.timestamp ? new Date(b.timestamp) : new Date(0);
+                return timeA - timeB;
+            });
+            const last = sortedData[sortedData.length - 1];
+            console.log(`getCurrentValue: Последняя запись для области ${areaKey}:`, last);
             const val = Number(last && last.value);
+            console.log(`getCurrentValue: Значение для области ${areaKey}: ${val}`);
             return isNaN(val) ? 0 : val;
         };
 
@@ -203,6 +220,24 @@ const MainDashboard = {
         // Обновление таблицы ключевых линий каждые 3 минуты
         setInterval(async () => {
             await this.createKeyLinesMetricsTable();
+        }, 180000); // 3 минуты = 180000 мс
+        
+        // Обновление таблицы показателей участков (BD и Availability) каждые 3 минуты
+        setInterval(async () => {
+            try {
+                console.log('Начинаем обновление таблицы показателей участков...');
+                const { bdData, availabilityData } = await DashboardCharts.loadOnlineCharts();
+                console.log('Получены данные BD:', bdData);
+                console.log('Получены данные Availability:', availabilityData);
+                if (bdData || availabilityData) {
+                    this.createMetricsTable(bdData, availabilityData);
+                    console.log('Таблица показателей участков обновлена успешно');
+                } else {
+                    console.log('Нет данных для обновления таблицы показателей участков');
+                }
+            } catch (error) {
+                console.error('Ошибка при обновлении таблицы показателей участков:', error);
+            }
         }, 180000); // 3 минуты = 180000 мс
         
         // Обновление таблицы нарядов каждые 2 минуты
