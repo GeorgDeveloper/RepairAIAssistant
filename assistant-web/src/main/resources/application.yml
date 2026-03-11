@@ -16,3 +16,8 @@ core:
 base-update:
   service:
     url: http://localhost:${server.base_update.port:8084}
+
+# Доступ к странице корректировки производственных дней только по паролю
+app:
+  production-days-correction:
+    password: ${PRODUCTION_DAYS_CORRECTION_PASSWORD:kadmin}

@@ -155,6 +155,11 @@ public class AssistantController {
         return "final";
     }
 
+    @GetMapping("/production-days-correction")
+    public String productionDaysCorrection() {
+        return "production_days_correction";
+    }
+
     @PostMapping("/api/chat")
     @ResponseBody
     public String processChat(@RequestBody String message) {

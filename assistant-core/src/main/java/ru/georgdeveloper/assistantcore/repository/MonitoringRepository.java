@@ -177,6 +177,35 @@ public class MonitoringRepository {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private ProductionDaysCorrectionRepository productionDaysCorrectionRepository;
+
+    /**
+     * Список диапазонов производственных дней [firstDay, lastDay] для учёта в расчётах за месяц.
+     * Пустой список — фильтр не применяется. Несколько диапазонов поддерживают простой в середине месяца.
+     */
+    private List<int[]> getProductionDayRanges(int year, int month) {
+        return productionDaysCorrectionRepository.findRangesByYearAndMonth(year, month);
+    }
+
+    /** Строит фрагмент SQL и массив параметров для фильтра по производственным дням (несколько диапазонов). */
+    private Object[] buildDayFilterAndParams(List<int[]> ranges) {
+        if (ranges == null || ranges.isEmpty()) {
+            return new Object[]{ "", new Object[0] };
+        }
+        String dayExpr = "DAY(STR_TO_DATE(production_day, '%d.%m.%Y'))";
+        StringBuilder sb = new StringBuilder(" AND (");
+        List<Object> params = new ArrayList<>();
+        for (int i = 0; i < ranges.size(); i++) {
+            if (i > 0) sb.append(" OR ");
+            sb.append("(").append(dayExpr).append(" >= ? AND ").append(dayExpr).append(" <= ?)");
+            params.add(ranges.get(i)[0]);
+            params.add(ranges.get(i)[1]);
+        }
+        sb.append(")");
+        return new Object[]{ sb.toString(), params.toArray() };
+    }
+
     public List<Map<String, Object>> getRegions() {
         return jdbcTemplate.queryForList("SELECT id, name_region FROM region");
     }
@@ -192,36 +221,63 @@ public class MonitoringRepository {
     }
 
     public List<Map<String, Object>> searchBreakDown(Integer year, Integer month) {
-        String sql;
+        int y, m;
         if (year != null && month != null) {
-            sql = "SELECT production_day, downtime_percentage "
-                    + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? "
-                    + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
-            return jdbcTemplate.queryForList(sql, year, month);
+            y = year;
+            m = month;
         } else {
-            sql = "SELECT production_day, downtime_percentage "
-                    + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) "
-                    + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
-            return jdbcTemplate.queryForList(sql);
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.add(java.util.Calendar.DAY_OF_MONTH, -1);
+            y = cal.get(java.util.Calendar.YEAR);
+            m = cal.get(java.util.Calendar.MONTH) + 1;
         }
+        List<int[]> ranges = getProductionDayRanges(y, m);
+        Object[] filterAndParams = buildDayFilterAndParams(ranges);
+        String dayFilter = (String) filterAndParams[0];
+        Object[] dayParams = (Object[]) filterAndParams[1];
+        String sql = "SELECT production_day, downtime_percentage "
+                + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? "
+                + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ?" + dayFilter + " ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
+        if (dayParams.length > 0) {
+            Object[] params = new Object[2 + dayParams.length];
+            params[0] = y;
+            params[1] = m;
+            System.arraycopy(dayParams, 0, params, 2, dayParams.length);
+            return jdbcTemplate.queryForList(sql, params);
+        }
+        return jdbcTemplate.queryForList(sql, y, m);
     }
     
     public List<Map<String, Object>> searchAvailability(Integer year, Integer month) {
-        String sql;
+        int y, m;
         if (year != null && month != null) {
-            sql = "SELECT production_day, availability "
-                    + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? "
-                    + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
-            return jdbcTemplate.queryForList(sql, year, month);
+            y = year;
+            m = month;
         } else {
-            sql = "SELECT production_day, availability "
-                    + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) "
-                    + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
-            return jdbcTemplate.queryForList(sql);
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.add(java.util.Calendar.DAY_OF_MONTH, -1);
+            y = cal.get(java.util.Calendar.YEAR);
+            m = cal.get(java.util.Calendar.MONTH) + 1;
         }
+        List<int[]> ranges = getProductionDayRanges(y, m);
+        Object[] filterAndParams = buildDayFilterAndParams(ranges);
+        String dayFilter = (String) filterAndParams[0];
+        Object[] dayParams = (Object[]) filterAndParams[1];
+        String sql = "SELECT production_day, availability "
+                + "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? "
+                + "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ?" + dayFilter + " ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
+        if (dayParams.length > 0) {
+            Object[] params = new Object[2 + dayParams.length];
+            params[0] = y;
+            params[1] = m;
+            System.arraycopy(dayParams, 0, params, 2, dayParams.length);
+            return jdbcTemplate.queryForList(sql, params);
+        }
+        return jdbcTemplate.queryForList(sql, y, m);
     }
     
-    // Данные для графика PM: план/факт/tag за указанный месяц
+    // Данные для графика PM: план/факт/tag за указанный месяц.
+    // Фильтр по производственным дням не применяется — останов завода на ППР не влияет.
     public List<Map<String, Object>> getPmPlanFactTagPerMonth(Integer year, Integer month) {
         String sql;
         if (year != null && month != null) {
@@ -230,13 +286,12 @@ public class MonitoringRepository {
                     "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? " +
                     "ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
             return jdbcTemplate.queryForList(sql, year, month);
-        } else {
-            sql = "SELECT production_day, quantity_pm_planned AS plan, quantity_pm_close AS fact, quantity_tag AS tag " +
-                    "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) " +
-                    "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) " +
-                    "ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
-            return jdbcTemplate.queryForList(sql);
         }
+        sql = "SELECT production_day, quantity_pm_planned AS plan, quantity_pm_close AS fact, quantity_tag AS tag " +
+                "FROM report_plant WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) " +
+                "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 DAY)) " +
+                "ORDER BY STR_TO_DATE(production_day, '%d.%m.%Y')";
+        return jdbcTemplate.queryForList(sql);
     }
 
     // Данные для графика PM: план/факт/tag за все периоды
@@ -669,6 +724,11 @@ public class MonitoringRepository {
             lastDayStr = dateFormat.format(lastDayCal.getTime());
         }
         
+        List<int[]> dayRanges = getProductionDayRanges(targetYear, targetMonth);
+        Object[] filterAndParams = buildDayFilterAndParams(dayRanges);
+        String monthDayFilter = (String) filterAndParams[0];
+        Object[] dayParams = (Object[]) filterAndParams[1];
+
         for (String[] t : tables) {
             String table = t[0];
             String prefix = t[1];
@@ -683,11 +743,19 @@ public class MonitoringRepository {
             }
             result.put(prefix + "_bd_today", bdToday != null ? bdToday : 0.0);
 
-            // BD за весь месяц
-            String sqlMonth = "SELECT AVG(downtime_percentage) as bd FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ?";
+            // BD за весь месяц (с учётом корректировки производственных дней; ППР не пересчитывается)
+            String sqlMonth = "SELECT AVG(downtime_percentage) as bd FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ?" + monthDayFilter;
             Double bdMonth = null;
             try {
-                bdMonth = jdbcTemplate.queryForObject(sqlMonth, Double.class, targetYear, targetMonth);
+                if (dayParams.length > 0) {
+                    Object[] params = new Object[2 + dayParams.length];
+                    params[0] = targetYear;
+                    params[1] = targetMonth;
+                    System.arraycopy(dayParams, 0, params, 2, dayParams.length);
+                    bdMonth = jdbcTemplate.queryForObject(sqlMonth, Double.class, params);
+                } else {
+                    bdMonth = jdbcTemplate.queryForObject(sqlMonth, Double.class, targetYear, targetMonth);
+                }
             } catch (Exception e) {
                 // Игнорируем ошибки, если данных нет
             }
@@ -703,11 +771,19 @@ public class MonitoringRepository {
             }
             result.put(prefix + "_availability_today", aToday != null ? aToday : 0.0);
 
-            // Availability за весь месяц
-            String sqlMonthA = "SELECT AVG(availability) FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ?";
+            // Availability за весь месяц (с учётом корректировки производственных дней; ППР не пересчитывается)
+            String sqlMonthA = "SELECT AVG(availability) FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ?" + monthDayFilter;
             Double aMonth = null;
             try {
-                aMonth = jdbcTemplate.queryForObject(sqlMonthA, Double.class, targetYear, targetMonth);
+                if (dayParams.length > 0) {
+                    Object[] params = new Object[2 + dayParams.length];
+                    params[0] = targetYear;
+                    params[1] = targetMonth;
+                    System.arraycopy(dayParams, 0, params, 2, dayParams.length);
+                    aMonth = jdbcTemplate.queryForObject(sqlMonthA, Double.class, params);
+                } else {
+                    aMonth = jdbcTemplate.queryForObject(sqlMonthA, Double.class, targetYear, targetMonth);
+                }
             } catch (Exception e) {
                 // Игнорируем ошибки, если данных нет
             }
@@ -727,6 +803,15 @@ public class MonitoringRepository {
             {"report_modules", "report_modules"},
             {"report_plant", "report_plant"}
         };
+        int yearMonth = parseYearMonthFromProductionDay(date);
+        int targetYear = yearMonth / 100;
+        int targetMonth = yearMonth % 100;
+        List<int[]> dayRanges = (targetYear > 0 && targetMonth >= 1 && targetMonth <= 12)
+                ? getProductionDayRanges(targetYear, targetMonth) : new ArrayList<>();
+        Object[] filterAndParams = buildDayFilterAndParams(dayRanges);
+        String monthDayFilter = (String) filterAndParams[0];
+        Object[] dayParams = (Object[]) filterAndParams[1];
+
         for (String[] t : tables) {
             String table = t[0];
             String prefix = t[1];
@@ -740,10 +825,18 @@ public class MonitoringRepository {
             }
             result.put(prefix + "_bd_today", bdToday != null ? bdToday : 0.0);
 
-            String sqlMonth = "SELECT AVG(downtime_percentage) as bd FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(STR_TO_DATE(?, '%d.%m.%Y')) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(STR_TO_DATE(?, '%d.%m.%Y'))";
+            String sqlMonth = "SELECT AVG(downtime_percentage) as bd FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(STR_TO_DATE(?, '%d.%m.%Y')) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(STR_TO_DATE(?, '%d.%m.%Y'))" + monthDayFilter;
             Double bdMonth = null;
             try {
-                bdMonth = jdbcTemplate.queryForObject(sqlMonth, Double.class, date, date);
+                if (dayParams.length > 0) {
+                    Object[] params = new Object[2 + dayParams.length];
+                    params[0] = date;
+                    params[1] = date;
+                    System.arraycopy(dayParams, 0, params, 2, dayParams.length);
+                    bdMonth = jdbcTemplate.queryForObject(sqlMonth, Double.class, params);
+                } else {
+                    bdMonth = jdbcTemplate.queryForObject(sqlMonth, Double.class, date, date);
+                }
             } catch (Exception e) {
                 // If no data found, bdMonth will remain null
             }
@@ -758,15 +851,36 @@ public class MonitoringRepository {
             }
             result.put(prefix + "_availability_today", aToday != null ? aToday : 0.0);
 
-            String sqlMonthA = "SELECT AVG(availability) FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(STR_TO_DATE(?, '%d.%m.%Y')) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(STR_TO_DATE(?, '%d.%m.%Y'))";
+            String sqlMonthA = "SELECT AVG(availability) FROM " + table + " WHERE YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(STR_TO_DATE(?, '%d.%m.%Y')) AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(STR_TO_DATE(?, '%d.%m.%Y'))" + monthDayFilter;
             Double aMonth = null;
             try {
-                aMonth = jdbcTemplate.queryForObject(sqlMonthA, Double.class, date, date);
+                if (dayParams.length > 0) {
+                    Object[] params = new Object[2 + dayParams.length];
+                    params[0] = date;
+                    params[1] = date;
+                    System.arraycopy(dayParams, 0, params, 2, dayParams.length);
+                    aMonth = jdbcTemplate.queryForObject(sqlMonthA, Double.class, params);
+                } else {
+                    aMonth = jdbcTemplate.queryForObject(sqlMonthA, Double.class, date, date);
+                }
             } catch (Exception e) {
                 // If no data found, aMonth will remain null
             }
             result.put(prefix + "_availability_month", aMonth != null ? aMonth : 0.0);
         }
         return result;
+    }
+
+    /** Парсит дату в формате dd.MM.yyyy и возвращает year*100+month (например 202603 для марта 2026). При ошибке — 0. */
+    private int parseYearMonthFromProductionDay(String productionDay) {
+        if (productionDay == null || productionDay.length() < 10) return 0;
+        try {
+            String[] parts = productionDay.split("\\.");
+            if (parts.length != 3) return 0;
+            int month = Integer.parseInt(parts[1]);
+            int year = Integer.parseInt(parts[2]);
+            if (month >= 1 && month <= 12 && year >= 1900 && year <= 2100) return year * 100 + month;
+        } catch (NumberFormatException ignored) { }
+        return 0;
     }
 }

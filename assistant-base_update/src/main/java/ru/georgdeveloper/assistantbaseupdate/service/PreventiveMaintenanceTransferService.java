@@ -235,7 +235,7 @@ public class PreventiveMaintenanceTransferService {
     /**
      * Ежедневный перенос данных в 6:01 утра (Europe/Moscow).
      * Запуск в 06:01, а не в 06:00, чтобы не пересекаться с синхронизацией ключевых линий и data-sync
-     * (cron "0 */3 * * * ?" — каждые 3 минуты в :00, :03, :06…), иначе возможны deadlock и откат транзакции.
+     * (cron "0 *&#42;/&#47;3 * * * ?" — каждые 3 минуты в :00, :03, :06…), иначе возможны deadlock и откат транзакции.
      */
     @Scheduled(cron = "0 1 6 * * *", zone = "Europe/Moscow")
     @Transactional
