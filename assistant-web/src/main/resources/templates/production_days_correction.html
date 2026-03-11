@@ -4,21 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Корректировка производственных дней</title>
+    <link rel="icon" type="image/png" href="/static/images/LogoPirelli3.png">
     <link rel="stylesheet" href="/static/styles/style.css">
     <link rel="stylesheet" href="/static/styles/dashboard.css">
+    <link rel="stylesheet" href="/static/styles/production-days-correction.css">
 </head>
 <body>
     <div th:replace="~{fragments/navigation :: nav}"></div>
 
-    <div class="total-content">
+    <div class="total-content production-days-page">
         <div class="header">
             <div class="user_logo">Привет, <a href="#">user</a></div>
         </div>
         <div class="main-content">
-            <h2>Корректировка производственных дней</h2>
-            <p class="help-text">Задайте для каждого месяца один или несколько диапазонов дней, по которым считаются показатели BD и доступность. Дни вне диапазонов (простой) в расчёт не попадают. ППР (плановые ремонты) из перерасчёта исключены. Пример: простой 1–9 и 15–20 марта — добавьте диапазоны 10–14 и 21–31.</p>
+            <div class="container">
+                <h2>Корректировка производственных дней</h2>
+                <p class="help-text">Задайте для каждого месяца один или несколько диапазонов дней, по которым считаются показатели BD и доступность. Дни вне диапазонов (простой) в расчёт не попадают. ППР (плановые ремонты) из перерасчёта исключены. Пример: простой 1–9 и 15–20 марта — добавьте диапазоны 10–14 и 21–31.</p>
 
-            <div class="correction-form">
+                <div class="correction-form">
                 <h3>Добавить или изменить</h3>
                 <div class="form-row">
                     <label>Год</label>
@@ -53,23 +56,28 @@
                 <div class="form-row">
                     <button type="button" id="btnSave" class="btn-apply">Сохранить</button>
                 </div>
-            </div>
+                </div>
 
-            <h3>Текущие корректировки</h3>
-            <table class="metrics-table">
-                <thead>
-                    <tr>
-                        <th>Год</th>
-                        <th>Месяц</th>
-                        <th>Диапазоны дней</th>
-                        <th>Комментарий</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="correctionTableBody">
-                </tbody>
-            </table>
-            <p id="noDataMsg" style="display:none;">Корректировок нет. Добавьте запись выше.</p>
+                <div class="table-block">
+                    <h3>Текущие корректировки</h3>
+                    <div class="table-container">
+                        <table class="metrics-table">
+                            <thead>
+                                <tr>
+                                    <th>Год</th>
+                                    <th>Месяц</th>
+                                    <th>Диапазоны дней</th>
+                                    <th>Комментарий</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="correctionTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <p id="noDataMsg" style="display:none;">Корректировок нет. Добавьте запись выше.</p>
+                </div>
+            </div>
         </div>
     </div>
 
