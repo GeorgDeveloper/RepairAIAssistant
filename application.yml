@@ -17,6 +17,8 @@ server:
     port: 8081
   telegram:
     port: 8082
+  yandex:
+    port: 8086
   analyzer:
     port: 8083
   base_update:
@@ -32,7 +34,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: dbaPass
+    password: DbaPass123!
     driver-class-name: com.mysql.cj.jdbc.Driver
   http:
     encoding:
@@ -72,6 +74,14 @@ telegram:
     token: ${TELEGRAM_BOT_TOKEN:8012443751:AAHz3jiRV_QuUtu4nraFzb-P4mr7Z9XVm3k}
     username: KvantAibot
     webhook-url: ${TELEGRAM_WEBHOOK_URL:}
+
+# Yandex Messenger Bot (Яндекс 360) — см. https://yandex.ru/dev/messenger/doc/ru/
+yandex:
+  bot:
+    token: ${YANDEX_BOT_TOKEN:}
+    polling:
+      enabled: true
+      interval-ms: 1500
 
 # Файловая система
 files:
@@ -139,7 +149,7 @@ data-sync:
   mysql:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: dbaPass
+    password: DbaPass123!
     driver: com.mysql.cj.jdbc.Driver
   areas:
     - name: Plant
