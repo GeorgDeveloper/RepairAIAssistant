@@ -12,6 +12,9 @@ import ru.georgdeveloper.assistantyandexbot.config.YandexBotProperties;
 /**
  * Альтернатива вебхуку: polling {@code getUpdates}
  * (<a href="https://yandex.ru/dev/messenger/doc/ru/api-requests/update-polling">документация</a>).
+ *
+ * <p>Алгоритм полностью следует рекомендации API:
+ * берем пачку, обрабатываем, затем двигаем {@code offset = max(update_id)+1}.
  */
 @Component
 @ConditionalOnProperty(prefix = "yandex.bot.polling", name = "enabled", havingValue = "true")
@@ -35,6 +38,7 @@ public class YandexPollingWorker {
 
 	@Scheduled(fixedDelayString = "${yandex.bot.polling.interval-ms:1500}")
 	public void poll() {
+		// Если токен не задан, worker тихо пропускает цикл.
 		if (properties.getToken() == null || properties.getToken().isBlank()) {
 			return;
 		}
@@ -46,8 +50,10 @@ public class YandexPollingWorker {
 			}
 			JsonNode updates = root.path("updates");
 			if (!updates.isArray() || updates.isEmpty()) {
+				// Нет событий — это штатная ситуация.
 				return;
 			}
+			// nextOffset продвигаем только после обработки пачки.
 			int maxId = nextOffset - 1;
 			for (JsonNode u : updates) {
 				yandexBotService.processUpdate(u);

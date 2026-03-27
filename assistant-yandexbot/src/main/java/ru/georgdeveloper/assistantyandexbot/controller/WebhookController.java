@@ -12,7 +12,12 @@ import ru.georgdeveloper.assistantyandexbot.service.YandexBotService;
 /**
  * Вебхук Bot API: тело запроса совпадает с ответом {@code getUpdates}
  * (<a href="https://yandex.ru/dev/messenger/doc/ru/api-requests/update-webhook">документация</a>).
- * Ответ должен быть быстрым (у платформы жёсткие таймауты), обработка — асинхронно.
+ * Ответ должен быть быстрым (у платформы жёсткие таймауты), поэтому:
+ * <ul>
+ *   <li>контроллер только принимает raw JSON;</li>
+ *   <li>делегирует парсинг/обработку в async-сервис;</li>
+ *   <li>сразу возвращает HTTP 200.</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/webhook")
@@ -31,6 +36,7 @@ public class WebhookController {
 		if (log.isDebugEnabled()) {
 			log.debug("Yandex webhook, length={}", body != null ? body.length() : 0);
 		}
+		// Важно вернуть 2xx максимально быстро, иначе платформа инициирует ретраи.
 		yandexBotService.handleWebhookPayloadAsync(body);
 		return ResponseEntity.ok().build();
 	}

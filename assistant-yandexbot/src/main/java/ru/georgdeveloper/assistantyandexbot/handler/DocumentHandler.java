@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 @Component
@@ -18,6 +17,7 @@ public class DocumentHandler {
 	private static final Logger logger = LoggerFactory.getLogger(DocumentHandler.class);
 
 	private static final String DOWNLOAD_DIR = "downloads";
+	/** Защитный лимит для вложений, чтобы не раздувать память/диск. */
 	private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 	private final YandexMessengerClient messengerClient;
@@ -28,6 +28,7 @@ public class DocumentHandler {
 
 	public String processDocument(String fileId, String fileName, long sizeBytes, String chatKey) {
 		try {
+			// Быстрая валидация до скачивания.
 			if (sizeBytes > MAX_FILE_SIZE) {
 				return "Файл слишком большой (макс. 20 МБ).";
 			}
@@ -45,8 +46,10 @@ public class DocumentHandler {
 			Files.write(localFilePath, data);
 
 			if (isPdfDocument(fileName)) {
+				// Сейчас PDF обрабатываем как подтверждение получения.
 				return processPdfDocument(localFilePath.toString(), fileName);
 			}
+			// Для текстовых форматов читаем содержимое и отправляем выдержку.
 			return processOtherDocument(localFilePath.toString(), fileName);
 		} catch (Exception e) {
 			logger.error("Ошибка обработки документа {}: {}", fileName, e.getMessage(), e);
@@ -79,6 +82,7 @@ public class DocumentHandler {
 		} catch (IOException e) {
 			return "Ошибка при чтении файла: " + e.getMessage();
 		} finally {
+			// Всегда удаляем временный файл, чтобы не копить мусор на диске.
 			try {
 				Files.deleteIfExists(Path.of(filePath));
 			} catch (IOException ignored) {

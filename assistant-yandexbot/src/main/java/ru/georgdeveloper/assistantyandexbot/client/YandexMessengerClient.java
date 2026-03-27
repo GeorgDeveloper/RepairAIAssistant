@@ -23,7 +23,15 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Клиент <a href="https://yandex.ru/dev/messenger/doc/ru/">Bot API Мессенджера Яндекс 360</a>.
+ * Тонкий HTTP-клиент для
+ * <a href="https://yandex.ru/dev/messenger/doc/ru/">Bot API Мессенджера Яндекс 360</a>.
+ *
+ * <p>Ответственность класса:
+ * <ul>
+ *   <li>собрать корректные заголовки OAuth;</li>
+ *   <li>вызвать endpoint API;</li>
+ *   <li>вернуть/логировать результат без бизнес-логики маршрутизации.</li>
+ * </ul>
  */
 @Component
 public class YandexMessengerClient {
@@ -41,6 +49,7 @@ public class YandexMessengerClient {
 	}
 
 	private HttpHeaders oauthHeaders() {
+		// Для JSON-методов (sendText, getUpdates, setWebhookUrl).
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "OAuth " + properties.getToken());
 		headers.setContentType(MediaType.APPLICATION_JSON);
@@ -48,6 +57,7 @@ public class YandexMessengerClient {
 	}
 
 	private HttpHeaders oauthHeadersNoContentType() {
+		// Для методов, где content-type может отличаться (например multipart).
 		HttpHeaders headers = new HttpHeaders();
 		headers.set(HttpHeaders.AUTHORIZATION, "OAuth " + properties.getToken());
 		return headers;
@@ -60,6 +70,7 @@ public class YandexMessengerClient {
 			return;
 		}
 
+		// Параметры соответствуют /messages/sendText.
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("text", text);
 		body.put("payload_id", UUID.randomUUID().toString());
@@ -67,8 +78,10 @@ public class YandexMessengerClient {
 			body.put("reply_message_id", replyMessageId);
 		}
 		if (target.needsLogin()) {
+			// private-чат: отправляем по login.
 			body.put("login", target.login());
 		} else if (target.chatId() != null && !target.chatId().isBlank()) {
+			// group/channel: отправляем по chat_id.
 			body.put("chat_id", target.chatId());
 		} else {
 			log.warn("Нет ни chat_id, ни login для отправки сообщения");
@@ -95,6 +108,7 @@ public class YandexMessengerClient {
 	}
 
 	public JsonNode getUpdates(int limit, int offset) throws Exception {
+		// Polling режим: получаем следующую пачку обновлений.
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("limit", limit);
 		body.put("offset", offset);
@@ -109,6 +123,7 @@ public class YandexMessengerClient {
 
 	public byte[] downloadFile(String fileId) {
 		try {
+			// Первый вариант из документации: GET + query param file_id.
 			String url = UriComponentsBuilder.fromUriString(API_ROOT + "messages/getFile/")
 					.queryParam("file_id", fileId)
 					.encode()
@@ -122,6 +137,7 @@ public class YandexMessengerClient {
 		}
 
 		try {
+			// Fallback: POST multipart (тоже поддерживается API).
 			MultiValueMap<String, Object> multipart = new LinkedMultiValueMap<>();
 			multipart.add("file_id", fileId);
 			HttpHeaders headers = oauthHeadersNoContentType();

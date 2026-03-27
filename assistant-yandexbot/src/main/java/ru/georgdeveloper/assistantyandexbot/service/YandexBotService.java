@@ -20,7 +20,18 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Логика бота (аналог {@code RepairAssistantBot} в assistant-telegram) поверх Bot API Яндекс Мессенджера.
+ * Центральный роутер логики бота.
+ *
+ * <p>Поток обработки:
+ * <ol>
+ *   <li>получаем {@code Update} из webhook/polling;</li>
+ *   <li>отбрасываем дубликаты (at-least-once доставка у webhook);</li>
+ *   <li>определяем тип события: callback, файл, команда, обычный текст;</li>
+ *   <li>делегируем в соответствующий handler и отправляем ответ через Bot API.</li>
+ * </ol>
+ *
+ * <p>Класс спроектирован как аналог {@code RepairAssistantBot} из модуля
+ * {@code assistant-telegram}, но адаптирован под формат обновлений Яндекс Мессенджера.
  */
 @Service
 public class YandexBotService {
@@ -35,8 +46,18 @@ public class YandexBotService {
 	private final DocumentHandler documentHandler;
 	private final ReportHandler reportHandler;
 
+	/**
+	 * Локальный anti-dup cache по {@code update_id}.
+	 * Нужен, потому что webhook доставляется по схеме "at least once".
+	 */
 	private final Map<Integer, Boolean> processedUpdates = new ConcurrentHashMap<>();
+	/**
+	 * Временное хранилище соответствий "вопрос-ответ" для кнопок фидбэка.
+	 */
 	private static final Map<String, FeedbackPair> feedbackMemory = new ConcurrentHashMap<>();
+	/**
+	 * Защита от дребезга callback-событий в одном чате (повторные клики/повторная доставка).
+	 */
 	private static final Map<String, Long> lastCallbackTime = new ConcurrentHashMap<>();
 	private static final long CALLBACK_COOLDOWN_MS = 2000L;
 
@@ -70,6 +91,7 @@ public class YandexBotService {
 	}
 
 	public void processUpdate(JsonNode update) {
+		// 1) Отбрасываем уже обработанные update_id.
 		int updateId = update.path("update_id").asInt(0);
 		if (updateId > 0) {
 			if (processedUpdates.size() > 100_000) {
@@ -85,6 +107,7 @@ public class YandexBotService {
 		String chatKey = chatKey(target);
 		Long messageId = update.hasNonNull("message_id") ? update.get("message_id").longValue() : null;
 
+		// 2) Callback имеет приоритет над текстом/файлом.
 		JsonNode callbackPayload = extractCallbackPayload(update);
 		if (callbackPayload != null && !callbackPayload.isMissingNode() && callbackPayload.size() > 0) {
 			long now = System.currentTimeMillis();
@@ -100,6 +123,7 @@ public class YandexBotService {
 
 		JsonNode fileNode = update.path("file");
 		if (!fileNode.isMissingNode() && fileNode.hasNonNull("id")) {
+			// 3) Вложение: скачиваем и выполняем упрощённую обработку.
 			String fid = fileNode.get("id").asText();
 			String name = fileNode.path("name").asText("file");
 			int size = fileNode.path("size").asInt(0);
@@ -109,6 +133,7 @@ public class YandexBotService {
 		}
 
 		if (update.hasNonNull("images") || update.hasNonNull("sticker")) {
+			// 4) Медиа пока не поддерживаем, явно сообщаем пользователю ограничение.
 			sendPlain(target, messageId, "Получены изображения или стикер. Обработка медиа в этом боте не реализована — опишите задачу текстом.");
 			return;
 		}
@@ -120,6 +145,7 @@ public class YandexBotService {
 		}
 
 		if (text.startsWith("{") && text.contains("\"action\"")) {
+			// Часть клиентов может присылать callback как обычный текст с JSON.
 			try {
 				JsonNode synthetic = objectMapper.readTree(text);
 				if (handleActionJson(target, messageId, synthetic, chatKey)) {
@@ -135,6 +161,7 @@ public class YandexBotService {
 		}
 
 		if (commandHandler.isCommand(text)) {
+			// 5) Командный режим (/start, /help).
 			String response = commandHandler.processCommand(text, chatKey);
 			if ("/start".equals(text)) {
 				sendTextWithKeyboard(target, messageId, response, commandHandler.getMainMenuKeyboard());
@@ -144,6 +171,7 @@ public class YandexBotService {
 			return;
 		}
 
+		// 6) Обычный вопрос -> assistant-core + кнопки фидбэка.
 		String response = messageHandler.processMessage(text, chatKey);
 		sendWithFeedback(target, messageId, text, response);
 	}
@@ -178,6 +206,7 @@ public class YandexBotService {
 	}
 
 	private boolean handleActionJson(YandexChatTarget target, Long messageId, JsonNode cb, String chatKey) {
+		// Основной формат callback_data: {"action":"...", "id":"..."}.
 		String action = cb.path("action").asText("");
 		String id = cb.path("id").asText("");
 
@@ -211,6 +240,7 @@ public class YandexBotService {
 		}
 
 		if (action.isEmpty() && cb.has("data")) {
+			// Совместимость с альтернативным форматом callback_data: {"data":"..."}.
 			action = cb.get("data").asText("");
 		}
 
@@ -222,6 +252,7 @@ public class YandexBotService {
 	}
 
 	private void sendWithFeedback(YandexChatTarget target, Long replyToId, String userQuery, String answer) {
+		// Идентификатор нужен, чтобы в callback передать ссылку на исходную пару вопрос/ответ.
 		String feedbackId = shortHash(userQuery + "::" + answer);
 		feedbackMemory.put(feedbackId, new FeedbackPair(userQuery, answer));
 
@@ -259,6 +290,7 @@ public class YandexBotService {
 		int start = 0;
 		boolean first = true;
 		while (start < text.length()) {
+			// Клавиатуру прикрепляем только к первому чанку, чтобы не дублировать кнопки.
 			int end = Math.min(start + MAX_TEXT_CHUNK, text.length());
 			String part = text.substring(start, end);
 			messengerClient.sendText(target, part, replyToId, first ? firstChunkKeyboard : null);
@@ -268,6 +300,7 @@ public class YandexBotService {
 	}
 
 	private static JsonNode extractCallbackPayload(JsonNode update) {
+		// Платформа может доставлять callback в разных полях, поддерживаем оба.
 		if (update.hasNonNull("callback_data")) {
 			JsonNode n = update.get("callback_data");
 			if (n.isTextual()) {
@@ -295,6 +328,7 @@ public class YandexBotService {
 	}
 
 	private static String chatKey(YandexChatTarget t) {
+		// Ключ используется для cooldown и локальной корреляции событий по диалогу.
 		if (t.needsLogin()) {
 			return "p:" + t.login();
 		}

@@ -31,6 +31,9 @@ public class MessageHandler {
 	}
 
 	public String processMessage(String message, String chatKey, ProgressCallback callback) {
+		// Две задачи в отдельном пуле:
+		// 1) периодический progress callback (например "печатает");
+		// 2) основной долгий запрос к assistant-core.
 		ExecutorService executor = Executors.newFixedThreadPool(2);
 		Future<?> progressTask = executor.submit(() -> {
 			try {
@@ -46,6 +49,7 @@ public class MessageHandler {
 		});
 		Future<String> mainTask = executor.submit(() -> coreServiceClient.analyzeRepairRequest(message));
 		try {
+			// Ограничиваем время, чтобы не зависать бесконечно на внешнем сервисе.
 			return mainTask.get(4, TimeUnit.MINUTES);
 		} catch (TimeoutException e) {
 			logger.warn("Таймаут: помощник не ответил за 4 минуты");
@@ -55,6 +59,7 @@ public class MessageHandler {
 			logger.error("Ошибка обработки: {}", e.getMessage(), e);
 			return "Помощник не справился с задачей. Попробуйте позже.";
 		} finally {
+			// Корректно останавливаем обе задачи независимо от исхода.
 			progressTask.cancel(true);
 			executor.shutdownNow();
 		}
