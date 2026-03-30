@@ -42,7 +42,8 @@ public class SchedulerConfig implements SchedulingConfigurer {
      * Создание и конфигурация ThreadPoolTaskScheduler для планируемых задач.
      * 
      * Параметры:
-     * - poolSize: 5 потоков для параллельного выполнения независимых задач
+     * - poolSize: 5 потоков — тяжёлые @Scheduled могут идти параллельно; расписания вынесены из одного слота
+ *   (перенос ремонтов 8:00, Tag 8:08, онлайн-синхр. 1/3 мин — не в :00), иначе рост риска блокировок и таймаутов
      * - threadNamePrefix: "pm-scheduler-" для удобной идентификации в логах
      * - awaitTerminationSeconds: 60 секунд ожидания завершения задач
      * - waitForTasksToCompleteOnShutdown: true - дождаться завершения перед выключением

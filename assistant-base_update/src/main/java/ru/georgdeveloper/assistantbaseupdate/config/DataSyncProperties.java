@@ -16,7 +16,8 @@ import java.util.List;
 public class DataSyncProperties {
 
     private boolean enabled = true;
-    private String schedule = "0 */3 * * * ?";
+    /** Минуты 1,4,7,… — вне совпадения с cron 8:00 для тяжёлых переносов из SQL Server */
+    private String schedule = "0 1/3 * * * ?";
     private SqlServer sqlServer = new SqlServer();
     private Mysql mysql = new Mysql();
     private List<Area> areas;

@@ -135,7 +135,8 @@ cache:
 # Синхронизация данных между базами
 data-sync:
   enabled: true
-  schedule: "0 */3 * * * ?"  # Каждые 3 минуты
+  # Каждые 3 минуты, минуты 1,4,7,... — не совпадает с ежедневным переносом ремонтов/тегов в 8:00 (раньше */3 давал :00 и конкурировал с transferDataDaily)
+  schedule: "0 1/3 * * * ?"
   sql_server:
     # Основной URL (пробуется первым)
     url: jdbc:sqlserver://pindapp466-39ru:1433;databaseName=CMMS;encrypt=false;trustServerCertificate=true

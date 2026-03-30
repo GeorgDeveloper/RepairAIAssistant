@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * Сервис для ежедневного переноса Tag данных из SQL Server в MySQL
- * Выполняется каждый день в 8:00 утра
+ * Выполняется каждый день в 8:08 (после переноса ремонтов)
  */
 @Service
 public class TagTransferService {
@@ -31,9 +31,9 @@ public class TagTransferService {
     private JdbcTemplate mysqlJdbcTemplate;
 
     /**
-     * Ежедневный перенос Tag данных в 8:00 утра
+     * Ежедневный перенос Tag — 8:08, после старта переноса ремонтов в 8:00 (минута вне слота онлайн-синхр. 1/3: 1,4,7,…)
      */
-    @Scheduled(cron = "0 0 8 * * *", zone = "Europe/Moscow")
+    @Scheduled(cron = "0 8 8 * * *", zone = "Europe/Moscow")
     @Transactional
     public void transferTagDataDaily() {
         try {

@@ -49,7 +49,7 @@ public class MainLinesSyncService {
     /**
      * Планируемая задача синхронизации данных ключевых линий каждые 3 минуты
      */
-    @Scheduled(cron = "${data-sync.schedule:0 */3 * * * ?}")
+    @Scheduled(cron = "${data-sync.schedule:0 1/3 * * * ?}")
     public void syncMainLinesData() {
         if (!dataSyncProperties.isEnabled()) {
             logger.debug("Синхронизация данных ключевых линий отключена в конфигурации");

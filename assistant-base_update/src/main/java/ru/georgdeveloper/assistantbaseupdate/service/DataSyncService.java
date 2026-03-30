@@ -41,7 +41,7 @@ public class DataSyncService {
     /**
      * Планируемая задача синхронизации данных каждые 3 минуты
      */
-    @Scheduled(cron = "${data-sync.schedule:0 */3 * * * ?}")
+    @Scheduled(cron = "${data-sync.schedule:0 1/3 * * * ?}")
     public void syncData() {
         if (!dataSyncProperties.isEnabled()) {
             logger.debug("Синхронизация данных отключена в конфигурации");
