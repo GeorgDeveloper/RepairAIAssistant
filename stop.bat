@@ -24,6 +24,9 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8081"') do taskkill /f /pid
 REM Остановка процесса на порту 8082 (телеграм бот)
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8082"') do taskkill /f /pid %%a >nul 2>&1
 
+REM Остановка процесса на порту 8086 (assistant-yandexbot)
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8086"') do taskkill /f /pid %%a >nul 2>&1
+
 REM Остановка процесса на порту 8084 (assistant-base_update)
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8084"') do taskkill /f /pid %%a >nul 2>&1
 

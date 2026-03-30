@@ -71,7 +71,7 @@ ai:
 telegram:
   bot:
     enabled: true
-    token: ${TELEGRAM_BOT_TOKEN:8012443751:AAHz3jiRV_QuUtu4nraFzb-P4mr7Z9XVm3k}
+    token: ${TELEGRAM_BOT_TOKEN:}
     username: KvantAibot
     webhook-url: ${TELEGRAM_WEBHOOK_URL:}
 

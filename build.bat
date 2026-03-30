@@ -49,6 +49,7 @@ echo [6/9] Copying application files...
 copy assistant-core\target\*.war target\jars\ >nul 2>&1
 copy assistant-web\target\*.war target\jars\ >nul 2>&1
 copy assistant-telegram\target\*.war target\jars\ >nul 2>&1
+copy assistant-yandexbot\target\*.war target\jars\ >nul 2>&1
 copy assistant-base_update\target\*.war target\jars\ >nul 2>&1
 copy assistant-ai\target\*.war target\jars\ >nul 2>&1
 echo [OK] Application files copied
@@ -58,6 +59,7 @@ echo [7/9] Copying configuration files...
 copy assistant-core\src\main\resources\application.yml target\config\core-application.yml >nul 2>&1
 copy assistant-web\src\main\resources\application.yml target\config\web-application.yml >nul 2>&1
 copy assistant-telegram\src\main\resources\application.yml target\config\telegram-application.yml >nul 2>&1
+copy assistant-yandexbot\src\main\resources\application.yml target\config\yandex-application.yml >nul 2>&1
 copy assistant-base_update\src\main\resources\application.yml target\config\base-update-application.yml >nul 2>&1
 copy assistant-ai\src\main\resources\application.yml target\config\ai-application.yml >nul 2>&1
 echo [OK] Configuration files copied
@@ -79,6 +81,8 @@ echo start "Web" java -jar jars\assistant-web-0.0.1-SNAPSHOT.war >> target\start
 echo timeout /t 5 /nobreak ^>nul >> target\start.bat
 echo start "Telegram" java -jar jars\assistant-telegram-0.0.1-SNAPSHOT.war >> target\start.bat
 echo timeout /t 5 /nobreak ^>nul >> target\start.bat
+echo start "Yandex" java -jar jars\assistant-yandexbot-0.0.1-SNAPSHOT.war >> target\start.bat
+echo timeout /t 5 /nobreak ^>nul >> target\start.bat
 echo start "AI" java -jar jars\assistant-ai-0.0.1-SNAPSHOT.war >> target\start.bat
 echo timeout /t 5 /nobreak ^>nul >> target\start.bat
 echo start "Base Update" java -jar jars\assistant-base-update-0.0.1-SNAPSHOT.war >> target\start.bat
@@ -90,6 +94,7 @@ echo echo Stopping services... >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Core*" ^>nul 2^>^&1 >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Web*" ^>nul 2^>^&1 >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Telegram*" ^>nul 2^>^&1 >> target\stop.bat
+echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Yandex*" ^>nul 2^>^&1 >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq AI*" ^>nul 2^>^&1 >> target\stop.bat
 echo taskkill /f /im java.exe /fi "WINDOWTITLE eq Base Update*" ^>nul 2^>^&1 >> target\stop.bat
 echo echo Services stopped. >> target\stop.bat
