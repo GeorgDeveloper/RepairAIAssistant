@@ -279,6 +279,34 @@
 .pm-holder .table-container {
     height: 100% !important;
     max-height: none !important;
+    position: relative;
+}
+
+.pm-chart-toolbar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    display: flex;
+    gap: 5px;
+}
+
+.pm-chart-mode-btn {
+    background: #e74c3c;
+    color: #fff;
+    border: 2px solid transparent;
+    padding: 8px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.pm-chart-mode-btn:hover {
+    filter: brightness(1.05);
+}
+
+.pm-chart-mode-btn.active {
+    border: 3px solid #111;
 }
 /* Styles for inline styles that were removed from HTML */
 #resizable_breakDownOnline.chart-container,

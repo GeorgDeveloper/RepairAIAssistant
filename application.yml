@@ -34,7 +34,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: DbaPass123!
+    password: dbaPass
     driver-class-name: com.mysql.cj.jdbc.Driver
   http:
     encoding:
@@ -71,14 +71,14 @@ ai:
 telegram:
   bot:
     enabled: true
-    token: ${TELEGRAM_BOT_TOKEN:}
+    token: ${TELEGRAM_BOT_TOKEN:8012443751:AAHz3jiRV_QuUtu4nraFzb-P4mr7Z9XVm3k}
     username: KvantAibot
     webhook-url: ${TELEGRAM_WEBHOOK_URL:}
 
 # Yandex Messenger Bot (Яндекс 360) — см. https://yandex.ru/dev/messenger/doc/ru/
 yandex:
   bot:
-    token: ${YANDEX_BOT_TOKEN:}
+    token: ${YANDEX_BOT_TOKEN:y0__xCJkNziCBiWkRMgqYXe9RZzyQ_qXG_AuRSWAQihRtZDln7vQQ}
     polling:
       enabled: true
       interval-ms: 1500
@@ -149,7 +149,7 @@ data-sync:
   mysql:
     url: jdbc:mysql://localhost:3306/monitoring_bd?useUnicode=true&characterEncoding=UTF-8
     username: dba
-    password: DbaPass123!
+    password: dbaPass
     driver: com.mysql.cj.jdbc.Driver
   areas:
     - name: Plant

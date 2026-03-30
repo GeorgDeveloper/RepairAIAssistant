@@ -100,6 +100,15 @@ function closeFileModal() {
     document.getElementById('filePreviewModal').style.display = 'none';
 }
 
+/** Тип диагностики в строке от API (разные варианты имён полей в JSON). */
+function rowDiagnosticsType(row) {
+    if (!row) return '';
+    var v = row.diagnostics_type;
+    if (v == null || v === '') v = row.diagnosticsType;
+    if (v == null || v === '') v = row.DIAGNOSTICS_TYPE;
+    return v == null ? '' : String(v);
+}
+
 function getFileUrl(path) {
     if (!path) return '';
     var normalizedPath = path.startsWith('/') ? path : '/' + path;
@@ -1274,9 +1283,10 @@ $(document).ready(function () {
 
     let allData = []; // Хранилище всех данных
 
-    // Заполнение фильтров после загрузки данных
-    table.on('xhr', function(){
-        allData = table.ajax.json() || [];
+    // Заполнение фильтров после загрузки данных (нужен namespace .dt и сырой json — не полагаться на ajax.json())
+    // json — ответ сервера до dataSrc; table.ajax.json() после функции dataSrc может быть не массивом исходных строк
+    $('#diagnosticsTable').on('xhr.dt', function (_e, _settings, json) {
+        allData = Array.isArray(json) ? json : [];
         populateFilters();
         // Устанавливаем текущий год по умолчанию
         $('#yearSelect').val(new Date().getFullYear());
@@ -1284,12 +1294,14 @@ $(document).ready(function () {
 
     function populateFilters() {
         const data = allData;
+        const diagnosticsTypes = Array.from(new Set(data.map(function (r) { return rowDiagnosticsType(r); }).filter(function (v) { return v.trim() !== ''; }))).sort(function (a, b) { return String(a).localeCompare(String(b), 'ru'); });
         const equipment = Array.from(new Set(data.map(r => r.equipment).filter(Boolean))).sort();
         const areas = Array.from(new Set(data.map(r => r.area).filter(Boolean))).sort();
         const years = Array.from(new Set(data.map(r => { 
             const d = new Date(r.detection_date || r.created_at); 
             return isNaN(new Date(d).getTime())? null : new Date(d).getFullYear(); 
         }).filter(Boolean))).sort((a,b)=>a-b);
+        $('#diagnosticsTypeSelect').html('<option value="all">Все</option>' + diagnosticsTypes.map(t => `<option value="${t}">${t}</option>`).join(''));
         $('#equipmentSelect').html('<option value="all">Все</option>' + equipment.map(e=>`<option value="${e}">${e}</option>`).join(''));
         $('#areaSelect').html('<option value="all">Все</option>' + areas.map(a=>`<option value="${a}">${a}</option>`).join(''));
         $('#yearSelect').html('<option value="all">Все</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join(''));
@@ -1304,6 +1316,7 @@ $(document).ready(function () {
         const year = $('#yearSelect').val();
         const month = $('#monthSelect').val();
         const week = $('#weekSelect').val();
+        const diagnosticsType = $('#diagnosticsTypeSelect').val();
         const equipment = $('#equipmentSelect').val();
         const area = $('#areaSelect').val();
 
@@ -1328,6 +1341,10 @@ $(document).ready(function () {
                 const dt = new Date(row.detection_date || row.created_at);
                 return !isNaN(dt.getTime()) && getWeekNumber(dt) === Number(week);
             });
+        }
+
+        if (diagnosticsType !== 'all') {
+            filteredData = filteredData.filter(function (row) { return rowDiagnosticsType(row) === diagnosticsType; });
         }
 
         if (equipment !== 'all') {

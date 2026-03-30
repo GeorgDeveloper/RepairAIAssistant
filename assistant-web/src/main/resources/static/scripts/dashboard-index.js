@@ -2,6 +2,12 @@
 const IndexDashboard = {
     // Управление месяцем
     currentDate: null,
+    /** Последние данные PM для перерисовки без повторного запроса */
+    pmChartData: null,
+    /** 'line' | 'column' */
+    pmDisplayMode: 'line',
+    /** Chart.js instance for PM column mode */
+    pmChartJs: null,
     
     initMonthNavigation() {
         // Проверяем, что элементы существуют
@@ -66,6 +72,33 @@ const IndexDashboard = {
         nextBtn.disabled = isCurrentMonth;
         nextBtn.style.opacity = isCurrentMonth ? '0.5' : '1';
         nextBtn.style.cursor = isCurrentMonth ? 'not-allowed' : 'pointer';
+    },
+    
+    initPmChartModeButtons() {
+        const lineBtn = document.getElementById('pmChartBtnLine');
+        const colBtn = document.getElementById('pmChartBtnColumn');
+        if (!lineBtn || !colBtn) return;
+        
+        lineBtn.addEventListener('click', () => {
+            if (IndexDashboard.pmDisplayMode === 'line') return;
+            IndexDashboard.pmDisplayMode = 'line';
+            IndexDashboard.updatePmChartModeButtons();
+            IndexDashboard.Charts.createPmLineChart('#resizablePm', '#pmChart', IndexDashboard.pmChartData, 'line');
+        });
+        
+        colBtn.addEventListener('click', () => {
+            if (IndexDashboard.pmDisplayMode === 'column') return;
+            IndexDashboard.pmDisplayMode = 'column';
+            IndexDashboard.updatePmChartModeButtons();
+            IndexDashboard.Charts.createPmLineChart('#resizablePm', '#pmChart', IndexDashboard.pmChartData, 'column');
+        });
+    },
+    
+    updatePmChartModeButtons() {
+        const lineBtn = document.getElementById('pmChartBtnLine');
+        const colBtn = document.getElementById('pmChartBtnColumn');
+        if (lineBtn) lineBtn.classList.toggle('active', IndexDashboard.pmDisplayMode === 'line');
+        if (colBtn) colBtn.classList.toggle('active', IndexDashboard.pmDisplayMode === 'column');
     },
     
     // Проверяет, является ли выбранный месяц текущим (предыдущим месяцем)
@@ -280,7 +313,8 @@ const IndexDashboard = {
             }, 200);
         },
         
-        createPmLineChart(containerSelector, chartSelector, data) {
+        createPmLineChart(containerSelector, chartSelector, data, displayMode) {
+            const mode = displayMode || IndexDashboard.pmDisplayMode || 'line';
             // Уничтожаем старый график и resizable, если они существуют
             try {
                 const existingChart = $(chartSelector).CanvasJSChart();
@@ -301,6 +335,16 @@ const IndexDashboard = {
             
             // Проверяем, является ли текущий месяц выбранным
             const isCurrentMonth = IndexDashboard.isCurrentMonth();
+
+            // Если переключились между режимами — уничтожаем предыдущий Chart.js (если был)
+            try {
+                if (IndexDashboard.pmChartJs) {
+                    IndexDashboard.pmChartJs.destroy();
+                    IndexDashboard.pmChartJs = null;
+                }
+            } catch (e) {
+                // ignore
+            }
             
             let parse;
             
@@ -358,7 +402,154 @@ const IndexDashboard = {
             const totalFact = factPoints.reduce((s, x) => s + (x.y || 0), 0);
             const completion = totalPlan > 0 ? Math.round((totalFact / totalPlan) * 100) : 0;
             
-            const options = {
+            const axisXCommon = {
+                labelAngle: -45,
+                margin: 45,
+                labelFontSize: isCurrentMonth ? 10 : 9,
+                interval: isCurrentMonth ? 2 : 1
+            };
+            
+            // Столбики на главной рендерим через Chart.js.
+            // CanvasJS плохо/непредсказуемо смешивает "column" и "stackedColumn" в одном графике.
+            if (mode === 'column') {
+                if (typeof Chart === 'undefined') {
+                    console.error('Chart.js не загружен на странице index.html');
+                    return;
+                }
+
+                const labels = planPoints.map(p => p.label);
+                const planValues = planPoints.map(p => Number(p.y) || 0);
+                const factValues = factPoints.map(p => Number(p.y) || 0);
+                const tagValues = tagPoints.map(p => Number(p.y) || 0);
+
+                // максимальное значение для оси Y (Fact+Tag, т.к. они в стеке)
+                let yMax = 0;
+                for (let i = 0; i < labels.length; i++) {
+                    const p = planValues[i] || 0;
+                    const ft = (factValues[i] || 0) + (tagValues[i] || 0);
+                    yMax = Math.max(yMax, p, ft);
+                }
+                const yStep = 2;
+                const yAxisMax = Math.max(yStep, Math.ceil(yMax / yStep) * yStep);
+
+                const chartElement = document.querySelector(chartSelector);
+                if (chartElement) {
+                    chartElement.innerHTML = '<canvas id="pmChartCanvas" style="width:100%;height:100%;display:block"></canvas>';
+                }
+
+                const canvas = document.getElementById('pmChartCanvas');
+                if (!canvas) return;
+
+                const initChartJs = () => {
+                    // Принудительно подставляем размер canvas под высоту контейнера,
+                    // иначе иногда Chart.js рисует в слишком маленькой области.
+                    const containerEl = document.querySelector(containerSelector);
+                    const w = containerEl ? containerEl.clientWidth : canvas.parentElement?.clientWidth;
+                    const h = containerEl ? containerEl.clientHeight : canvas.parentElement?.clientHeight;
+                    const ww = Math.max(1, w || 800);
+                    const hh = Math.max(1, h || 300);
+                    canvas.width = Math.floor(ww);
+                    canvas.height = Math.floor(hh);
+
+                    const ctx = canvas.getContext('2d');
+                    IndexDashboard.pmChartJs = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [
+                                {
+                                    label: 'Plan',
+                                    data: planValues,
+                                    backgroundColor: '#e31a1c',
+                                    borderWidth: 0,
+                                    stack: 'planStack'
+                                },
+                                {
+                                    label: 'Fact',
+                                    data: factValues,
+                                    backgroundColor: '#33a02c',
+                                    borderWidth: 0,
+                                    stack: 'factTagStack'
+                                },
+                                {
+                                    label: 'Tag',
+                                    data: tagValues,
+                                    backgroundColor: '#1f78b4',
+                                    borderWidth: 0,
+                                    stack: 'factTagStack'
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: false,
+                            maintainAspectRatio: false,
+                            animation: false,
+                            layout: {
+                                padding: { top: 0, left: 0, right: 0, bottom: 0 }
+                            },
+                            plugins: {
+                                legend: { display: true, position: 'top' },
+                                title: {
+                                    display: true,
+                                    text: `PM: План / Факт / Tag (Выполнение: ${completion}%)`
+                                }
+                            },
+                            scales: {
+                                x: {
+                                stacked: true,
+                                    ticks: {
+                                        maxRotation: 45,
+                                        minRotation: 45,
+                                        autoSkip: false
+                                    },
+                                    grid: { display: false }
+                                },
+                                y: {
+                                stacked: true,
+                                    beginAtZero: true,
+                                    max: yAxisMax,
+                                    ticks: {
+                                        stepSize: yStep,
+                                        display: true,
+                                        font: { size: 11 },
+                                        color: '#666'
+                                    },
+                                    grid: { color: '#e6e6e6' }
+                                }
+                            }
+                        }
+                    });
+                };
+
+                // Даем браузеру 1-2 кадра на расчет размеров.
+                requestAnimationFrame(() => requestAnimationFrame(initChartJs));
+
+                // Настраиваем resizable под Chart.js
+                setTimeout(() => {
+                    try {
+                        $(containerSelector).resizable({
+                            create() {
+                                try {
+                                    IndexDashboard.pmChartJs?.resize();
+                                    IndexDashboard.pmChartJs?.update();
+                                } catch (e) {}
+                            },
+                            resize() {
+                                try {
+                                    IndexDashboard.pmChartJs?.resize();
+                                    IndexDashboard.pmChartJs?.update();
+                                } catch (e) {}
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Ошибка при настройке resizable для PM (Chart.js):', e);
+                    }
+                }, 200);
+
+                return;
+            }
+
+            let options = {
                 animationEnabled: true,
                 backgroundColor: "#ffffff",
                 title: { text: "PM: План / Факт / Tag", fontSize: 14 },
@@ -368,7 +559,7 @@ const IndexDashboard = {
                     horizontalAlign: "right",
                     dockInsidePlotArea: true
                 }],
-                axisX: { labelAngle: -45, margin: 45, labelFontSize: isCurrentMonth ? 10 : 9, interval: isCurrentMonth ? 2 : 1 },
+                axisX: axisXCommon,
                 axisY: { includeZero: true, margin: 10, labelFontSize: 10, interval: 2 },
                 legend: { dockInsidePlotArea: true, verticalAlign: "top", horizontalAlign: "left" },
                 data: [
@@ -570,6 +761,8 @@ const IndexDashboard = {
             console.log('Availability data points:', availabilityPoints.length);
             console.log('PM data:', pmData?.length || 0);
             
+            this.pmChartData = pmData;
+            
             // Обновляем заголовки таблиц
             this.updateTableHeaders(isCurrentMonth);
             
@@ -584,7 +777,8 @@ const IndexDashboard = {
             }, 100);
             
             setTimeout(() => {
-                this.Charts.createPmLineChart('#resizablePm', '#pmChart', pmData);
+                this.Charts.createPmLineChart('#resizablePm', '#pmChart', pmData, this.pmDisplayMode);
+                this.updatePmChartModeButtons();
             }, 150);
             
             this.Tables.createMetrics(currentMetrics);
@@ -616,16 +810,31 @@ const IndexDashboard = {
 // Инициализация при загрузке страницы
 window.onload = async function() {
     IndexDashboard.initMonthNavigation();
+    IndexDashboard.initPmChartModeButtons();
     await IndexDashboard.initializeDashboard();
     
     // Настройка автоматического перерендера графиков при изменении размеров
     const rerender = () => {
-        ['#breakDown', '#availability', '#pmChart'].forEach(sel => {
-            try { 
-                const chart = $(sel).CanvasJSChart(); 
-                chart?.render(); 
+        ['#breakDown', '#availability'].forEach(sel => {
+            try {
+                const chart = $(sel).CanvasJSChart();
+                chart?.render();
             } catch (e) {}
         });
+
+        // PM график может быть как CanvasJS (линия), так и Chart.js (столбики)
+        try {
+            if (IndexDashboard.pmChartJs) {
+                IndexDashboard.pmChartJs.resize();
+                IndexDashboard.pmChartJs.update();
+                return;
+            }
+        } catch (e) {}
+
+        try {
+            const chart = $('#pmChart').CanvasJSChart();
+            chart?.render();
+        } catch (e) {}
     };
     
     const grid = document.querySelector('.dashboard-grid');
