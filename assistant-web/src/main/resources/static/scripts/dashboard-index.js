@@ -432,24 +432,31 @@ const IndexDashboard = {
                 const yStep = 2;
                 const yAxisMax = Math.max(yStep, Math.ceil(yMax / yStep) * yStep);
 
+                // #resizablePm в сетке часто имеет огромный clientHeight (1fr); без верхней границы раздуваем страницу.
+                const PM_CHART_JS_MAX_H = 440;
+                const PM_CHART_JS_MIN_H = 280;
+                const clampPmChartJsHeight = containerEl => {
+                    const raw = containerEl?.clientHeight || 0;
+                    const base = raw > 0 ? raw : 360;
+                    return Math.min(PM_CHART_JS_MAX_H, Math.max(PM_CHART_JS_MIN_H, base));
+                };
+
                 const chartElement = document.querySelector(chartSelector);
                 if (chartElement) {
-                    chartElement.innerHTML = '<canvas id="pmChartCanvas" style="width:100%;height:100%;display:block"></canvas>';
+                    chartElement.innerHTML = '<div id="pmChartJsWrapper" style="position:relative;width:100%;height:100%;"><canvas id="pmChartCanvas" style="display:block;width:100%;height:100%;"></canvas></div>';
                 }
 
                 const canvas = document.getElementById('pmChartCanvas');
                 if (!canvas) return;
 
                 const initChartJs = () => {
-                    // Принудительно подставляем размер canvas под высоту контейнера,
-                    // иначе иногда Chart.js рисует в слишком маленькой области.
                     const containerEl = document.querySelector(containerSelector);
-                    const w = containerEl ? containerEl.clientWidth : canvas.parentElement?.clientWidth;
-                    const h = containerEl ? containerEl.clientHeight : canvas.parentElement?.clientHeight;
-                    const ww = Math.max(1, w || 800);
-                    const hh = Math.max(1, h || 300);
-                    canvas.width = Math.floor(ww);
-                    canvas.height = Math.floor(hh);
+                    const wrapperEl = document.getElementById('pmChartJsWrapper');
+                    const renderHeight = clampPmChartJsHeight(containerEl);
+                    if (wrapperEl) {
+                        wrapperEl.style.height = `${renderHeight}px`;
+                    }
+                    canvas.style.height = `${renderHeight}px`;
 
                     const ctx = canvas.getContext('2d');
                     IndexDashboard.pmChartJs = new Chart(ctx, {
@@ -481,11 +488,11 @@ const IndexDashboard = {
                             ]
                         },
                         options: {
-                            responsive: false,
+                            responsive: true,
                             maintainAspectRatio: false,
                             animation: false,
                             layout: {
-                                padding: { top: 0, left: 0, right: 0, bottom: 0 }
+                                padding: { top: 0, left: 0, right: 0, bottom: 16 }
                             },
                             plugins: {
                                 legend: { display: true, position: 'top' },
@@ -496,16 +503,17 @@ const IndexDashboard = {
                             },
                             scales: {
                                 x: {
-                                stacked: true,
+                                    stacked: true,
                                     ticks: {
                                         maxRotation: 45,
                                         minRotation: 45,
-                                        autoSkip: false
+                                        autoSkip: true,
+                                        maxTicksLimit: isCurrentMonth ? 18 : 31
                                     },
                                     grid: { display: false }
                                 },
                                 y: {
-                                stacked: true,
+                                    stacked: true,
                                     beginAtZero: true,
                                     max: yAxisMax,
                                     ticks: {
@@ -530,12 +538,32 @@ const IndexDashboard = {
                         $(containerSelector).resizable({
                             create() {
                                 try {
+                                    const wrapperEl = document.getElementById('pmChartJsWrapper');
+                                    const containerEl = document.querySelector(containerSelector);
+                                    const renderHeight = clampPmChartJsHeight(containerEl);
+                                    if (wrapperEl) {
+                                        wrapperEl.style.height = `${renderHeight}px`;
+                                    }
+                                    const canvasEl = document.getElementById('pmChartCanvas');
+                                    if (canvasEl) {
+                                        canvasEl.style.height = `${renderHeight}px`;
+                                    }
                                     IndexDashboard.pmChartJs?.resize();
                                     IndexDashboard.pmChartJs?.update();
                                 } catch (e) {}
                             },
                             resize() {
                                 try {
+                                    const wrapperEl = document.getElementById('pmChartJsWrapper');
+                                    const containerEl = document.querySelector(containerSelector);
+                                    const renderHeight = clampPmChartJsHeight(containerEl);
+                                    if (wrapperEl) {
+                                        wrapperEl.style.height = `${renderHeight}px`;
+                                    }
+                                    const canvasEl = document.getElementById('pmChartCanvas');
+                                    if (canvasEl) {
+                                        canvasEl.style.height = `${renderHeight}px`;
+                                    }
                                     IndexDashboard.pmChartJs?.resize();
                                     IndexDashboard.pmChartJs?.update();
                                 } catch (e) {}

@@ -282,6 +282,16 @@
     position: relative;
 }
 
+/* PM (Chart.js, режим «Столбики»): не задавать высоту от всего 1fr-слота сетки — иначе страница «уезжает» вниз */
+#pmChart #pmChartJsWrapper {
+    max-height: 440px;
+}
+#pmChart canvas#pmChartCanvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 440px !important;
+}
+
 .pm-chart-toolbar {
     position: absolute;
     top: 8px;
