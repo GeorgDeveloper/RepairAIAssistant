@@ -4,10 +4,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import ru.georgdeveloper.assistantcore.repository.MonitoringRepository;
+import ru.georgdeveloper.assistantcore.repository.TopEquipmentRepository;
 
 @RestController
 @RequestMapping("/dashboard")
 public class DashboardController {
+
+    @Autowired
+    private TopEquipmentRepository topEquipmentRepository;
 
     @GetMapping("/top-breakdowns-week")
     @ResponseBody
@@ -35,6 +39,27 @@ public class DashboardController {
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) Integer month) {
         return monitoringRepository.getTopBreakdownsPerMonthKeyLines(year, month);
+    }
+
+    /**
+     * Детализация нарядов для ячейки времени простоя в таблицах «Топ поломок» / «Ключевые линии».
+     * @param period {@code week} — текущая неделя (как в топе за неделю), {@code month} — календарный месяц (year/month).
+     */
+    @GetMapping("/top-breakdowns-drilldown")
+    @ResponseBody
+    public List<Map<String, Object>> getTopBreakdownsDrilldown(
+            @RequestParam("machineName") String machineName,
+            @RequestParam("period") String period,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        if ("week".equalsIgnoreCase(period)) {
+            return monitoringRepository.getTopBreakdownsDrilldownForWeek(machineName);
+        }
+        if ("month".equalsIgnoreCase(period) && year != null && month != null) {
+            // Как детализация из графика: месяц по production_day, иначе по start_bd_t1 (TopEquipmentRepository)
+            return topEquipmentRepository.getBreakdownDetailsForMachineAndProductionMonth(year, month, machineName);
+        }
+        return Collections.emptyList();
     }
 
     @GetMapping("/top-breakdowns")

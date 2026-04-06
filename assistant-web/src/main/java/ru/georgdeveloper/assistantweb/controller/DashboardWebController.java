@@ -3,7 +3,9 @@ package ru.georgdeveloper.assistantweb.controller;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -133,6 +135,27 @@ public class DashboardWebController {
         }
         
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/top-breakdowns-drilldown")
+    public List<Map<String, Object>> topBreakdownsDrilldown(
+            @RequestParam String machineName,
+            @RequestParam String period,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        UriComponentsBuilder b = UriComponentsBuilder
+                .fromHttpUrl(coreServiceUrl + "/dashboard/top-breakdowns-drilldown")
+                .queryParam("machineName", machineName)
+                .queryParam("period", period);
+        if (year != null) {
+            b.queryParam("year", year);
+        }
+        if (month != null) {
+            b.queryParam("month", month);
+        }
+        URI uri = b.encode().build().toUri();
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(uri, List.class);
     }
 
     @SuppressWarnings("unchecked")

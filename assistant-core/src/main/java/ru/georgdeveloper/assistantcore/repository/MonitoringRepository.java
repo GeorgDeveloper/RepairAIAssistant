@@ -49,72 +49,102 @@ public class MonitoringRepository {
         return jdbcTemplate.queryForList(sql);
     }
 
-    // Топ-5 поломок за месяц (общее)
+    // Топ-5 поломок за месяц (общее) — месяц как в детализации графика: production_day, иначе start_bd_t1
     public List<Map<String, Object>> getTopBreakdownsPerMonth(Integer year, Integer month) {
-        String sql;
         if (year != null && month != null) {
-            sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
-                    "FROM equipment_maintenance_records " +
-                    "WHERE YEAR(start_bd_t1) = ? " +
-                    "AND MONTH(start_bd_t1) = ? " +
-                    "AND failure_type <> 'Другие' " +
-                    "GROUP BY machine_name " +
-                    "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
-                    "LIMIT 4";
-            return jdbcTemplate.queryForList(sql, year, month);
-        } else {
-            // По умолчанию используем предыдущий месяц
-            sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
-                    "FROM equipment_maintenance_records " +
-                    "WHERE YEAR(start_bd_t1) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
-                    "AND MONTH(start_bd_t1) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
-                    "AND failure_type <> 'Другие' " +
-                    "GROUP BY machine_name " +
-                    "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
-                    "LIMIT 4";
-            return jdbcTemplate.queryForList(sql);
+            StringBuilder sql = new StringBuilder();
+            List<Object> params = new ArrayList<>();
+            sql.append("SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds ")
+                    .append("FROM equipment_maintenance_records ")
+                    .append("WHERE failure_type <> 'Другие' ");
+            TopEquipmentRepository.appendMonthByProductionDayOrStartBd(sql, params, year, month);
+            sql.append("GROUP BY machine_name ")
+                    .append("ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC ")
+                    .append("LIMIT 4");
+            return jdbcTemplate.queryForList(sql.toString(), params.toArray());
         }
+        String sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
+                "FROM equipment_maintenance_records " +
+                "WHERE failure_type <> 'Другие' " +
+                "AND ( " +
+                "(production_day IS NOT NULL AND TRIM(production_day) <> '' " +
+                "AND STR_TO_DATE(production_day, '%d.%m.%Y') IS NOT NULL " +
+                "AND YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
+                "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))) " +
+                "OR ( " +
+                "(production_day IS NULL OR TRIM(production_day) = '' OR STR_TO_DATE(production_day, '%d.%m.%Y') IS NULL) " +
+                "AND YEAR(start_bd_t1) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
+                "AND MONTH(start_bd_t1) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
+                ") ) " +
+                "GROUP BY machine_name " +
+                "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
+                "LIMIT 4";
+        return jdbcTemplate.queryForList(sql);
     }
 
-    // Топ-5 поломок за месяц по ключевым линиям
+    /**
+     * Наряды (записи), из которых сложилось время простоя в топе за неделю для указанной машины.
+     * Условия те же, что в {@link #getTopBreakdownsPerWeek()} / {@link #getTopBreakdownsPerWeekKeyLines()}.
+     */
+    public List<Map<String, Object>> getTopBreakdownsDrilldownForWeek(String machineName) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT code, machine_name, mechanism_node, failure_type, status, ")
+                .append("machine_downtime, start_bd_t1, stop_bd_t4, cause, comments ")
+                .append("FROM equipment_maintenance_records ")
+                // TRIM: имя в БД может отличаться пробелами от строки в топе; фильтр keyLines не дублируем — имя уже из нужной таблицы
+                .append("WHERE TRIM(machine_name) = TRIM(?) ")
+                .append("AND failure_type <> 'Другие' ")
+                .append("AND week_number = WEEK(CURDATE(), 3) ")
+                .append("AND YEAR(start_bd_t1) = YEAR(CURDATE()) ");
+        sql.append("ORDER BY TIME_TO_SEC(machine_downtime) DESC");
+        return jdbcTemplate.queryForList(sql.toString(), machineName);
+    }
+
+    // Топ-5 поломок за месяц по ключевым линиям — месяц как в детализации графика
     public List<Map<String, Object>> getTopBreakdownsPerMonthKeyLines(Integer year, Integer month) {
-        String sql;
         if (year != null && month != null) {
-            sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
-                    "FROM equipment_maintenance_records " +
-                    "WHERE YEAR(start_bd_t1) = ? " +
-                    "AND MONTH(start_bd_t1) = ? " +
-                    "AND failure_type <> 'Другие' " +
-                    "AND machine_name IN (" +
-                    "'Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', " +
-                    "'Calender Complex Berstorf - 01', 'Bandina - 01', 'Duplex - 01', " +
-                    "'Calender Comerio Ercole - 01', 'VMI APEX - 01', 'VMI APEX - 02', " +
-                    "'Trafila Quadruplex - 01', 'Bartell Bead Machine - 01', " +
-                    "'TTM fisher belt cutting - 01', 'VMI TPCS 1600-1000'" +
-                    ") " +
-                    "GROUP BY machine_name " +
-                    "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
-                    "LIMIT 4";
-            return jdbcTemplate.queryForList(sql, year, month);
-        } else {
-            // По умолчанию используем предыдущий месяц
-            sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
-                    "FROM equipment_maintenance_records " +
-                    "WHERE YEAR(start_bd_t1) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
-                    "AND MONTH(start_bd_t1) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
-                    "AND failure_type <> 'Другие' " +
-                    "AND machine_name IN (" +
-                    "'Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', " +
-                    "'Calender Complex Berstorf - 01', 'Bandina - 01', 'Duplex - 01', " +
-                    "'Calender Comerio Ercole - 01', 'VMI APEX - 01', 'VMI APEX - 02', " +
-                    "'Trafila Quadruplex - 01', 'Bartell Bead Machine - 01', " +
-                    "'TTM fisher belt cutting - 01', 'VMI TPCS 1600-1000'" +
-                    ") " +
-                    "GROUP BY machine_name " +
-                    "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
-                    "LIMIT 4";
-            return jdbcTemplate.queryForList(sql);
+            StringBuilder sql = new StringBuilder();
+            List<Object> params = new ArrayList<>();
+            sql.append("SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds ")
+                    .append("FROM equipment_maintenance_records ")
+                    .append("WHERE failure_type <> 'Другие' ")
+                    .append("AND machine_name IN (")
+                    .append("'Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', ")
+                    .append("'Calender Complex Berstorf - 01', 'Bandina - 01', 'Duplex - 01', ")
+                    .append("'Calender Comerio Ercole - 01', 'VMI APEX - 01', 'VMI APEX - 02', ")
+                    .append("'Trafila Quadruplex - 01', 'Bartell Bead Machine - 01', ")
+                    .append("'TTM fisher belt cutting - 01', 'VMI TPCS 1600-1000'")
+                    .append(") ");
+            TopEquipmentRepository.appendMonthByProductionDayOrStartBd(sql, params, year, month);
+            sql.append("GROUP BY machine_name ")
+                    .append("ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC ")
+                    .append("LIMIT 4");
+            return jdbcTemplate.queryForList(sql.toString(), params.toArray());
         }
+        String sql = "SELECT machine_name, SUM(TIME_TO_SEC(machine_downtime)) AS machine_downtime_seconds " +
+                "FROM equipment_maintenance_records " +
+                "WHERE failure_type <> 'Другие' " +
+                "AND machine_name IN (" +
+                "'Mixer GK 270 T-C 2.1', 'Mixer GK 320 E 1.1', " +
+                "'Calender Complex Berstorf - 01', 'Bandina - 01', 'Duplex - 01', " +
+                "'Calender Comerio Ercole - 01', 'VMI APEX - 01', 'VMI APEX - 02', " +
+                "'Trafila Quadruplex - 01', 'Bartell Bead Machine - 01', " +
+                "'TTM fisher belt cutting - 01', 'VMI TPCS 1600-1000'" +
+                ") " +
+                "AND ( " +
+                "(production_day IS NOT NULL AND TRIM(production_day) <> '' " +
+                "AND STR_TO_DATE(production_day, '%d.%m.%Y') IS NOT NULL " +
+                "AND YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
+                "AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))) " +
+                "OR ( " +
+                "(production_day IS NULL OR TRIM(production_day) = '' OR STR_TO_DATE(production_day, '%d.%m.%Y') IS NULL) " +
+                "AND YEAR(start_bd_t1) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
+                "AND MONTH(start_bd_t1) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) " +
+                ") ) " +
+                "GROUP BY machine_name " +
+                "ORDER BY SUM(TIME_TO_SEC(machine_downtime)) DESC " +
+                "LIMIT 4";
+        return jdbcTemplate.queryForList(sql);
     }
     // Топ-5 поломок за сутки (последние 24 часа)
     public List<Map<String, Object>> getTopBreakdownsPerDay() {

@@ -258,6 +258,44 @@ public class TopEquipmentRepository {
         return jdbcTemplate.queryForList(sql.toString(), params.toArray());
     }
 
+    /**
+     * Наряды за календарный месяц в терминах производственного дня — как {@link #getBreakdownDetailsForDateAndArea}:
+     * если задан {@code production_day}, месяц берётся из него; иначе — из {@code start_bd_t1}.
+     * Исключаем только {@code failure_type = 'Другие'}, как в топе поломок за месяц.
+     */
+    public List<Map<String, Object>> getBreakdownDetailsForMachineAndProductionMonth(int year, int month, String machineName) {
+        StringBuilder sql = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        sql.append("SELECT code, machine_name, mechanism_node, failure_type, status, ")
+                .append("machine_downtime, start_bd_t1, stop_bd_t4, cause, comments ")
+                .append("FROM equipment_maintenance_records WHERE 1=1 ");
+        sql.append("AND TRIM(machine_name) = TRIM(?) ");
+        params.add(machineName);
+        appendMonthByProductionDayOrStartBd(sql, params, year, month);
+        sql.append("AND failure_type <> 'Другие' ");
+        sql.append("ORDER BY start_bd_t1 DESC");
+        return jdbcTemplate.queryForList(sql.toString(), params.toArray());
+    }
+
+    /**
+     * Фильтр «строка относится к календарному месяцу»: согласован с детализацией по дате из графиков.
+     */
+    static void appendMonthByProductionDayOrStartBd(StringBuilder sql, List<Object> params, int year, int month) {
+        sql.append("AND ( ");
+        sql.append("(production_day IS NOT NULL AND TRIM(production_day) <> '' ");
+        sql.append("AND STR_TO_DATE(production_day, '%d.%m.%Y') IS NOT NULL ");
+        sql.append("AND YEAR(STR_TO_DATE(production_day, '%d.%m.%Y')) = ? ");
+        sql.append("AND MONTH(STR_TO_DATE(production_day, '%d.%m.%Y')) = ?) ");
+        params.add(year);
+        params.add(month);
+        sql.append("OR ( ");
+        sql.append("(production_day IS NULL OR TRIM(production_day) = '' OR STR_TO_DATE(production_day, '%d.%m.%Y') IS NULL) ");
+        sql.append("AND YEAR(start_bd_t1) = ? AND MONTH(start_bd_t1) = ? ");
+        params.add(year);
+        params.add(month);
+        sql.append(") ) ");
+    }
+
     public List<Map<String, Object>> getWeeks() {
         String sql = "SELECT DISTINCT WEEK(start_bd_t1, 1) AS week_number " +
                 "FROM equipment_maintenance_records WHERE start_bd_t1 IS NOT NULL " +

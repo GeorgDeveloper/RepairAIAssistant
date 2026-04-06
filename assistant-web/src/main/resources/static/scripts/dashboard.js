@@ -188,7 +188,7 @@ const DashboardCharts = {
 
 // Common table functions used across dashboard pages
 const DashboardTables = {
-    createTopBreakdownsTable(data, containerId, isWeekly = false) {
+    createTopBreakdownsTable(data, containerId, isWeekly = false, drilldownOptions = null) {
         if (!data || !Array.isArray(data) || data.length === 0) {
             document.getElementById(containerId).innerHTML = '<p>Нет данных для отображения</p>';
             return;
@@ -217,7 +217,16 @@ const DashboardTables = {
                     return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
                 };
                 const downtime = (row.machine_downtime_seconds != null) ? formatSeconds(row.machine_downtime_seconds) : (row.machine_downtime || '');
-                tableHTML += `<td>${row.machine_name || ''}</td><td>${downtime}</td>`;
+                const machineEnc = encodeURIComponent(row.machine_name || '');
+                const canDrill = drilldownOptions && downtime;
+                const dd = drilldownOptions || {};
+                const yAttr = dd.year != null ? String(dd.year) : '';
+                const mAttr = dd.month != null ? String(dd.month) : '';
+                const pAttr = dd.period || 'week';
+                const downtimeCell = canDrill
+                    ? `<td class="top-breakdown-downtime-cell clickable-cell" data-machine="${machineEnc}" data-period="${pAttr}" data-year="${yAttr}" data-month="${mAttr}" title="Кликните для детализации нарядов">${downtime}</td>`
+                    : `<td>${downtime}</td>`;
+                tableHTML += `<td>${row.machine_name || ''}</td>${downtimeCell}`;
             } else {
                 tableHTML += `<td>${row.code || ''}</td><td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td><td>${row.cause || ''}</td>`;
             }

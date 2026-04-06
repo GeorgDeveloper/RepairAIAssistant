@@ -731,8 +731,8 @@ const IndexDashboard = {
             document.getElementById('metricsTable').innerHTML = tableHTML;
         },
         
-        createTopBreakdowns(data, containerId, isWeekly = false) {
-            DashboardTables.createTopBreakdownsTable(data, containerId, isWeekly);
+        createTopBreakdowns(data, containerId, isWeekly = false, drilldownOptions = null) {
+            DashboardTables.createTopBreakdownsTable(data, containerId, isWeekly, drilldownOptions);
         }
     },
 
@@ -812,8 +812,11 @@ const IndexDashboard = {
             this.Tables.createMetrics(currentMetrics);
             // Для недельных и месячных данных используется одинаковый формат (machine_name и machine_downtime_seconds)
             // Всегда используем формат с двумя колонками (machine_name и machine_downtime)
-            this.Tables.createTopBreakdowns(topBreakdowns, 'topBreakdownsWeekTable', true);
-            this.Tables.createTopBreakdowns(topBreakdownsKeyLines, 'topBreakdownsWeekKeyLinesTable', true);
+            const drilldownBase = isCurrentMonth
+                ? { period: 'week' }
+                : { period: 'month', year, month };
+            this.Tables.createTopBreakdowns(topBreakdowns, 'topBreakdownsWeekTable', true, { ...drilldownBase, keyLines: false });
+            this.Tables.createTopBreakdowns(topBreakdownsKeyLines, 'topBreakdownsWeekKeyLinesTable', true, { ...drilldownBase, keyLines: true });
             
         } catch (error) {
             console.error('Ошибка при инициализации дашборда:', error);
@@ -1017,33 +1020,20 @@ function mapAreaNameToCode(areaName) {
     return areaMapping[areaName] || areaName;
 }
 
-// Function to show breakdown details modal
-async function showBreakdownDetails(date, area, metric) {
-    try {
-        console.log('Fetching breakdown details for:', { date, area, metric });
-        
-        // Map area name to code
-        const areaCode = mapAreaNameToCode(area);
-        console.log('Mapped area:', area, '->', areaCode);
-        
-        // Set modal header info
-        document.getElementById('breakdownDate').textContent = date;
-        document.getElementById('breakdownArea').textContent = area;
-        
-        // Show loading state
-        document.getElementById('breakdownDetailsContainer').innerHTML = '<p>Загрузка данных...</p>';
-        document.getElementById('breakdownDetailsModal').style.display = 'flex';
-        
-        // Fetch breakdown details
-        const breakdownData = await DashboardAPI.fetchData(`/api/work-orders/breakdown-details?date=${date}&area=${areaCode}`);
-        
-        if (!breakdownData || breakdownData.length === 0) {
-            document.getElementById('breakdownDetailsContainer').innerHTML = '<p>Нет данных о нарядах для указанной даты и области</p>';
-            return;
-        }
-        
-        // Create breakdown details table
-        let tableHTML = `
+function formatTopBreakdownDrilldownPeriodLabel(period, year, month) {
+    if (period === 'week') return 'Текущая неделя';
+    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    if (year != null && month != null && month >= 1 && month <= 12) {
+        return `${monthNames[month - 1]} ${year}`;
+    }
+    return '';
+}
+
+/** HTML таблицы детализации нарядов (как в графиках). */
+function buildBreakdownDetailsTableHtml(breakdownData) {
+    if (!breakdownData || breakdownData.length === 0) return '';
+    let tableHTML = `
             <table class="breakdown-details-table">
                 <thead>
                     <tr>
@@ -1060,22 +1050,21 @@ async function showBreakdownDetails(date, area, metric) {
                     </tr>
                 </thead>
                 <tbody>`;
-        
-        breakdownData.forEach(record => {
-            const duration = record.machine_downtime || 'N/A';
-            const startTime = record.start_bd_t1 || 'N/A';
-            const endTime = record.stop_bd_t4 || 'N/A';
-            const comment = record.comments || 'N/A';
-            const cause = record.cause || 'N/A';
-            const failureType = record.failure_type || 'N/A';
-            
-            // Add color coding based on failure type
-            let rowClass = '';
-            if (failureType && failureType.toLowerCase().includes('электрик')) rowClass = 'electrical-downtime';
-            else if (failureType && failureType.toLowerCase().includes('электрон')) rowClass = 'electronic-downtime';
-            else if (failureType && failureType.toLowerCase().includes('механ')) rowClass = 'mechanical-downtime';
-            
-            tableHTML += `
+
+    breakdownData.forEach(record => {
+        const duration = record.machine_downtime || 'N/A';
+        const startTime = record.start_bd_t1 || 'N/A';
+        const endTime = record.stop_bd_t4 || 'N/A';
+        const comment = record.comments || 'N/A';
+        const cause = record.cause || 'N/A';
+        const failureType = record.failure_type || 'N/A';
+
+        let rowClass = '';
+        if (failureType && failureType.toLowerCase().includes('электрик')) rowClass = 'electrical-downtime';
+        else if (failureType && failureType.toLowerCase().includes('электрон')) rowClass = 'electronic-downtime';
+        else if (failureType && failureType.toLowerCase().includes('механ')) rowClass = 'mechanical-downtime';
+
+        tableHTML += `
                 <tr class="${rowClass}">
                     <td>${record.code || 'N/A'}</td>
                     <td>${record.machine_name || 'N/A'}</td>
@@ -1088,10 +1077,83 @@ async function showBreakdownDetails(date, area, metric) {
                     <td>${cause}</td>
                     <td class="comment-cell">${comment}</td>
                 </tr>`;
-        });
-        
-        tableHTML += '</tbody></table>';
-        document.getElementById('breakdownDetailsContainer').innerHTML = tableHTML;
+    });
+
+    tableHTML += '</tbody></table>';
+    return tableHTML;
+}
+
+/** Детализация по клику на суммарное время простоя в таблицах топ поломок / ключевых линий. */
+async function showTopBreakdownsDrilldown(machineName, period, year, month) {
+    try {
+        const l1 = document.getElementById('breakdownLabel1');
+        const l2 = document.getElementById('breakdownLabel2');
+        if (l1) l1.textContent = 'Период:';
+        if (l2) l2.textContent = 'Оборудование:';
+
+        let y = year;
+        let m = month;
+        if (period === 'month' && (!Number.isFinite(y) || !Number.isFinite(m)) && IndexDashboard.currentDate) {
+            y = IndexDashboard.currentDate.getFullYear();
+            m = IndexDashboard.currentDate.getMonth() + 1;
+        }
+
+        document.getElementById('breakdownDate').textContent = formatTopBreakdownDrilldownPeriodLabel(period, y, m);
+        document.getElementById('breakdownArea').textContent = machineName;
+
+        document.getElementById('breakdownDetailsContainer').innerHTML = '<p>Загрузка данных...</p>';
+        document.getElementById('breakdownDetailsModal').style.display = 'flex';
+
+        let url = `/dashboard/top-breakdowns-drilldown?machineName=${encodeURIComponent(machineName)}&period=${encodeURIComponent(period)}`;
+        if (period === 'month' && Number.isFinite(y) && Number.isFinite(m)) {
+            url += `&year=${y}&month=${m}`;
+        }
+
+        const breakdownData = await DashboardAPI.fetchData(url);
+
+        if (!breakdownData || breakdownData.length === 0) {
+            document.getElementById('breakdownDetailsContainer').innerHTML = '<p>Нет данных о нарядах для выбранного периода и оборудования</p>';
+            return;
+        }
+
+        document.getElementById('breakdownDetailsContainer').innerHTML = buildBreakdownDetailsTableHtml(breakdownData);
+    } catch (error) {
+        console.error('Ошибка при получении детализации топ поломок:', error);
+        document.getElementById('breakdownDetailsContainer').innerHTML = '<p>Ошибка при загрузке данных</p>';
+    }
+}
+
+// Function to show breakdown details modal
+async function showBreakdownDetails(date, area, metric) {
+    try {
+        console.log('Fetching breakdown details for:', { date, area, metric });
+
+        const l1 = document.getElementById('breakdownLabel1');
+        const l2 = document.getElementById('breakdownLabel2');
+        if (l1) l1.textContent = 'Дата:';
+        if (l2) l2.textContent = 'Область:';
+
+        // Map area name to code
+        const areaCode = mapAreaNameToCode(area);
+        console.log('Mapped area:', area, '->', areaCode);
+
+        // Set modal header info
+        document.getElementById('breakdownDate').textContent = date;
+        document.getElementById('breakdownArea').textContent = area;
+
+        // Show loading state
+        document.getElementById('breakdownDetailsContainer').innerHTML = '<p>Загрузка данных...</p>';
+        document.getElementById('breakdownDetailsModal').style.display = 'flex';
+
+        // Fetch breakdown details
+        const breakdownData = await DashboardAPI.fetchData(`/api/work-orders/breakdown-details?date=${date}&area=${areaCode}`);
+
+        if (!breakdownData || breakdownData.length === 0) {
+            document.getElementById('breakdownDetailsContainer').innerHTML = '<p>Нет данных о нарядах для указанной даты и области</p>';
+            return;
+        }
+
+        document.getElementById('breakdownDetailsContainer').innerHTML = buildBreakdownDetailsTableHtml(breakdownData);
         
     } catch (error) {
         console.error('Ошибка при получении детализации нарядов:', error);
@@ -1111,6 +1173,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const modal = this.closest('.modal');
             modal.style.display = 'none';
         });
+    });
+
+    document.addEventListener('click', function(e) {
+        const cell = e.target.closest('.top-breakdown-downtime-cell');
+        if (!cell) return;
+        const machine = decodeURIComponent(cell.getAttribute('data-machine') || '');
+        const period = cell.getAttribute('data-period');
+        const yearStr = cell.getAttribute('data-year');
+        const monthStr = cell.getAttribute('data-month');
+        if (!machine || !period) return;
+        const year = yearStr ? parseInt(yearStr, 10) : null;
+        const month = monthStr ? parseInt(monthStr, 10) : null;
+        showTopBreakdownsDrilldown(machine, period, year, month);
     });
     
     // Close modal when clicking outside of it
