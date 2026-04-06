@@ -324,6 +324,38 @@ public class MonitoringRepository {
         return jdbcTemplate.queryForList(sql);
     }
 
+    /**
+     * ППР, запланированные на производственный день (как счётчик Plan в {@link #getPmPlanFactTagFiltered}).
+     */
+    public List<Map<String, Object>> getPmPlannedForProductionDay(String productionDay) {
+        String sql = "SELECT * FROM pm_maintenance_records "
+                + "WHERE scheduled_proposed_date IS NOT NULL "
+                + "AND DATE_FORMAT(scheduled_proposed_date, '%d.%m.%Y') = ? "
+                + "ORDER BY area, machine_name, id";
+        return jdbcTemplate.queryForList(sql, productionDay);
+    }
+
+    /**
+     * ППР с фактом закрытия на производственный день (Fact в отчёте завода).
+     */
+    public List<Map<String, Object>> getPmCompletedForProductionDay(String productionDay) {
+        String sql = "SELECT * FROM pm_maintenance_records "
+                + "WHERE scheduled_date IS NOT NULL AND status IN ('Закрыто', 'Выполнено') "
+                + "AND DATE_FORMAT(scheduled_date, '%d.%m.%Y') = ? "
+                + "ORDER BY area, machine_name, id";
+        return jdbcTemplate.queryForList(sql, productionDay);
+    }
+
+    /**
+     * Tag-наряды за производственный день (как счётчик Tag в отчёте).
+     */
+    public List<Map<String, Object>> getTagMaintenanceForProductionDay(String productionDay) {
+        String sql = "SELECT * FROM tag_maintenance_records "
+                + "WHERE production_day IS NOT NULL AND TRIM(production_day) <> '' AND production_day = ? "
+                + "ORDER BY area, machine_name, id";
+        return jdbcTemplate.queryForList(sql, productionDay);
+    }
+
     // Данные для графика PM: план/факт/tag за все периоды
     // Использует логику из триггера update_plant_reports (без фильтров)
     public List<Map<String, Object>> getPmPlanFactTagAll() {

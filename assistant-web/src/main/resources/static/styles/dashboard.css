@@ -74,6 +74,20 @@
     overflow-wrap: break-word;
 }
 
+.pm-drilldown-section {
+    margin-top: 1rem;
+}
+
+.pm-drilldown-section h3 {
+    font-size: 14px;
+    margin: 0 0 8px 0;
+    color: #333;
+}
+
+#pmChartCanvas {
+    cursor: pointer;
+}
+
 .main-content {
     height: 100% !important;
     padding-top: 16px !important;

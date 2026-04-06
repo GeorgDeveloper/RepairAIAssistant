@@ -96,6 +96,18 @@
         </div>
     </div>
 
+    <!-- Детализация ППР (план / факт / tag) по клику на график -->
+    <div id="pmDrilldownModal" class="modal">
+        <div class="modal-content breakdown-details-modal">
+            <span class="close">&times;</span>
+            <h2 id="pmDrilldownTitle">ППР: детализация</h2>
+            <div class="breakdown-info">
+                <p><strong>Производственный день:</strong> <span id="pmDrilldownDate"></span></p>
+            </div>
+            <div id="pmDrilldownContainer"></div>
+        </div>
+    </div>
+
     <script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
     <script src="https://canvasjs.com/assets/script/jquery-ui.1.11.2.min.js"></script>
     <script src="/static/lib/jquery.canvasjs.min.js"></script>

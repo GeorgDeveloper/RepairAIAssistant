@@ -159,6 +159,21 @@ public class DashboardWebController {
     }
 
     @SuppressWarnings("unchecked")
+    @GetMapping("/pm-drilldown")
+    public List<Map<String, Object>> pmDrilldown(
+            @RequestParam String productionDay,
+            @RequestParam String kind) {
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(coreServiceUrl + "/dashboard/pm-drilldown")
+                .queryParam("productionDay", productionDay)
+                .queryParam("kind", kind)
+                .encode()
+                .build()
+                .toUri();
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(uri, List.class);
+    }
+
+    @SuppressWarnings("unchecked")
     @GetMapping("/top-breakdowns")
     public List<Map<String, Object>> topBreakdownsDay() {
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dashboard/top-breakdowns", List.class);

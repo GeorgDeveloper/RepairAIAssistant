@@ -491,8 +491,12 @@ const IndexDashboard = {
                             responsive: true,
                             maintainAspectRatio: false,
                             animation: false,
+                            interaction: { mode: 'nearest', intersect: true },
                             layout: {
                                 padding: { top: 0, left: 0, right: 0, bottom: 16 }
+                            },
+                            onClick: (evt, elements) => {
+                                IndexDashboard.handlePmBarClick(elements, labels);
                             },
                             plugins: {
                                 legend: { display: true, position: 'top' },
@@ -591,9 +595,30 @@ const IndexDashboard = {
                 axisY: { includeZero: true, margin: 10, labelFontSize: 10, interval: 2 },
                 legend: { dockInsidePlotArea: true, verticalAlign: "top", horizontalAlign: "left" },
                 data: [
-                    { type: "line", name: "Plan", showInLegend: true, color: "#e31a1c", markerSize: 4, dataPoints: planPoints },
-                    { type: "line", name: "Fact", showInLegend: true, color: "#33a02c", markerSize: 4, dataPoints: factPoints },
-                    { type: "line", name: "Tag", showInLegend: true, color: "#1f78b4", markerSize: 4, dataPoints: tagPoints }
+                    {
+                        type: "line", name: "Plan", showInLegend: true, color: "#e31a1c", markerSize: 4, dataPoints: planPoints,
+                        click: function(e) {
+                            if (e.dataPoint && e.dataPoint.label) {
+                                IndexDashboard.openPmDrilldown(e.dataPoint.label, 'plan');
+                            }
+                        }
+                    },
+                    {
+                        type: "line", name: "Fact", showInLegend: true, color: "#33a02c", markerSize: 4, dataPoints: factPoints,
+                        click: function(e) {
+                            if (e.dataPoint && e.dataPoint.label) {
+                                IndexDashboard.openPmDrilldown(e.dataPoint.label, 'factAndTag');
+                            }
+                        }
+                    },
+                    {
+                        type: "line", name: "Tag", showInLegend: true, color: "#1f78b4", markerSize: 4, dataPoints: tagPoints,
+                        click: function(e) {
+                            if (e.dataPoint && e.dataPoint.label) {
+                                IndexDashboard.openPmDrilldown(e.dataPoint.label, 'tag');
+                            }
+                        }
+                    }
                 ]
             };
             
@@ -835,6 +860,133 @@ const IndexDashboard = {
         if (topBreakdownsHeader) {
             topBreakdownsHeader.textContent = isCurrentMonth ? 'Топ поломок за неделю' : 'Топ поломок за месяц';
         }
+    }
+};
+
+function pmEscapeHtml(s) {
+    if (s == null || s === undefined) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function pmFormatCell(val) {
+    if (val == null || val === undefined) return '';
+    if (typeof val === 'object') {
+        try {
+            return pmEscapeHtml(JSON.stringify(val));
+        } catch (e) {
+            return pmEscapeHtml(String(val));
+        }
+    }
+    return pmEscapeHtml(String(val));
+}
+
+function buildPmRecordsTableHtml(rows, emptyHint) {
+    if (!rows || rows.length === 0) {
+        return `<p>${emptyHint || 'Нет записей'}</p>`;
+    }
+    const cols = [
+        { key: 'machine_name', title: 'Машина' },
+        { key: 'work_order_name', title: 'Название заказа' },
+        { key: 'scheduled_proposed_date', title: 'Предложенная дата' },
+        { key: 'scheduled_date', title: 'Запланированная дата' },
+        { key: 'status', title: 'Статус' },
+        { key: 'area', title: 'Участок' }
+    ];
+    let html = '<table class="breakdown-details-table"><thead><tr>';
+    cols.forEach(c => { html += `<th>${c.title}</th>`; });
+    html += '</tr></thead><tbody>';
+    rows.forEach(row => {
+        html += '<tr>';
+        cols.forEach(c => {
+            html += `<td>${pmFormatCell(row[c.key])}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+}
+
+function buildTagRecordsTableHtml(rows) {
+    if (!rows || rows.length === 0) {
+        return '<p>Нет записей Tag</p>';
+    }
+    const cols = [
+        { key: 'machine_name', title: 'Машина' },
+        { key: 'mechanism_node', title: 'Узел' },
+        { key: 'code', title: 'Код' },
+        { key: 'description', title: 'Описание' },
+        { key: 'status', title: 'Статус' },
+        { key: 'production_day', title: 'Производственный день' },
+        { key: 'area', title: 'Участок' }
+    ];
+    let html = '<table class="breakdown-details-table"><thead><tr>';
+    cols.forEach(c => { html += `<th>${c.title}</th>`; });
+    html += '</tr></thead><tbody>';
+    rows.forEach(row => {
+        html += '<tr>';
+        cols.forEach(c => {
+            html += `<td>${pmFormatCell(row[c.key])}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+}
+
+/** Клик по столбику PM (Chart.js): 0 — Plan, 1 — Fact+Tag, 2 — Tag */
+IndexDashboard.handlePmBarClick = function(elements, labels) {
+    if (!elements || !elements.length) return;
+    const el = elements[0];
+    const label = labels[el.index];
+    if (!label) return;
+    const ds = el.datasetIndex;
+    if (ds === 0) IndexDashboard.openPmDrilldown(label, 'plan');
+    else if (ds === 1) IndexDashboard.openPmDrilldown(label, 'factAndTag');
+    else IndexDashboard.openPmDrilldown(label, 'tag');
+};
+
+IndexDashboard.openPmDrilldown = async function(productionDay, mode) {
+    const modal = document.getElementById('pmDrilldownModal');
+    const container = document.getElementById('pmDrilldownContainer');
+    const titleEl = document.getElementById('pmDrilldownTitle');
+    const dateEl = document.getElementById('pmDrilldownDate');
+    if (!modal || !container || !titleEl || !dateEl) return;
+
+    dateEl.textContent = productionDay;
+    container.innerHTML = '<p>Загрузка данных...</p>';
+    modal.style.display = 'flex';
+
+    const base = `/dashboard/pm-drilldown?productionDay=${encodeURIComponent(productionDay)}&kind=`;
+
+    try {
+        if (mode === 'plan') {
+            titleEl.textContent = 'ППР: план на день';
+            const rows = await DashboardAPI.fetchData(base + 'plan');
+            container.innerHTML = buildPmRecordsTableHtml(rows, 'Нет запланированных работ на этот день');
+        } else if (mode === 'factAndTag') {
+            titleEl.textContent = 'ППР: выполнено и Tag';
+            const [pmRows, tagRows] = await Promise.all([
+                DashboardAPI.fetchData(base + 'fact'),
+                DashboardAPI.fetchData(base + 'tag')
+            ]);
+            let html = '<div class="pm-drilldown-section"><h3>Выполнено (ППР)</h3>';
+            html += buildPmRecordsTableHtml(pmRows, 'Нет закрытых ППР на этот день');
+            html += '</div><div class="pm-drilldown-section"><h3>Tag</h3>';
+            html += buildTagRecordsTableHtml(tagRows || []);
+            html += '</div>';
+            container.innerHTML = html;
+        } else if (mode === 'tag') {
+            titleEl.textContent = 'Tag на день';
+            const rows = await DashboardAPI.fetchData(base + 'tag');
+            container.innerHTML = buildTagRecordsTableHtml(rows || []);
+        }
+    } catch (err) {
+        console.error('Ошибка детализации ППР:', err);
+        container.innerHTML = '<p>Ошибка при загрузке данных</p>';
     }
 };
 
@@ -1165,6 +1317,7 @@ async function showBreakdownDetails(date, area, metric) {
 document.addEventListener('DOMContentLoaded', function() {
     const indicatorModal = document.getElementById('indicatorModal');
     const breakdownModal = document.getElementById('breakdownDetailsModal');
+    const pmDrilldownModal = document.getElementById('pmDrilldownModal');
     const closeBtns = document.querySelectorAll('.modal .close');
     
     closeBtns.forEach(closeBtn => {
@@ -1197,6 +1350,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.target === breakdownModal) {
             console.log('Clicked outside breakdown modal');
             breakdownModal.style.display = 'none';
+        }
+        if (pmDrilldownModal && event.target === pmDrilldownModal) {
+            pmDrilldownModal.style.display = 'none';
         }
     });
 });

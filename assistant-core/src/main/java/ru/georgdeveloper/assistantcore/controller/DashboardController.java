@@ -119,6 +119,29 @@ public class DashboardController {
         return monitoringRepository.getPmPlanFactTagAll();
     }
 
+    /**
+     * Детализация графика ППР на главной: записи за производственный день (логика как в {@code getPmPlanFactTagFiltered}).
+     *
+     * @param kind {@code plan} — по {@code scheduled_proposed_date}; {@code fact} — закрытые по {@code scheduled_date};
+     *             {@code tag} — {@code tag_maintenance_records.production_day}
+     */
+    @GetMapping("/pm-drilldown")
+    @ResponseBody
+    public List<Map<String, Object>> getPmDrilldown(
+            @RequestParam("productionDay") String productionDay,
+            @RequestParam("kind") String kind) {
+        if ("plan".equalsIgnoreCase(kind)) {
+            return monitoringRepository.getPmPlannedForProductionDay(productionDay);
+        }
+        if ("fact".equalsIgnoreCase(kind)) {
+            return monitoringRepository.getPmCompletedForProductionDay(productionDay);
+        }
+        if ("tag".equalsIgnoreCase(kind)) {
+            return monitoringRepository.getTagMaintenanceForProductionDay(productionDay);
+        }
+        return Collections.emptyList();
+    }
+
     @GetMapping("/pm/areas")
     @ResponseBody
     public List<Map<String, Object>> getPmAreas() {
