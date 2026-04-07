@@ -122,11 +122,33 @@ telegram:
 | `/tag` | Перенос Tag за один интервал | Аналогично `/bd` (`start`, `end`). |
 | `/tag/backfill` | Догруз Tag за диапазон дней | Как `/bd/backfill` (`from`, `to`). |
 
-Примеры:
+Параметры можно передавать **в query** (`?from=...&to=...`) или **в теле** POST как `application/x-www-form-urlencoded` (несколько `-d` у `curl`).
 
-```http
-POST http://localhost:8084/api/transfer/bd?start=2026-04-04T08:00:00&end=2026-04-05T08:00:00
-POST http://localhost:8084/api/transfer/bd/backfill?from=2026-04-04&to=2026-04-05
+### Важно: Windows и символ `&`
+
+В **cmd.exe** символ **`&`** — разделитель команд. Если URL не заключён в кавычки, оболочка обрезает запрос на первом `&`, вторую часть пытается выполнить как команду (сообщение вроде `'to' is not recognized...`), а сервер получает **не все** параметры → часто **HTTP 400** (`to` / `end` отсутствует).
+
+Для **`/bd`** при отсутствии `start` или `end` сервер **намеренно** подставляет интервал «вчера 08:00 — сегодня 08:00» по Москве — поэтому кажется, что «игнорируется» заданный диапазон: до сервера дошёл только `start`, а `end` потерялся из‑за `&`.
+
+**Рабочие примеры для Windows (cmd):** весь URL в **двойных кавычках**:
+
+```bat
+curl -X POST "http://10.130.143.200:8084/api/transfer/bd/backfill?from=2026-04-04&to=2026-04-05"
+curl -X POST "http://10.130.143.200:8084/api/transfer/bd?start=2026-04-04T08:00:00&end=2026-04-05T08:00:00"
+```
+
+Либо **без `&` в строке для cmd** — параметры в теле запроса:
+
+```bat
+curl -X POST http://10.130.143.200:8084/api/transfer/bd/backfill -d from=2026-04-04 -d to=2026-04-05
+curl -X POST http://10.130.143.200:8084/api/transfer/bd -d start=2026-04-04T08:00:00 -d end=2026-04-05T08:00:00
+```
+
+**PowerShell:** либо кавычки вокруг URI, либо явно `curl.exe` (чтобы не сработал алиас), например:
+
+```powershell
+curl.exe -X POST "http://10.130.143.200:8084/api/transfer/bd/backfill?from=2026-04-04&to=2026-04-05"
+Invoke-RestMethod -Method Post -Uri "http://10.130.143.200:8084/api/transfer/bd/backfill?from=2026-04-04&to=2026-04-05"
 ```
 
 ### Дубликаты
