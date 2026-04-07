@@ -122,6 +122,7 @@ public class DataTransferService {
         logger.info("Найдено {} записей для переноса (диапазон [{} .. {}])", rows.size(), startDateTime, endDateTime);
 
         int successCount = 0;
+        int skippedDuplicateCount = 0;
         int errorCount = 0;
         int splitOrdersCount = 0;
 
@@ -154,14 +155,17 @@ public class DataTransferService {
                 if (durationMinutes > 1439 && startBdT1 != null && stopBdT4 != null) {
                     logger.info("⚡ НАЙДЕН ДЛИТЕЛЬНЫЙ НАРЯД, ВЫПОЛНЯЕМ РАЗБИВКУ ПО СМЕНАМ...");
 
-                    int partsCreated = splitAndTransferOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4);
-                    successCount += partsCreated;
+                    int[] splitStats = splitAndTransferOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4);
+                    successCount += splitStats[0];
+                    skippedDuplicateCount += splitStats[1];
                     splitOrdersCount++;
-                    logger.info("✅ Наряд разбит на {} частей", partsCreated);
+                    logger.info("✅ Наряд разбит: вставлено частей {}, пропущено дубликатов {}", splitStats[0], splitStats[1]);
                 } else {
-                    // Если не нужно разбивать, просто переносим наряд как есть
-                    transferSingleOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4);
-                    successCount++;
+                    if (transferSingleOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4)) {
+                        successCount++;
+                    } else {
+                        skippedDuplicateCount++;
+                    }
                 }
 
                 if ((i + 1) % 50 == 0) {
@@ -174,15 +178,17 @@ public class DataTransferService {
             }
         }
 
-        logger.info("Перенос данных завершен. Успешно: {}, Ошибок: {}, Разбито нарядов: {}",
-                successCount, errorCount, splitOrdersCount);
+        logger.info("Перенос данных завершен. Вставлено: {}, Пропущено (дубликат code+t1+t4): {}, Ошибок: {}, Разбито нарядов: {}",
+                successCount, skippedDuplicateCount, errorCount, splitOrdersCount);
         return successCount;
     }
 
     /**
-     * Разбивка длинного наряда на части по границам смен
+     * Разбивка длинного наряда на части по границам смен.
+     *
+     * @return [вставлено частей, пропущено дубликатов]
      */
-    private int splitAndTransferOrder(Map<String, Object> row, LocalDateTime startBdT1,
+    private int[] splitAndTransferOrder(Map<String, Object> row, LocalDateTime startBdT1,
             LocalDateTime startMaintT2, LocalDateTime stopMaintT3,
             LocalDateTime stopBdT4) {
         List<LocalDateTime> shiftBoundaries = getAllShiftBoundaries(startBdT1, stopBdT4);
@@ -194,7 +200,8 @@ public class DataTransferService {
         splitPoints.addAll(shiftBoundaries);
         splitPoints.add(stopBdT4);
 
-        int partsCreated = 0;
+        int partsInserted = 0;
+        int partsSkipped = 0;
         logger.info("Всего будет создано {} частей", splitPoints.size() - 1);
 
         // Создаем части наряда
@@ -229,22 +236,23 @@ public class DataTransferService {
             int partT2MinusT1Minutes = calculateDurationMinutes(partStart, partStartMaintT2);
             Time partT2MinusT1 = formatDowntime(partT2MinusT1Minutes);
 
-            // Вставляем запись в MySQL
-            transferOrderPart(row, partStart, partStartMaintT2, partStopMaintT3, partEnd,
-                    partDowntime, partTtr, partT2MinusT1);
-            partsCreated++;
-
-            logger.info("✅ Часть {}:", i + 1);
-            logger.info("   T1: {}", formatDateTime(partStart));
-            logger.info("   T2: {}", formatDateTime(partStartMaintT2));
-            logger.info("   T3: {}", formatDateTime(partStopMaintT3));
-            logger.info("   T4: {}", formatDateTime(partEnd));
-            logger.info("   downtime: {}", partDowntime);
-            logger.info("   ttr: {}", partTtr);
-            logger.info("   t2_minus_t1: {}", partT2MinusT1);
+            if (transferOrderPart(row, partStart, partStartMaintT2, partStopMaintT3, partEnd,
+                    partDowntime, partTtr, partT2MinusT1)) {
+                partsInserted++;
+                logger.info("✅ Часть {}:", i + 1);
+                logger.info("   T1: {}", formatDateTime(partStart));
+                logger.info("   T2: {}", formatDateTime(partStartMaintT2));
+                logger.info("   T3: {}", formatDateTime(partStopMaintT3));
+                logger.info("   T4: {}", formatDateTime(partEnd));
+                logger.info("   downtime: {}", partDowntime);
+                logger.info("   ttr: {}", partTtr);
+                logger.info("   t2_minus_t1: {}", partT2MinusT1);
+            } else {
+                partsSkipped++;
+            }
         }
 
-        return partsCreated;
+        return new int[] { partsInserted, partsSkipped };
     }
 
     /**
@@ -279,12 +287,20 @@ public class DataTransferService {
     }
 
     /**
-     * Перенос одной части наряда
+     * Перенос одной части наряда.
+     *
+     * @return {@code true} если выполнена вставка, {@code false} если запись с тем же номером BD и границами T1/T4 уже есть
      */
-    private void transferOrderPart(Map<String, Object> row, LocalDateTime startBdT1,
+    private boolean transferOrderPart(Map<String, Object> row, LocalDateTime startBdT1,
             LocalDateTime startMaintT2, LocalDateTime stopMaintT3,
             LocalDateTime stopBdT4, Time machineDowntime, Time ttr,
             Time t2MinusT1) {
+        String code = getStringValue(row.get("WOCodeName"));
+        if (maintenanceRecordExists(code, startBdT1, stopBdT4)) {
+            logger.info("Пропуск дубликата BD: code={}, start_bd_t1={}, stop_bd_t4={}", code, startBdT1, stopBdT4);
+            return false;
+        }
+
         String insertSql = """
                 INSERT INTO equipment_maintenance_records (
                     machine_name, mechanism_node, additional_kit, description, code,
@@ -299,7 +315,7 @@ public class DataTransferService {
                 getStringValue(row.get("Assembly")),
                 getStringValue(row.get("SubAssembly")),
                 getStringValue(row.get("InitialComment")),
-                getStringValue(row.get("WOCodeName")),
+                code,
                 getStringValue(row.get("TYPEWO")),
                 startBdT1,
                 startMaintT2,
@@ -316,12 +332,33 @@ public class DataTransferService {
         };
 
         mysqlJdbcTemplate.update(insertSql, data);
+        return true;
+    }
+
+    /**
+     * Совпадение по номеру наряда (code) и границам простоя в MySQL (как в вставляемой строке).
+     * Для разбитых нарядов у частей разные start_bd_t1/stop_bd_t4 — каждая часть проверяется отдельно.
+     */
+    private boolean maintenanceRecordExists(String code, LocalDateTime startBdT1, LocalDateTime stopBdT4) {
+        if (code == null || code.isBlank()) {
+            return false;
+        }
+        String sql = """
+                SELECT COUNT(*) FROM equipment_maintenance_records
+                WHERE code = ?
+                  AND (start_bd_t1 <=> ?)
+                  AND (stop_bd_t4 <=> ?)
+                """;
+        Integer cnt = mysqlJdbcTemplate.queryForObject(sql, Integer.class, code, startBdT1, stopBdT4);
+        return cnt != null && cnt > 0;
     }
 
     /**
      * Перенос обычного наряда (без разбивки) - ВСЕГДА берем значения из SQL Server
+     *
+     * @return {@code true} если строка вставлена, {@code false} если дубликат
      */
-    private void transferSingleOrder(Map<String, Object> row, LocalDateTime startBdT1,
+    private boolean transferSingleOrder(Map<String, Object> row, LocalDateTime startBdT1,
             LocalDateTime startMaintT2, LocalDateTime stopMaintT3,
             LocalDateTime stopBdT4) {
         // ✅ ВСЕГДА берем SDuration, STTR, SLogisticTimeMin из SQL Server
@@ -334,13 +371,16 @@ public class DataTransferService {
         int t2MinusT1Minutes = parseDurationToMinutes(getStringValue(row.get("SLogisticTimeMin")));
         Time t2MinusT1 = formatDowntime(t2MinusT1Minutes);
 
-        transferOrderPart(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4,
+        boolean inserted = transferOrderPart(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4,
                 downtime, ttr, t2MinusT1);
 
-        logger.info("✓ Обычный наряд, создана запись:");
-        logger.info("   downtime: {} (из SQL Server)", downtime);
-        logger.info("   ttr: {} (из SQL Server)", ttr);
-        logger.info("   t2_minus_t1: {} (из SQL Server)", t2MinusT1);
+        if (inserted) {
+            logger.info("✓ Обычный наряд, создана запись:");
+            logger.info("   downtime: {} (из SQL Server)", downtime);
+            logger.info("   ttr: {} (из SQL Server)", ttr);
+            logger.info("   t2_minus_t1: {} (из SQL Server)", t2MinusT1);
+        }
+        return inserted;
     }
 
     /**
