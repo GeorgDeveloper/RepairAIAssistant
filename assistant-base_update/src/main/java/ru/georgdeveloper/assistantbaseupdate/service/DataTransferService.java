@@ -12,6 +12,7 @@ import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -23,6 +24,9 @@ import java.util.*;
 public class DataTransferService {
 
     private static final Logger logger = LoggerFactory.getLogger(DataTransferService.class);
+
+    /** Календарь «сегодня» для производственных суток 08:00–08:00 — только эта зона, как у cron */
+    private static final ZoneId PRODUCTION_ZONE = ZoneId.of("Europe/Moscow");
 
     @Autowired
     private JdbcTemplate sqlServerJdbcTemplate;
@@ -39,11 +43,12 @@ public class DataTransferService {
     @Transactional
     public void transferDataDaily() {
         try {
-            java.time.ZonedDateTime triggerTime = java.time.ZonedDateTime.now(java.time.ZoneId.of("Europe/Moscow"));
+            java.time.ZonedDateTime triggerTime = java.time.ZonedDateTime.now(PRODUCTION_ZONE);
             logger.info("=== Начало ежедневного переноса данных... Trigger at {} (zone Europe/Moscow)", triggerTime);
 
-            // Получаем текущую дату и время для фильтрации
-            LocalDate today = LocalDate.now();
+            // Важно: брать «сегодня» в той же зоне, что и cron (Europe/Moscow), а не LocalDate.now() JVM по умолчанию —
+            // иначе на сервере с UTC (и др.) окно выборки съезжает на календарный день и из SQL приходит 0 строк.
+            LocalDate today = LocalDate.now(PRODUCTION_ZONE);
             LocalDateTime startDateTime = today.minusDays(1).atTime(8, 0);
             LocalDateTime endDateTime = today.atTime(8, 0);
 
@@ -64,7 +69,9 @@ public class DataTransferService {
                 logger.info("Итог: перенесено {} записей, удалено {} отфильтрованных записей",
                         transferredCount, deletedCount);
             } else {
-                logger.warn("Нет данных для обработки");
+                logger.warn(
+                        "Вставлено 0 строк: в SQL за расчётное окно нет записей, либо все отфильтрованы как дубликаты. "
+                                + "Сверьте лог «Найдено N записей для переноса» и «Пропуск дубликата» выше.");
             }
 
         } catch (Exception e) {

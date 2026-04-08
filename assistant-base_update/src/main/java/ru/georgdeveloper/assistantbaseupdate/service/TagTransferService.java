@@ -12,6 +12,7 @@ import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -23,6 +24,8 @@ import java.util.Map;
 public class TagTransferService {
 
     private static final Logger logger = LoggerFactory.getLogger(TagTransferService.class);
+
+    private static final ZoneId PRODUCTION_ZONE = ZoneId.of("Europe/Moscow");
 
     @Autowired
     private JdbcTemplate sqlServerJdbcTemplate;
@@ -37,11 +40,10 @@ public class TagTransferService {
     @Transactional
     public void transferTagDataDaily() {
         try {
-            java.time.ZonedDateTime triggerTime = java.time.ZonedDateTime.now(java.time.ZoneId.of("Europe/Moscow"));
+            java.time.ZonedDateTime triggerTime = java.time.ZonedDateTime.now(PRODUCTION_ZONE);
             logger.info("=== Начало ежедневного переноса Tag данных... Trigger at {} (zone Europe/Moscow)", triggerTime);
             
-            // Получаем текущую дату и время для фильтрации
-            LocalDate today = LocalDate.now();
+            LocalDate today = LocalDate.now(PRODUCTION_ZONE);
             LocalDateTime startDateTime = today.minusDays(1).atTime(8, 0);
             LocalDateTime endDateTime = today.atTime(8, 0);
             
