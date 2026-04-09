@@ -3,6 +3,7 @@ package ru.georgdeveloper.assistantbaseupdate.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -34,75 +36,97 @@ public class DataTransferService {
     @Autowired
     private JdbcTemplate mysqlJdbcTemplate;
 
+    /**
+     * Прокси на этот же бин: вызов через {@code self} гарантирует срабатывание {@code @Transactional}
+     * (у {@code @Scheduled} метод часто вызывается на raw-target и обходит AOP — см. PreventiveMaintenanceTransferService).
+     */
+    private DataTransferService self;
+
+    @Autowired
+    public void setSelf(@Lazy DataTransferService self) {
+        this.self = self;
+    }
+
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     /**
-     * Ежедневный перенос данных в 8:00 утра
+     * Ежедневный перенос данных в 8:00 утра.
+     * Без {@code @Transactional} здесь: транзакции открываются в {@link #orchestrateBdTransfer} через прокси.
      */
     @Scheduled(cron = "0 0 8 * * *", zone = "Europe/Moscow")
-    @Transactional
     public void transferDataDaily() {
-        try {
-            java.time.ZonedDateTime triggerTime = java.time.ZonedDateTime.now(PRODUCTION_ZONE);
-            logger.info("=== Начало ежедневного переноса данных... Trigger at {} (zone Europe/Moscow)", triggerTime);
+        ZonedDateTime triggerTime = ZonedDateTime.now(PRODUCTION_ZONE);
+        logger.info("=== Начало ежедневного переноса данных... Trigger at {} (zone Europe/Moscow)", triggerTime);
 
-            // Важно: брать «сегодня» в той же зоне, что и cron (Europe/Moscow), а не LocalDate.now() JVM по умолчанию —
-            // иначе на сервере с UTC (и др.) окно выборки съезжает на календарный день и из SQL приходит 0 строк.
-            LocalDate today = LocalDate.now(PRODUCTION_ZONE);
-            LocalDateTime startDateTime = today.minusDays(1).atTime(8, 0);
-            LocalDateTime endDateTime = today.atTime(8, 0);
+        // Важно: брать «сегодня» в той же зоне, что и cron (Europe/Moscow), а не LocalDate.now() JVM по умолчанию —
+        // иначе на сервере с UTC (и др.) окно выборки съезжает на календарный день и из SQL приходит 0 строк.
+        LocalDate today = LocalDate.now(PRODUCTION_ZONE);
+        LocalDateTime startDateTime = today.minusDays(1).atTime(8, 0);
+        LocalDateTime endDateTime = today.atTime(8, 0);
 
-            logger.info("Фильтрация данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
-            logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
-            logger.info("SQL params: startDateTime={}, endDateTime={}", startDateTime, endDateTime);
+        logger.info("Фильтрация данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
+        logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
+        logger.info("SQL params: startDateTime={}, endDateTime={}", startDateTime, endDateTime);
 
-            // Выполняем перенос данных
-            int transferredCount = transferDataFromSqlServer(startDateTime, endDateTime);
-
-            if (transferredCount > 0) {
-                // Обрабатываем дополнительные поля
-                processAdditionalFields();
-
-                // Удаляем отфильтрованные записи
-                int deletedCount = cleanupFilteredRecords();
-
-                logger.info("Итог: перенесено {} записей, удалено {} отфильтрованных записей",
-                        transferredCount, deletedCount);
-            } else {
-                logger.warn(
-                        "Вставлено 0 строк: в SQL за расчётное окно нет записей, либо все отфильтрованы как дубликаты. "
-                                + "Сверьте лог «Найдено N записей для переноса» и «Пропуск дубликата» выше.");
-            }
-
-        } catch (Exception e) {
-            logger.error("Критическая ошибка при переносе данных: {}", e.getMessage(), e);
-            throw e;
-        }
+        self.orchestrateBdTransfer(startDateTime, endDateTime, false);
     }
 
     /**
      * Ручной запуск переноса данных с указанным интервалом времени
      */
-    @Transactional
     public void runTransfer(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        logger.info("=== Ручной запуск переноса данных... Интервал [{} .. {}] (Europe/Moscow)", startDateTime,
+                endDateTime);
+        self.orchestrateBdTransfer(startDateTime, endDateTime, true);
+    }
+
+    /**
+     * Сценарий переноса: две отдельные транзакции (вставки, затем постобработка), чтобы при сбое длинной фазы
+     * уже вставленные строки оставались в MySQL; вызов только через {@code self}, чтобы транзакции применялись.
+     */
+    public void orchestrateBdTransfer(LocalDateTime startDateTime, LocalDateTime endDateTime, boolean manual) {
         try {
-            logger.info("=== Ручной запуск переноса данных... Интервал [{} .. {}] (Europe/Moscow)", startDateTime,
-                    endDateTime);
-
-            int transferredCount = transferDataFromSqlServer(startDateTime, endDateTime);
-
+            int transferredCount = self.transferBatchFromSqlServerTransactional(startDateTime, endDateTime);
             if (transferredCount > 0) {
-                processAdditionalFields();
-                int deletedCount = cleanupFilteredRecords();
-                logger.info("Ручной запуск: перенесено {} записей, удалено {} отфильтрованных записей",
-                        transferredCount, deletedCount);
+                logger.info(
+                        "Вставки BD зафиксированы в БД ({} строк). Постобработка и очистка — в отдельной транзакции.",
+                        transferredCount);
+                int deletedCount = self.postProcessBdRecordsTransactional();
+                if (manual) {
+                    logger.info("Ручной запуск: перенесено {} записей, удалено {} отфильтрованных записей",
+                            transferredCount, deletedCount);
+                } else {
+                    logger.info("Итог: перенесено {} записей, удалено {} отфильтрованных записей",
+                            transferredCount, deletedCount);
+                }
             } else {
-                logger.warn("Ручной запуск: нет данных для обработки");
+                if (manual) {
+                    logger.warn("Ручной запуск: нет данных для обработки");
+                } else {
+                    logger.warn(
+                            "Вставлено 0 строк: в SQL за расчётное окно нет записей, либо все отфильтрованы как дубликаты. "
+                                    + "Сверьте лог «Найдено N записей для переноса» и «Пропуск дубликата» выше.");
+                }
             }
         } catch (Exception e) {
-            logger.error("Критическая ошибка при ручном переносе данных: {}", e.getMessage(), e);
+            if (manual) {
+                logger.error("Критическая ошибка при ручном переносе данных: {}", e.getMessage(), e);
+            } else {
+                logger.error("Критическая ошибка при переносе данных: {}", e.getMessage(), e);
+            }
             throw e;
         }
+    }
+
+    @Transactional
+    public int transferBatchFromSqlServerTransactional(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return transferDataFromSqlServer(startDateTime, endDateTime);
+    }
+
+    @Transactional
+    public int postProcessBdRecordsTransactional() {
+        processAdditionalFields();
+        return cleanupFilteredRecords();
     }
 
     /**

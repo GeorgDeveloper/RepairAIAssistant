@@ -3,6 +3,7 @@ package ru.georgdeveloper.assistantbaseupdate.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -33,44 +35,30 @@ public class TagTransferService {
     @Autowired
     private JdbcTemplate mysqlJdbcTemplate;
 
+    private TagTransferService self;
+
+    @Autowired
+    public void setSelf(@Lazy TagTransferService self) {
+        this.self = self;
+    }
+
     /**
      * Ежедневный перенос Tag — 8:08, после старта переноса ремонтов в 8:00 (минута вне слота онлайн-синхр. 1/3: 1,4,7,…)
      */
     @Scheduled(cron = "0 8 8 * * *", zone = "Europe/Moscow")
-    @Transactional
     public void transferTagDataDaily() {
-        try {
-            java.time.ZonedDateTime triggerTime = java.time.ZonedDateTime.now(PRODUCTION_ZONE);
-            logger.info("=== Начало ежедневного переноса Tag данных... Trigger at {} (zone Europe/Moscow)", triggerTime);
-            
-            LocalDate today = LocalDate.now(PRODUCTION_ZONE);
-            LocalDateTime startDateTime = today.minusDays(1).atTime(8, 0);
-            LocalDateTime endDateTime = today.atTime(8, 0);
-            
-            logger.info("Фильтрация Tag данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
-            logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
-            logger.info("SQL params (Tag): startDateTime={}, endDateTime={}", startDateTime, endDateTime);
-            
-            // Выполняем перенос данных
-            int transferredCount = transferTagDataFromSqlServer(startDateTime, endDateTime);
-            
-            if (transferredCount > 0) {
-                // Обрабатываем дополнительные поля
-                processTagAdditionalFields();
-                
-                // Удаляем отфильтрованные записи
-                int deletedCount = cleanupTagFilteredRecords();
-                
-                logger.info("Итог Tag: перенесено {} записей, удалено {} отфильтрованных записей", 
-                    transferredCount, deletedCount);
-            } else {
-                logger.warn("Нет Tag данных для обработки");
-            }
-            
-        } catch (Exception e) {
-            logger.error("Критическая ошибка при переносе Tag данных: {}", e.getMessage(), e);
-            throw e;
-        }
+        ZonedDateTime triggerTime = ZonedDateTime.now(PRODUCTION_ZONE);
+        logger.info("=== Начало ежедневного переноса Tag данных... Trigger at {} (zone Europe/Moscow)", triggerTime);
+
+        LocalDate today = LocalDate.now(PRODUCTION_ZONE);
+        LocalDateTime startDateTime = today.minusDays(1).atTime(8, 0);
+        LocalDateTime endDateTime = today.atTime(8, 0);
+
+        logger.info("Фильтрация Tag данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
+        logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
+        logger.info("SQL params (Tag): startDateTime={}, endDateTime={}", startDateTime, endDateTime);
+
+        self.orchestrateTagTransfer(startDateTime, endDateTime);
     }
 
     /**
@@ -516,35 +504,44 @@ public class TagTransferService {
     /**
      * Ручной запуск переноса Tag данных с указанными параметрами времени
      */
-    @Transactional
     public void runTagTransfer(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        logger.info("=== Начало ручного переноса Tag данных... Start: {}, End: {}", startDateTime, endDateTime);
+
+        logger.info("Фильтрация Tag данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
+        logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
+        logger.info("SQL params (Tag): startDateTime={}, endDateTime={}", startDateTime, endDateTime);
+
+        self.orchestrateTagTransfer(startDateTime, endDateTime);
+    }
+
+    public void orchestrateTagTransfer(LocalDateTime startDateTime, LocalDateTime endDateTime) {
         try {
-            logger.info("=== Начало ручного переноса Tag данных... Start: {}, End: {}", startDateTime, endDateTime);
-            
-            logger.info("Фильтрация Tag данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
-            logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
-            logger.info("SQL params (Tag): startDateTime={}, endDateTime={}", startDateTime, endDateTime);
-            
-            // Выполняем перенос данных
-            int transferredCount = transferTagDataFromSqlServer(startDateTime, endDateTime);
-            
+            int transferredCount = self.transferTagBatchTransactional(startDateTime, endDateTime);
             if (transferredCount > 0) {
-                // Обрабатываем дополнительные поля
-                processTagAdditionalFields();
-                
-                // Удаляем отфильтрованные записи
-                int deletedCount = cleanupTagFilteredRecords();
-                
-                logger.info("Итог Tag: перенесено {} записей, удалено {} отфильтрованных записей", 
-                    transferredCount, deletedCount);
+                logger.info(
+                        "Вставки Tag зафиксированы в БД ({} строк). Постобработка и очистка — в отдельной транзакции.",
+                        transferredCount);
+                int deletedCount = self.postProcessTagRecordsTransactional();
+                logger.info("Итог Tag: перенесено {} записей, удалено {} отфильтрованных записей",
+                        transferredCount, deletedCount);
             } else {
                 logger.warn("Нет Tag данных для обработки");
             }
-            
         } catch (Exception e) {
-            logger.error("Критическая ошибка при ручном переносе Tag данных: {}", e.getMessage(), e);
+            logger.error("Критическая ошибка при переносе Tag данных: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    @Transactional
+    public int transferTagBatchTransactional(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return transferTagDataFromSqlServer(startDateTime, endDateTime);
+    }
+
+    @Transactional
+    public int postProcessTagRecordsTransactional() {
+        processTagAdditionalFields();
+        return cleanupTagFilteredRecords();
     }
 
     /**
