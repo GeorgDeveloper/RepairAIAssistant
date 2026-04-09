@@ -16,7 +16,7 @@ import java.util.List;
 public class DataSyncProperties {
 
     private boolean enabled = true;
-    /** Минуты 1,4,7,… — вне совпадения с cron 8:00 для тяжёлых переносов из SQL Server */
+    /** Минуты 1,4,7,… — вне совпадения с автопереносом BD в 8:02 и Tag в 8:08 */
     private String schedule = "0 1/3 * * * ?";
     private SqlServer sqlServer = new SqlServer();
     private Mysql mysql = new Mysql();

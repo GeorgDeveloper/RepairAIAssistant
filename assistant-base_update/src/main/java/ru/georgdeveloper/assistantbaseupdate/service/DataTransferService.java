@@ -19,8 +19,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * Сервис для ежедневного переноса данных из SQL Server в MySQL
- * Выполняется каждый день в 8:00 утра
+ * Сервис для ежедневного переноса данных из SQL Server в MySQL.
+ * Автозапуск каждый день в 08:02 Europe/Moscow (сдвиг от :00, чтобы не упираться в онлайн-синхронизацию в :00;
+ * минуты 1,4,7… заняты {@code data-sync.schedule} вида {@code 0 1/3 * * * ?}).
  */
 @Service
 public class DataTransferService {
@@ -50,10 +51,10 @@ public class DataTransferService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     /**
-     * Ежедневный перенос данных в 8:00 утра.
+     * Ежедневный автоматический перенос BD — 08:02 Москва (окно выборки по-прежнему вчера 08:00 — сегодня 08:00).
      * Без {@code @Transactional} здесь: транзакции открываются в {@link #orchestrateBdTransfer} через прокси.
      */
-    @Scheduled(cron = "0 0 8 * * *", zone = "Europe/Moscow")
+    @Scheduled(cron = "0 2 8 * * *", zone = "Europe/Moscow")
     public void transferDataDaily() {
         ZonedDateTime triggerTime = ZonedDateTime.now(PRODUCTION_ZONE);
         logger.info("=== Начало ежедневного переноса данных... Trigger at {} (zone Europe/Moscow)", triggerTime);

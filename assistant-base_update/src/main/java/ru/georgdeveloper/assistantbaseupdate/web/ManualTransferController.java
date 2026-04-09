@@ -51,7 +51,7 @@ public class ManualTransferController {
 
     /**
      * Ручной догруз BD за несколько производственных суток подряд.
-     * Каждый день — интервал [fromDay 08:00, fromDay+1 08:00) в Europe/Moscow (как ежедневный cron {@code transferDataDaily}).
+     * Каждый день — интервал [fromDay 08:00, fromDay+1 08:00) в Europe/Moscow (как автозапуск {@code transferDataDaily} в 08:02).
      *
      * @param from первый день (включительно), граница интервала начинается в 08:00 этого дня
      * @param to   последний день (включительно), для него выполняется перенос до 08:00 следующего дня

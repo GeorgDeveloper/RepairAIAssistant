@@ -43,7 +43,7 @@ public class SchedulerConfig implements SchedulingConfigurer {
      * 
      * Параметры:
      * - poolSize: 5 потоков — тяжёлые @Scheduled могут идти параллельно; расписания вынесены из одного слота
- *   (перенос ремонтов 8:00, Tag 8:08, онлайн-синхр. 1/3 мин — не в :00), иначе рост риска блокировок и таймаутов
+ *   (перенос BD 8:02, Tag 8:08, онлайн-синхр. мин. 1,4,7…), иначе рост риска блокировок и таймаутов
      * - threadNamePrefix: "pm-scheduler-" для удобной идентификации в логах
      * - awaitTerminationSeconds: 60 секунд ожидания завершения задач
      * - waitForTasksToCompleteOnShutdown: true - дождаться завершения перед выключением

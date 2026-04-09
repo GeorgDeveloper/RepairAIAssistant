@@ -43,7 +43,7 @@ public class TagTransferService {
     }
 
     /**
-     * Ежедневный перенос Tag — 8:08, после старта переноса ремонтов в 8:00 (минута вне слота онлайн-синхр. 1/3: 1,4,7,…)
+     * Ежедневный перенос Tag — 8:08, после автопереноса BD в 8:02 (минута вне слота онлайн-синхр.: 1,4,7,…)
      */
     @Scheduled(cron = "0 8 8 * * *", zone = "Europe/Moscow")
     public void transferTagDataDaily() {
