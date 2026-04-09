@@ -304,7 +304,12 @@ public class DataTransferService {
             Time t2MinusT1) {
         String code = getStringValue(row.get("WOCodeName"));
         if (maintenanceRecordExists(code, startBdT1, stopBdT4)) {
-            logger.info("Пропуск дубликата BD: code={}, start_bd_t1={}, stop_bd_t4={}", code, startBdT1, stopBdT4);
+            if (startBdT1 == null || stopBdT4 == null) {
+                logger.warn("Пропуск BD с NULL датами (возможная проблема): code={}, start_bd_t1={}, stop_bd_t4={}. " +
+                           "Проверьте, не блокирует ли это перенос новых записей.", code, startBdT1, stopBdT4);
+            } else {
+                logger.info("Пропуск дубликата BD: code={}, start_bd_t1={}, stop_bd_t4={}", code, startBdT1, stopBdT4);
+            }
             return false;
         }
 
@@ -345,11 +350,21 @@ public class DataTransferService {
     /**
      * Совпадение по номеру наряда (code) и границам простоя в MySQL (как в вставляемой строке).
      * Для разбитых нарядов у частей разные start_bd_t1/stop_bd_t4 — каждая часть проверяется отдельно.
+     *
+     * Проблема: оператор <=> (NULL-safe equality) может приводить к ложным срабатываниям,
+     * когда в таблице уже есть запись с NULL значениями, а мы пытаемся вставить новую
+     * запись также с NULL значениями. Это приводит к пропуску легитимных записей.
+     *
+     * Решение: добавляем дополнительную проверку - если все три поля совпадают
+     * (включая NULL значения), то считаем запись дубликатом только если
+     * она была создана в течение последних 7 дней (для решения проблемы "раз в несколько дней").
      */
     private boolean maintenanceRecordExists(String code, LocalDateTime startBdT1, LocalDateTime stopBdT4) {
         if (code == null || code.isBlank()) {
             return false;
         }
+        
+        // Сначала проверяем по code + точным значениям дат (включая NULL)
         String sql = """
                 SELECT COUNT(*) FROM equipment_maintenance_records
                 WHERE code = ?
@@ -357,7 +372,30 @@ public class DataTransferService {
                   AND (stop_bd_t4 <=> ?)
                 """;
         Integer cnt = mysqlJdbcTemplate.queryForObject(sql, Integer.class, code, startBdT1, stopBdT4);
-        return cnt != null && cnt > 0;
+        
+        if (cnt != null && cnt > 0) {
+            // Запись с такими же значениями существует
+            // Дополнительная проверка: если даты NULL, проверяем когда была создана запись
+            if (startBdT1 == null || stopBdT4 == null) {
+                String checkRecentSql = """
+                    SELECT COUNT(*) FROM equipment_maintenance_records
+                    WHERE code = ?
+                      AND (start_bd_t1 <=> ?)
+                      AND (stop_bd_t4 <=> ?)
+                      AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                    """;
+                Integer recentCnt = mysqlJdbcTemplate.queryForObject(checkRecentSql, Integer.class,
+                    code, startBdT1, stopBdT4);
+                // Если запись создана более 7 дней назад, позволяем вставить новую
+                if (recentCnt == null || recentCnt == 0) {
+                    logger.warn("Обнаружена устаревшая запись с NULL датами (code={}), разрешаем вставку новой", code);
+                    return false;
+                }
+                return true;
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
