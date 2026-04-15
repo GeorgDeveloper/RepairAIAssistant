@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${energyTitleRu + ' — энергоресурсы'}">Энергоресурсы</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/energy-water.css">
+    <script src="/static/lib/chart.min.js"></script>
+</head>
+
+<body th:attr="data-energy-resource=${energyResourceCode},data-energy-title=${energyTitleRu}">
+
+<div th:replace="~{fragments/navigation :: nav}"></div>
+
+<div class="total-content">
+    <div class="header">
+        <div class="user_logo">
+            Привет, <a href="#">user</a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <h1 th:text="${energyTitleRu}">Энергия</h1>
+            <p class="energy-hint">
+                Год в селекторе используется и для отображения данных, и для колонки даты <code>dd.MM</code> при импорте.
+                График строится по метрикам с <code>chart_default: true</code> из карты колонок.
+            </p>
+
+            <div class="energy-import-row">
+                <input type="file" id="erFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+                <button type="button" id="erImportBtn" class="btn-apply">Импорт из Excel</button>
+                <span id="erFileName" class="energy-file-name"></span>
+            </div>
+
+            <div id="energyResourceMsg"></div>
+
+            <div class="filters energy-filters">
+                <div class="filter-group">
+                    <label for="erYear">Год</label>
+                    <select id="erYear"></select>
+                </div>
+                <div class="filter-group">
+                    <label for="erMonth">Месяц</label>
+                    <select id="erMonth">
+                        <option value="1">Январь</option>
+                        <option value="2">Февраль</option>
+                        <option value="3">Март</option>
+                        <option value="4">Апрель</option>
+                        <option value="5">Май</option>
+                        <option value="6">Июнь</option>
+                        <option value="7">Июль</option>
+                        <option value="8">Август</option>
+                        <option value="9">Сентябрь</option>
+                        <option value="10">Октябрь</option>
+                        <option value="11">Ноябрь</option>
+                        <option value="12">Декабрь</option>
+                    </select>
+                </div>
+                <div class="filter-group filter-group-actions">
+                    <button type="button" id="erApply" class="btn-apply">Показать</button>
+                </div>
+            </div>
+
+            <div class="chart-container energy-chart-wrap">
+                <canvas id="erChart" height="120"></canvas>
+            </div>
+
+            <h2>Таблица</h2>
+            <div class="table-container energy-table-wrap">
+                <table class="energy-table" id="erTable">
+                    <thead id="erThead"></thead>
+                    <tbody id="erTbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/scripts/energy-resource.js"></script>
+</body>
+</html>

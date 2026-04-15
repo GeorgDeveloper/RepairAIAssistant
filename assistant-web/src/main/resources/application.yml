@@ -1,11 +1,19 @@
 # Конфигурация для assistant-web
 server:
   port: ${server.web.port:8081}
+  tomcat:
+    # Иначе Tomcat может отдать 413 раньше, чем сработает spring.servlet.multipart
+    max-http-post-size: 60MB
+    max-swallow-size: 60MB
 
 spring:
   # Не импортируем корневой файл, чтобы избежать дублирования URL ядра в веб-модуле
   config:
     import: ''
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
 
 # URL ядра (assistant-core) для проксирования запросов из веб-интерфейса
 core:

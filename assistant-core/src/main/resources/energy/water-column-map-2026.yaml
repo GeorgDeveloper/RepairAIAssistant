@@ -1,0 +1,195 @@
+# Карта колонок Excel «2026 год ЗАО ВШЗ.xlsx» → показатели страницы «Вода»
+# Лист: 2026. Строка данных: с 3-й строки Excel (первая дата 01.01 в колонке A).
+# Дата суток: колонка A (excel 1-based row = номер строки, колонка A = индекс 0).
+#
+# Заголовки: строка 1 Excel = группы, строка 2 Excel = план/OP/факт/дельты.
+# Для AN..AP во 2-й строке подписей в файле нет (три одноимённых «тех.вода факт» в строке 1) —
+# интерпретация: три независимых фактических расхода, м³/сутки (уточнить у автора таблицы).
+
+file: "2026 год  ЗАО ВШЗ.xlsx"
+sheet: "2026"
+data_first_excel_row: 3
+date_column:
+  excel_letter: A
+  zero_based_index: 0
+  format: "dd.MM" # как в файле; год из контекста листа/имени файла
+
+resource: WATER
+metrics:
+  - id: tech_water_fact_meter_1
+    label_ru: "Тех. вода (факт), учёт 1, м³"
+    unit: "м³"
+    excel_column_letter: AN
+    zero_based_index: 39
+    row1_group: "тех.вода факт, куб.м"
+    row2_kind: "факт"
+    chart_default: false
+
+  - id: tech_water_fact_meter_2
+    label_ru: "Тех. вода (факт), учёт 2, м³"
+    unit: "м³"
+    excel_column_letter: AO
+    zero_based_index: 40
+    row1_group: "тех.вода факт, куб.м"
+    row2_kind: "факт"
+    chart_default: false
+
+  - id: tech_water_fact_meter_3
+    label_ru: "Тех. вода (факт), учёт 3, м³"
+    unit: "м³"
+    excel_column_letter: AP
+    zero_based_index: 41
+    row1_group: "тех.вода факт, куб.м"
+    row2_kind: "факт"
+    chart_default: false
+
+  - id: technical_water_plan_mr
+    label_ru: "Техническая вода — план (МР), м³"
+    unit: "м³"
+    excel_column_letter: AQ
+    zero_based_index: 42
+    row1_group: "техническая вода, м³"
+    row2_kind: "план (МР)"
+    chart_default: false
+
+  - id: technical_water_op
+    label_ru: "Техническая вода — OP, м³"
+    unit: "м³"
+    excel_column_letter: AR
+    zero_based_index: 43
+    row1_group: "техническая вода, м³"
+    row2_kind: "OP"
+    chart_default: false
+
+  - id: technical_water_fact
+    label_ru: "Техническая вода — факт, м³"
+    unit: "м³"
+    excel_column_letter: AS
+    zero_based_index: 44
+    row1_group: "техническая вода, м³"
+    row2_kind: "факт"
+    chart_default: true
+
+  - id: drinking_water_plan_mr
+    label_ru: "Питьевая вода — план (МР), м³"
+    unit: "м³"
+    excel_column_letter: AU
+    zero_based_index: 46
+    row1_group: "питьевая вода, м³"
+    row2_kind: "план (МР)"
+    chart_default: false
+
+  - id: drinking_water_op
+    label_ru: "Питьевая вода — OP, м³"
+    unit: "м³"
+    excel_column_letter: AV
+    zero_based_index: 47
+    row1_group: "питьевая вода, м³"
+    row2_kind: "OP"
+    chart_default: false
+
+  - id: drinking_water_fact
+    label_ru: "Питьевая вода — факт, м³"
+    unit: "м³"
+    excel_column_letter: AW
+    zero_based_index: 48
+    row1_group: "питьевая вода, м³"
+    row2_kind: "факт"
+    chart_default: true
+
+  - id: total_water_plan_mr
+    label_ru: "Всего вода — план (МР), м³"
+    unit: "м³"
+    excel_column_letter: AX
+    zero_based_index: 49
+    row1_group: "ВСЕГО ВОДА, м³"
+    row2_kind: "план (МР)"
+    chart_default: true
+
+  - id: total_water_op
+    label_ru: "Всего вода — OP, м³"
+    unit: "м³"
+    excel_column_letter: AY
+    zero_based_index: 50
+    row1_group: "ВСЕГО ВОДА, м³"
+    row2_kind: "OP"
+    chart_default: false
+
+  - id: total_water_fact
+    label_ru: "Всего вода — факт (общее потребление), м³"
+    unit: "м³"
+    excel_column_letter: AZ
+    zero_based_index: 51
+    row1_group: "ВСЕГО ВОДА, м³"
+    row2_kind: "факт общее потребл. воды, мᶾ"
+    chart_default: true
+
+  - id: total_water_delta_mr
+    label_ru: "Всего вода — отклонение Δ(МР), м³"
+    unit: "м³"
+    excel_column_letter: BA
+    zero_based_index: 52
+    row1_group: "ВСЕГО ВОДА, м³"
+    row2_kind: "∆(МР)"
+    chart_default: false
+
+  - id: total_water_delta_op
+    label_ru: "Всего вода — отклонение Δ(OP), м³"
+    unit: "м³"
+    excel_column_letter: BB
+    zero_based_index: 53
+    row1_group: "ВСЕГО ВОДА, м³"
+    row2_kind: "∆(OP )"
+    chart_default: false
+
+  - id: total_water_m3_per_tonne
+    label_ru: "Потребление воды на 1 т продукции, м³/т"
+    unit: "м³/т"
+    excel_column_letter: BC
+    zero_based_index: 54
+    row1_group: "ВСЕГО ВОДА, м³"
+    row2_kind: "Потребл. воды на 1 т продукции, мᶾ/т"
+    chart_default: true
+
+# Не вода по смыслу, но рядом в таблице — при необходимости вынести на отдельный виджет
+adjacent_non_water:
+  - id: outdoor_temp_avg_c
+    label_ru: "T min/max / средняя, °C"
+    excel_column_letter: AM
+    zero_based_index: 38
+    note: "Климатический контекст для графика воды (опционально)."
+
+charts_recommended:
+  - id: water_main_combo
+    title_ru: "Вода: план / OP / факт (сутки)"
+    series:
+      - metric_id: total_water_plan_mr
+        role: plan
+      - metric_id: total_water_op
+        role: operational_plan
+      - metric_id: total_water_fact
+        role: fact
+    note: "Основной сравнительный график по блоку «ВСЕГО ВОДА»."
+
+  - id: water_structure_fact
+    title_ru: "Вода: факт по видам (сутки)"
+    series:
+      - metric_id: technical_water_fact
+        role: fact
+      - metric_id: drinking_water_fact
+        role: fact
+      - metric_id: total_water_fact
+        role: fact
+    note: "Сумма тех.+питьевой не обязана совпадать с «всего» — проверить методологию перед выводом как stacked bar."
+
+  - id: water_intensity
+    title_ru: "Удельное потребление воды на тонну"
+    series:
+      - metric_id: total_water_m3_per_tonne
+        role: intensity
+    note: "Часто #DIV/0! при нулевой выработке — на бэкенде сохранять null."
+
+import_notes:
+  - "Ячейки с текстом #DIV/0! импортировать как null."
+  - "Строки «Итого январь:» и аналоги — не даты; пропускать или грузить в отдельную таблицу месячных итогов."
+  - "Год для колонки A (dd.MM): из имени файла или параметра импорта."

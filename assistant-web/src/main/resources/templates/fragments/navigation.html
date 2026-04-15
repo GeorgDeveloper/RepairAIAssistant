@@ -8,7 +8,7 @@
 <body>
     <div th:fragment="nav" class="sidebar">
         <div class="logo">
-            <img src="static/images/LogoPirelli3.png" alt="Логотип компании">
+            <img src="/static/images/LogoPirelli3.png" alt="Логотип компании">
         </div>
 
         <div class="nav-container">
@@ -20,6 +20,18 @@
                         <li><a href="/dashboard_graf">Показатели Online График</a></li>
                         <li><a href="/final">ИТОГИ</a></li>
                         <li><a href="/production-days-correction">Корректировка производственных дней</a></li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <a href="#">Показатели ОГЭ</a>
+                    <ul class="submenu">
+                        <li><a href="/energy/import">Импорт ОГЭ (все)</a></li>
+                        <li><a href="/energy/water">Вода</a></li>
+                        <li><a href="/energy/gas">Газ</a></li>
+                        <li><a href="/energy/electricity">Эл. энергия</a></li>
+                        <li><a href="/energy/nitrogen">Азот</a></li>
+                        <li><a href="/energy/steam">Пар</a></li>
+                        <li><a href="/energy/total">Итого</a></li>
                     </ul>
                 </li>
                 <li class="has-submenu">

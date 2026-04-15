@@ -1,0 +1,90 @@
+# Газ — колонки листа «2026» файла «2026 год ЗАО ВШЗ.xlsx»
+# Основная группа строки 1: «газ, м³» (колонка R). AD — доп. учёт газа в блоке паровых колонок.
+
+file: "2026 год  ЗАО ВШЗ.xlsx"
+sheet: "2026"
+data_first_excel_row: 3
+date_column:
+  excel_letter: A
+  zero_based_index: 0
+  format: "dd.MM"
+
+resource: GAS
+metrics:
+  - id: gas_plan_mr_m3
+    label_ru: "Газ — план (МР), м³"
+    unit: "м³"
+    excel_column_letter: R
+    zero_based_index: 17
+    row1_group: "газ, м³"
+    row2_kind: "план(МР)"
+    chart_default: true
+
+  - id: gas_op_m3
+    label_ru: "Газ — OP, м³"
+    unit: "м³"
+    excel_column_letter: S
+    zero_based_index: 18
+    row1_group: "газ, м³"
+    row2_kind: "OP"
+    chart_default: true
+
+  - id: gas_fact_total_caf_m3
+    label_ru: "Газ — факт ВСЕГО (CAF+ прочие), м³"
+    unit: "м³"
+    excel_column_letter: T
+    zero_based_index: 19
+    row1_group: "газ, м³"
+    row2_kind: "ВСЕГО факт (CAF+ прочие)"
+    chart_default: true
+
+  - id: gas_fact_kshz_m3
+    label_ru: "Газ — факт АО КШЗ, м³"
+    unit: "м³"
+    excel_column_letter: U
+    zero_based_index: 20
+    row1_group: "газ, м³"
+    row2_kind: "факт АО КШЗ"
+    chart_default: false
+
+  - id: gas_delta_mr_m3
+    label_ru: "Газ — Δ(МР), м³"
+    unit: "м³"
+    excel_column_letter: V
+    zero_based_index: 21
+    row1_group: "газ, м³"
+    row2_kind: "∆(МР)"
+    chart_default: false
+
+  - id: gas_delta_op_m3
+    label_ru: "Газ — Δ(OP), м³"
+    unit: "м³"
+    excel_column_letter: W
+    zero_based_index: 22
+    row1_group: "газ, м³"
+    row2_kind: "∆(OP )"
+    chart_default: false
+
+  - id: gas_line_323_m3
+    label_ru: "Газ ц. №323, м³"
+    unit: "м³"
+    excel_column_letter: AD
+    zero_based_index: 29
+    row1_group: "пар, 9ата (Гкал) (смежная колонка в шаблоне)"
+    row2_kind: "Газ ц. №323, м³"
+    chart_default: true
+    note: "В строке 1 Excel объединения нет в явном виде; колонка логически относится к газу."
+
+charts_recommended:
+  - id: gas_main
+    title_ru: "Газ: план / OP / факт"
+    series:
+      - metric_id: gas_plan_mr_m3
+        role: plan
+      - metric_id: gas_op_m3
+        role: operational_plan
+      - metric_id: gas_fact_total_caf_m3
+        role: fact
+
+import_notes:
+  - "Для страницы «Газ» при построении графика можно добавить серию gas_line_323_m3 отдельным цветом."

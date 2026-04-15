@@ -1,0 +1,162 @@
+# Пар / конденсат — колонки листа «2026» файла «2026 год ЗАО ВШЗ.xlsx»
+# Пар 9 ата в Гкал: группа от X; массы пара и конденсат — AF..AL.
+
+file: "2026 год  ЗАО ВШЗ.xlsx"
+sheet: "2026"
+data_first_excel_row: 3
+date_column:
+  excel_letter: A
+  zero_based_index: 0
+  format: "dd.MM"
+
+resource: STEAM
+metrics:
+  - id: steam9_plan_mr_gcal
+    label_ru: "Пар 9 ата — план (МР), Гкал"
+    unit: "Гкал"
+    excel_column_letter: X
+    zero_based_index: 23
+    row1_group: "пар, 9ата (Гкал)"
+    row2_kind: "план(МР)"
+    chart_default: true
+
+  - id: steam9_R
+    label_ru: "Пар 9 ата — R"
+    unit: ""
+    excel_column_letter: "Y"
+    zero_based_index: 24
+    row1_group: "пар, 9ата (Гкал)"
+    row2_kind: "R"
+    chart_default: false
+
+  - id: steam9_fact_kt_t
+    label_ru: "Пар 9 ата — факт ООО ПК «КТ», т"
+    unit: "т"
+    excel_column_letter: Z
+    zero_based_index: 25
+    row1_group: "пар, 9ата (Гкал)"
+    row2_kind: "факт ООО ПК \"КТ\""
+    chart_default: true
+
+  - id: steam9_fact_kshz_t
+    label_ru: "Пар 9 ата — факт АО КШЗ, т"
+    unit: "т"
+    excel_column_letter: AA
+    zero_based_index: 26
+    row1_group: "пар, 9ата (Гкал)"
+    row2_kind: "факт АО КШЗ"
+    chart_default: true
+
+  - id: steam9_delta_mr
+    label_ru: "Пар 9 ата — Δ(МР)"
+    unit: ""
+    excel_column_letter: AB
+    zero_based_index: 27
+    row1_group: "пар, 9ата (Гкал)"
+    row2_kind: "∆(МР)"
+    chart_default: false
+
+  - id: steam9_delta_R
+    label_ru: "Пар 9 ата — Δ(R)"
+    unit: ""
+    excel_column_letter: AC
+    zero_based_index: 28
+    row1_group: "пар, 9ата (Гкал)"
+    row2_kind: "∆(R )"
+    chart_default: false
+
+  - id: steam9_gcals_per_tonne
+    label_ru: "Пар 9 ата — Гкал/т"
+    unit: "Гкал/т"
+    excel_column_letter: AE
+    zero_based_index: 30
+    row1_group: "пар, 9ата (Гкал)"
+    row2_kind: "Гкал/т"
+    chart_default: true
+
+  - id: steam_16ata_fact_t
+    label_ru: "Пар 16 ата — факт, т"
+    unit: "т"
+    excel_column_letter: AF
+    zero_based_index: 31
+    row1_group: "Пар, 16 ата (т.)"
+    row2_kind: "факт"
+    chart_default: true
+
+  - id: steam_kshz_mass_fact_t
+    label_ru: "Факт АО КШЗ (т) — столбец AG"
+    unit: "т"
+    excel_column_letter: AG
+    zero_based_index: 32
+    row1_group: "факт АО КШЗ (т)"
+    row2_kind: "факт"
+    chart_default: false
+
+  - id: steam_9ata_mass_fact_t
+    label_ru: "Пар 9 ата (т) — факт, т"
+    unit: "т"
+    excel_column_letter: AH
+    zero_based_index: 33
+    row1_group: "Пар, 9 ата (т.)"
+    row2_kind: "факт"
+    chart_default: true
+
+  - id: steam_9ata_queue1_fact_t
+    label_ru: "Пар 9 ата I очередь — факт, т"
+    unit: "т"
+    excel_column_letter: AI
+    zero_based_index: 34
+    row1_group: "Пар, 9 ата (т.) I очередь"
+    row2_kind: "факт"
+    chart_default: false
+
+  - id: steam_kshz_mass_fact_t_paren
+    label_ru: "Факт АО КШЗ(т) — столбец AJ"
+    unit: "т"
+    excel_column_letter: AJ
+    zero_based_index: 35
+    row1_group: "факт АО КШЗ(т)"
+    row2_kind: "факт"
+    chart_default: false
+
+  - id: condensate_return_t
+    label_ru: "Возврат конденсата, т"
+    unit: "т"
+    excel_column_letter: AK
+    zero_based_index: 36
+    row1_group: "возврат конденсата, т."
+    row2_kind: "факт"
+    chart_default: true
+
+  - id: condensate_return_kshz_t
+    label_ru: "Возврат конденсата КШЗ, т"
+    unit: "т"
+    excel_column_letter: AL
+    zero_based_index: 37
+    row1_group: "возврат конденсата КШЗ, т."
+    row2_kind: "факт"
+    chart_default: true
+
+charts_recommended:
+  - id: steam9_energy_main
+    title_ru: "Пар 9 ата (Гкал): план и массовый факт"
+    series:
+      - metric_id: steam9_plan_mr_gcal
+        role: plan
+      - metric_id: steam9_fact_kshz_t
+        role: fact
+    note: "План в Гкал, факт в т — разные величины; для UI лучше разнести на два графика или нормализовать по методике предприятия."
+
+  - id: steam_mass_facts
+    title_ru: "Пар: фактические массы (т)"
+    series:
+      - metric_id: steam_16ata_fact_t
+        role: fact
+      - metric_id: steam_9ata_mass_fact_t
+        role: fact
+      - metric_id: condensate_return_t
+        role: fact
+
+import_notes:
+  - "Колонка AD отнесена к газу (см. gas-column-map-2026.yaml)."
+  - "Блок CAF / котельная (BJ..CT) можно вынести отдельным YAML при необходимости."
