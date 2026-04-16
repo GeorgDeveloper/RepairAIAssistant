@@ -26,6 +26,27 @@ import java.util.Set;
 public class EnergyExcelImportService {
 
     private static final DateTimeFormatter DAY_MONTH_YEAR = DateTimeFormatter.ofPattern("d.M.yyyy", Locale.ROOT);
+    private static final Set<String> WATER_REMOVED_METRICS = Set.of(
+            "tech_water_fact_meter_1",
+            "tech_water_fact_meter_2",
+            "tech_water_fact_meter_3");
+    private static final Set<String> GAS_REMOVED_METRICS = Set.of(
+            "gas_fact_kshz_m3",
+            "gas_line_323_m3");
+    private static final Set<String> ELECTRICITY_REMOVED_METRICS = Set.of(
+            "electricity_kirov_substation_kwh");
+    private static final Set<String> STEAM_REMOVED_METRICS = Set.of(
+            "steam9_plan_mr_gcal",
+            "steam9_R",
+            "steam9_fact_kt_t",
+            "steam9_fact_kshz_t",
+            "steam_16ata_fact_t",
+            "steam_kshz_mass_fact_t",
+            "steam_9ata_mass_fact_t",
+            "steam_9ata_queue1_fact_t",
+            "steam_kshz_mass_fact_t_paren",
+            "condensate_return_t",
+            "condensate_return_kshz_t");
 
     private final EnergyColumnMapService columnMapService;
     private final EnergyDailyValueRepository energyDailyValueRepository;
@@ -132,6 +153,10 @@ public class EnergyExcelImportService {
                 if (metricId == null) {
                     continue;
                 }
+                if (isRemovedMetric(resource, metricId)) {
+                    // На случай старой/кастомной YAML-карты: удаленные метрики больше не импортируем.
+                    continue;
+                }
                 int col = intVal(metricDef.get("zero_based_index"), -1);
                 if (col < 0) {
                     continue;
@@ -149,14 +174,44 @@ public class EnergyExcelImportService {
 
         if (batch.isEmpty()) {
             warnings.add(resource.name() + ": нет строк с датами для импорта");
+            cleanupRemovedMetrics(resource);
             return new ImportSummary(rowsScanned, rowsAccepted, 0, warnings);
         }
         energyDailyValueRepository.deleteByFactDateBetweenAndResourceCode(
                 Objects.requireNonNull(minDate), Objects.requireNonNull(maxDate), resource.name());
+        cleanupRemovedMetrics(resource);
         // Обеспечиваем порядок SQL: DELETE должен уйти в БД до INSERT, иначе срабатывает unique key.
         energyDailyValueRepository.flush();
         energyDailyValueRepository.saveAll(batch);
         return new ImportSummary(rowsScanned, rowsAccepted, batch.size(), warnings);
+    }
+
+    private void cleanupRemovedMetrics(EnergyResource resource) {
+        if (resource == EnergyResource.WATER) {
+            energyDailyValueRepository.deleteByResourceCodeAndMetricIdIn(resource.name(), WATER_REMOVED_METRICS);
+        } else if (resource == EnergyResource.GAS) {
+            energyDailyValueRepository.deleteByResourceCodeAndMetricIdIn(resource.name(), GAS_REMOVED_METRICS);
+        } else if (resource == EnergyResource.ELECTRICITY) {
+            energyDailyValueRepository.deleteByResourceCodeAndMetricIdIn(resource.name(), ELECTRICITY_REMOVED_METRICS);
+        } else if (resource == EnergyResource.STEAM) {
+            energyDailyValueRepository.deleteByResourceCodeAndMetricIdIn(resource.name(), STEAM_REMOVED_METRICS);
+        }
+    }
+
+    private static boolean isRemovedMetric(EnergyResource resource, String metricId) {
+        if (resource == EnergyResource.WATER) {
+            return WATER_REMOVED_METRICS.contains(metricId);
+        }
+        if (resource == EnergyResource.GAS) {
+            return GAS_REMOVED_METRICS.contains(metricId);
+        }
+        if (resource == EnergyResource.ELECTRICITY) {
+            return ELECTRICITY_REMOVED_METRICS.contains(metricId);
+        }
+        if (resource == EnergyResource.STEAM) {
+            return STEAM_REMOVED_METRICS.contains(metricId);
+        }
+        return false;
     }
 
     private static int excelRowToZeroBased(int excel1BasedRow) {

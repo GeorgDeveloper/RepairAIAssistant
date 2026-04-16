@@ -3,9 +3,6 @@
 # Дата суток: колонка A (excel 1-based row = номер строки, колонка A = индекс 0).
 #
 # Заголовки: строка 1 Excel = группы, строка 2 Excel = план/OP/факт/дельты.
-# Для AN..AP во 2-й строке подписей в файле нет (три одноимённых «тех.вода факт» в строке 1) —
-# интерпретация: три независимых фактических расхода, м³/сутки (уточнить у автора таблицы).
-
 file: "2026 год  ЗАО ВШЗ.xlsx"
 sheet: "2026"
 data_first_excel_row: 3
@@ -16,33 +13,6 @@ date_column:
 
 resource: WATER
 metrics:
-  - id: tech_water_fact_meter_1
-    label_ru: "Тех. вода (факт), учёт 1, м³"
-    unit: "м³"
-    excel_column_letter: AN
-    zero_based_index: 39
-    row1_group: "тех.вода факт, куб.м"
-    row2_kind: "факт"
-    chart_default: false
-
-  - id: tech_water_fact_meter_2
-    label_ru: "Тех. вода (факт), учёт 2, м³"
-    unit: "м³"
-    excel_column_letter: AO
-    zero_based_index: 40
-    row1_group: "тех.вода факт, куб.м"
-    row2_kind: "факт"
-    chart_default: false
-
-  - id: tech_water_fact_meter_3
-    label_ru: "Тех. вода (факт), учёт 3, м³"
-    unit: "м³"
-    excel_column_letter: AP
-    zero_based_index: 41
-    row1_group: "тех.вода факт, куб.м"
-    row2_kind: "факт"
-    chart_default: false
-
   - id: technical_water_plan_mr
     label_ru: "Техническая вода — план (МР), м³"
     unit: "м³"

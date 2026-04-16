@@ -65,15 +65,6 @@ metrics:
     row2_kind: "∆(OP )"
     chart_default: false
 
-  - id: electricity_kirov_substation_kwh
-    label_ru: "В т.ч. эл/эн на р/см Киров, кВт·ч"
-    unit: "кВт·ч"
-    excel_column_letter: N
-    zero_based_index: 13
-    row1_group: "эл.энергия, кВтч"
-    row2_kind: "в т.ч. эл/эн на р/см Киров, кВтч"
-    chart_default: false
-
   - id: air_compressors_running_count
     label_ru: "Компрессоры в работе, шт"
     unit: "шт"

@@ -24,18 +24,6 @@
     <div class="main-content">
         <div class="container">
             <h1 th:text="${energyTitleRu}">Энергия</h1>
-            <p class="energy-hint">
-                Год в селекторе используется и для отображения данных, и для колонки даты <code>dd.MM</code> при импорте.
-                График строится по метрикам с <code>chart_default: true</code> из карты колонок.
-            </p>
-
-            <div class="energy-import-row">
-                <input type="file" id="erFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
-                <button type="button" id="erImportBtn" class="btn-apply">Импорт из Excel</button>
-                <span id="erFileName" class="energy-file-name"></span>
-            </div>
-
-            <div id="energyResourceMsg"></div>
 
             <div class="filters energy-filters">
                 <div class="filter-group">
@@ -65,7 +53,7 @@
             </div>
 
             <div class="chart-container energy-chart-wrap">
-                <canvas id="erChart" height="120"></canvas>
+                <canvas id="erChart"></canvas>
             </div>
 
             <h2>Таблица</h2>

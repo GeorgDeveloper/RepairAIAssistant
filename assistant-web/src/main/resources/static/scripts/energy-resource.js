@@ -11,10 +11,22 @@ let erChart = null;
 let erColumnMap = null;
 
 function showMsg(html, kind) {
-    const el = document.getElementById('energyResourceMsg');
-    if (!el) return;
+    const text = html || '';
+    let el = document.getElementById('energyResourceMsg');
+    if (!text) {
+        if (el) el.remove();
+        return;
+    }
+    if (!el) {
+        const container = document.querySelector('.main-content .container');
+        const heading = container ? container.querySelector('h1') : null;
+        if (!container || !heading) return;
+        el = document.createElement('div');
+        el.id = 'energyResourceMsg';
+        heading.insertAdjacentElement('afterend', el);
+    }
     el.className = 'energy-msg' + (kind ? ' ' + kind : '');
-    el.innerHTML = html || '';
+    el.innerHTML = text;
 }
 
 function normalizeFactDate(d) {
@@ -78,50 +90,6 @@ async function loadDaily(year, month) {
     return fetchJson(`/api/energy/daily-values?${q.toString()}`);
 }
 
-async function importExcel(file) {
-    const year = parseInt(document.getElementById('erYear').value, 10);
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('year', String(year));
-    fd.append('resource', ER_RESOURCE);
-    const r = await fetch('/api/energy/import', { method: 'POST', body: fd });
-    const text = await r.text();
-    if (r.status === 413) {
-        throw new Error(
-            'Файл слишком большой для сервера (HTTP 413). Перезапустите assistant-web после изменения лимитов multipart.'
-        );
-    }
-    let body;
-    try {
-        body = text ? JSON.parse(text) : {};
-    } catch (e) {
-        throw new Error(`Ответ сервера не JSON (HTTP ${r.status}): ${text.slice(0, 200)}`);
-    }
-    if (!r.ok) {
-        const err =
-            body.error ||
-            body.message ||
-            (text && text.length && text.length < 400 ? text : null) ||
-            `HTTP ${r.status}`;
-        throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
-    }
-    return body;
-}
-
-function formatImportResult(body) {
-    const parts = [
-        `<strong>Импорт ${ER_TITLE} завершён.</strong> Строк обработано: ${body.rowsScanned ?? '—'}, принято с датой: ${body.rowsAccepted ?? '—'}, значений записано: ${body.valuesWritten ?? '—'}.`,
-    ];
-    if (Array.isArray(body.warnings) && body.warnings.length) {
-        parts.push('<br>Предупреждения:<ul>' + body.warnings.map((w) => `<li>${escapeHtml(String(w))}</li>`).join('') + '</ul>');
-    }
-    return parts.join('');
-}
-
-function escapeHtml(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 function pivotByDate(rows) {
     const byDate = new Map();
     for (const row of rows) {
@@ -141,6 +109,35 @@ function renderTable(metricsDefs, byDate, dates) {
     if (!thead || !tbody) return;
     thead.innerHTML = '';
     tbody.innerHTML = '';
+    const factMetricIds = metricsDefs
+        .filter((m) => {
+            const row2 = (m.row2_kind || '').toLowerCase();
+            const label = (m.label_ru || '').toLowerCase();
+            return row2.includes('факт') || label.includes('факт');
+        })
+        .map((m) => m.id);
+    const hasFactMetrics = factMetricIds.length > 0;
+    const isFilledFactValue = (v) => {
+        if (v == null) return false;
+        if (typeof v === 'number') return v !== 0;
+        if (typeof v === 'string') {
+            const t = v.trim();
+            if (!t) return false;
+            const n = Number(t.replace(',', '.'));
+            return Number.isNaN(n) ? true : n !== 0;
+        }
+        return true;
+    };
+    const steamVisibilityMetricId = 'steam9_gcals_per_tonne';
+    const hasSteamVisibilityMetric = metricsDefs.some((m) => m.id === steamVisibilityMetricId);
+    const visibleDates = dates.filter((d) => {
+        const row = byDate.get(d) || {};
+        if (ER_RESOURCE === 'STEAM' && hasSteamVisibilityMetric) {
+            return isFilledFactValue(row[steamVisibilityMetricId]);
+        }
+        if (!hasFactMetrics) return true;
+        return factMetricIds.some((metricId) => isFilledFactValue(row[metricId]));
+    });
     const trh = document.createElement('tr');
     const th0 = document.createElement('th');
     th0.textContent = 'Дата';
@@ -152,7 +149,7 @@ function renderTable(metricsDefs, byDate, dates) {
     }
     thead.appendChild(trh);
 
-    for (const d of dates) {
+    for (const d of visibleDates) {
         const tr = document.createElement('tr');
         const td0 = document.createElement('td');
         td0.textContent = d;
@@ -198,10 +195,19 @@ function renderChart(metricsDefs, byDate, dates) {
         data: { labels, datasets },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { position: 'bottom' },
+                legend: {
+                    position: 'right',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'line',
+                        boxWidth: 40,
+                        boxHeight: 3,
+                        padding: 12,
+                    },
+                },
                 title: { display: true, text: `${ER_TITLE} — ключевые показатели` },
             },
             scales: {
@@ -209,6 +215,10 @@ function renderChart(metricsDefs, byDate, dates) {
                 y: { title: { display: true, text: 'Значение' } },
             },
         },
+    });
+    // Ensure crisp first render after layout settles.
+    requestAnimationFrame(() => {
+        if (erChart) erChart.resize();
     });
 }
 
@@ -227,7 +237,7 @@ async function apply() {
         }
         const rows = await loadDaily(year, month);
         if (!rows.length) {
-            showMsg(`Нет данных за выбранный месяц для ресурса ${ER_TITLE}. Загрузите файл .xlsx кнопкой «Импорт из Excel».`, 'warn');
+            showMsg(`Нет данных за выбранный месяц для ресурса ${ER_TITLE}.`, 'warn');
             renderTable(metricsDefs, new Map(), []);
             if (erChart) {
                 erChart.destroy();
@@ -251,30 +261,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ms) ms.value = String(m);
     document.getElementById('erApply').addEventListener('click', apply);
 
-    const fileInput = document.getElementById('erFile');
-    const importBtn = document.getElementById('erImportBtn');
-    const fileNameEl = document.getElementById('erFileName');
-
-    importBtn.addEventListener('click', () => fileInput.click());
-
-    fileInput.addEventListener('change', async () => {
-        const file = fileInput.files && fileInput.files[0];
-        fileInput.value = '';
-        if (!file) return;
-        if (fileNameEl) fileNameEl.textContent = file.name;
-        importBtn.disabled = true;
-        showMsg('Идёт загрузка и импорт…', '');
-        try {
-            const result = await importExcel(file);
-            showMsg(formatImportResult(result), '');
-            await apply();
-        } catch (e) {
-            console.error(e);
-            showMsg('Ошибка импорта: ' + (e && e.message ? e.message : e), 'err');
-        } finally {
-            importBtn.disabled = false;
-        }
-    });
-
-    apply();
+    requestAnimationFrame(() => apply());
 });

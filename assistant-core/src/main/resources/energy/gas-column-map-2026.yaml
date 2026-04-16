@@ -38,15 +38,6 @@ metrics:
     row2_kind: "ВСЕГО факт (CAF+ прочие)"
     chart_default: true
 
-  - id: gas_fact_kshz_m3
-    label_ru: "Газ — факт АО КШЗ, м³"
-    unit: "м³"
-    excel_column_letter: U
-    zero_based_index: 20
-    row1_group: "газ, м³"
-    row2_kind: "факт АО КШЗ"
-    chart_default: false
-
   - id: gas_delta_mr_m3
     label_ru: "Газ — Δ(МР), м³"
     unit: "м³"
@@ -65,16 +56,6 @@ metrics:
     row2_kind: "∆(OP )"
     chart_default: false
 
-  - id: gas_line_323_m3
-    label_ru: "Газ ц. №323, м³"
-    unit: "м³"
-    excel_column_letter: AD
-    zero_based_index: 29
-    row1_group: "пар, 9ата (Гкал) (смежная колонка в шаблоне)"
-    row2_kind: "Газ ц. №323, м³"
-    chart_default: true
-    note: "В строке 1 Excel объединения нет в явном виде; колонка логически относится к газу."
-
 charts_recommended:
   - id: gas_main
     title_ru: "Газ: план / OP / факт"
@@ -87,4 +68,4 @@ charts_recommended:
         role: fact
 
 import_notes:
-  - "Для страницы «Газ» при построении графика можно добавить серию gas_line_323_m3 отдельным цветом."
+  - "Метрики 'Газ — факт АО КШЗ' и 'Газ ц. №323' исключены из импорта и отображения."
