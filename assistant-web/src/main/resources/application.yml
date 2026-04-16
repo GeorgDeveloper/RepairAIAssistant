@@ -29,3 +29,5 @@ base-update:
 app:
   production-days-correction:
     password: ${PRODUCTION_DAYS_CORRECTION_PASSWORD:kadmin}
+  energy-import:
+    password: ${ENERGY_IMPORT_PASSWORD:eadmin}
