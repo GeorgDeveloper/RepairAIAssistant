@@ -5,8 +5,9 @@
     padding: 30px;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    max-width: 900px;
+    max-width: 1000px;
     margin: 0 auto;
+    width: 100%;
 }
 
 .content h1 {
@@ -628,6 +629,19 @@
     color: #e74c3c;
     border-color: #e74c3c;
     background-color: #fff;
+}
+
+@media (max-width: 1024px) {
+    .content {
+        max-width: 100%;
+        padding: 1.25rem;
+    }
+
+    #updateReportModal.modal .modal-content,
+    #statusChangeModal.modal .modal-content {
+        max-width: 90%;
+        padding: 1.25rem;
+    }
 }
 
 /* Responsive design */

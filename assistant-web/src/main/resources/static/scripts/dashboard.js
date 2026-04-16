@@ -53,11 +53,26 @@ const DashboardUtils = {
     }
 };
 
+function wrapTablesResponsive(root) {
+    if (!root) return;
+    const tables = root.querySelectorAll('table');
+    tables.forEach(table => {
+        const parent = table.parentElement;
+        if (!parent) return;
+        if (parent.classList.contains('table-responsive')) return;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-responsive';
+        parent.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+    });
+}
+
 // Common chart functions used across dashboard pages
 const DashboardCharts = {
     createChart(containerId, chartId, title, dataPoints, yAxisSuffix = "%") {
         const options = {
             animationEnabled: true,
+            responsive: true,
             title: { text: title },
             axisX: {
                 title: "Время",
@@ -233,7 +248,9 @@ const DashboardTables = {
             tableHTML += '</tr>';
         });
         tableHTML += '</tbody></table>';
-        document.getElementById(containerId).innerHTML = tableHTML;
+        const container = document.getElementById(containerId);
+        container.innerHTML = tableHTML;
+        wrapTablesResponsive(container);
     },
     
     createWorkOrdersTable(data, containerId) {
@@ -272,7 +289,9 @@ const DashboardTables = {
         });
         
         tableHTML += '</tbody></table>';
-        document.getElementById(containerId).innerHTML = tableHTML;
+        const container = document.getElementById(containerId);
+        container.innerHTML = tableHTML;
+        wrapTablesResponsive(container);
     },
     
     // Функция для расчета продолжительности наряда на работы
@@ -365,5 +384,32 @@ const DashboardInit = {
         return setInterval(() => {
             window.location.reload();
         }, interval);
+    },
+
+    initResponsiveTables() {
+        wrapTablesResponsive(document);
+    },
+
+    initChartResizeHandling() {
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            if (resizeTimer) clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                ['#breakDown', '#availability', '#availabilityOnline', '#breakDownOnline', '#pmChart']
+                    .forEach(selector => {
+                        try {
+                            const chart = $(selector).CanvasJSChart();
+                            chart?.render();
+                        } catch (e) {
+                            // CanvasJS chart may not exist on current page.
+                        }
+                    });
+            }, 120);
+        });
     }
 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    DashboardInit.initResponsiveTables();
+    DashboardInit.initChartResizeHandling();
+});

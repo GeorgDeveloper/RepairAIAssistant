@@ -36,8 +36,10 @@ build/
 
 ### Mac OS ###
 .DS_Store
-assistant-core/logs/repair-assistant.log.*
-assistant-telegram/logs/repair-assistant.log.*
-assistant-web/logs/repair-assistant.log.*
-assistant-telegram/logs/repair-assistant.log
-assistant-web/logs/repair-assistant.log
+assistant-core/logs/
+assistant-telegram/
+assistant-web/logs/
+assistant-yandexbot/logs/
+assistant-ai/logs/
+assistant-base_update/logs/
+

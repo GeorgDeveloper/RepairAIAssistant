@@ -153,7 +153,8 @@
 .charts-wrapper {
     display: flex; 
     gap: 20px; 
-    height: 580px;
+    min-height: 18.75rem;
+    height: clamp(21.875rem, 45vh, 31.25rem);
 }
 
 .charts-column {
@@ -293,5 +294,71 @@
     cursor: pointer;
     margin: 0;
     flex: 1;
+}
+
+@media (max-width: 1024px) {
+    .filters {
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .chart-container {
+        padding: 1rem;
+        height: 21.875rem;
+    }
+
+    .charts-wrapper {
+        flex-direction: column;
+        height: auto;
+        min-height: 0;
+    }
+
+    .legend-column {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .filters {
+        gap: 0.75rem;
+        padding: 0.875rem;
+    }
+
+    .filter-control,
+    .multi-select-button,
+    .single-select-button {
+        font-size: 0.875rem;
+    }
+
+    .chart-container {
+        height: 18.75rem;
+        padding: 0.875rem;
+    }
+
+    .btn-toggle,
+    .btn-toggle-all {
+        font-size: 0.75rem;
+    }
+}
+
+/* Compact spacing overrides */
+.filters {
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+}
+
+.chart-container {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+}
+
+.charts-wrapper {
+    gap: 0.75rem;
+    height: clamp(18.75rem, 42vh, 28rem);
+}
+
+.legend-column {
+    padding: 0.75rem;
 }
 

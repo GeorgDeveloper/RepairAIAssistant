@@ -74,6 +74,7 @@
 .energy-chart-wrap {
     margin-bottom: 24px;
     min-height: 260px;
+    height: var(--chart-height, 25rem);
 }
 
 .energy-chart-wrap canvas {
@@ -90,6 +91,7 @@
     font-size: 0.85rem;
     white-space: nowrap;
     width: 100%;
+    min-width: 50rem;
 }
 
 .energy-table th,
@@ -127,4 +129,30 @@
 .energy-msg.err {
     background: #f8d7da;
     border: 1px solid #f5c6cb;
+}
+
+@media (max-width: 1024px) {
+    .energy-table {
+        min-width: 43.75rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .energy-import-row {
+        gap: 0.5rem;
+    }
+
+    .energy-file-name {
+        max-width: 100%;
+    }
+
+    .energy-table {
+        min-width: 37.5rem;
+    }
+
+    .energy-table th,
+    .energy-table td {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.625rem;
+    }
 }

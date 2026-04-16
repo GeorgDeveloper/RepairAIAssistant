@@ -6,6 +6,16 @@ let chartData = null;
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     loadInitialData();
+
+    // Chart.js может посчитать размеры до того, как flex/heights окончательно применились.
+    // Делегируем resize после layout и при изменении размера окна.
+    let resizeTimer = null;
+    window.addEventListener('resize', function() {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (mainChart) mainChart.resize();
+        }, 150);
+    });
 });
 
 function setupEventListeners() {
@@ -439,6 +449,10 @@ function createMainChart() {
                 }
             }
         }
+    });
+
+    requestAnimationFrame(function() {
+        if (mainChart) mainChart.resize();
     });
 }
 

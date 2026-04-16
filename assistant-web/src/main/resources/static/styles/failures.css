@@ -8,16 +8,20 @@
 /* Фиксируем страницу в пределах видимой области */
 html, body { 
     height: 100%; 
-    overflow: hidden !important; 
+    overflow-x: hidden !important; 
+    overflow-y: auto !important;
 }
 
 /* Основной контент прокручиваемый только внутри по вертикали при необходимости */
 .main-content { 
-    height: calc(100vh - 80px);
-    width: 85%; 
-    overflow-y: auto !important; 
+    height: calc(100vh - 5rem);
+    width: 100%; 
+    overflow-y: hidden !important; 
     overflow-x: visible !important; 
-    padding-right: 100px; 
+    padding-right: 0; 
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 /* Родители не должны обрезать полосы прокрутки */
@@ -25,21 +29,57 @@ html, body {
     overflow: visible !important; 
 }
 
+/* Чтобы блок с таблицей тянулся по высоте */
+.container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.row {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding-top: 0.5rem;
+}
+
+.col {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 /* Force scrollbars inside DataTables area */
 .dataTables_scroll { 
     overflow: auto !important; 
 }
 
+.dataTables_wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dataTables_scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 .dataTables_scrollBody { 
     overflow-x: scroll !important; 
     overflow-y: auto !important; 
-    height: calc(60vh - 80px) !important; 
-    max-height: calc(60vh - 80px) !important; 
+    height: 100% !important; 
+    max-height: none !important; 
 }
 
 /* Ensure inner tables are wider than viewport to trigger horizontal scroll */
 .dataTables_scrollHeadInner, .dataTables_scrollBody > table { 
-    min-width: 2200px !important; 
+    min-width: 75rem !important; 
 }
 
 .dataTables_scrollHead, .dataTables_scrollBody {
@@ -104,9 +144,9 @@ table.details-table th, table.details-table td {
 
 .filters { 
     display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); 
     gap: 15px; 
-    margin: 16px 0 8px 0; 
+    margin: 16px 0 10px 0; 
     padding: 15px; 
     background-color: #f5f5f5; 
     border-radius: 6px; 
@@ -178,4 +218,51 @@ table.details-table th, table.details-table td {
 
 #resizablePm { 
     height: 100% !important; 
+}
+
+@media (max-width: 1024px) {
+    .filters {
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .dataTables_scrollBody { 
+        height: calc(100vh - 13rem) !important; 
+        max-height: calc(100vh - 13rem) !important; 
+    }
+
+    .dataTables_scrollHeadInner, .dataTables_scrollBody > table { 
+        min-width: 62.5rem !important; 
+    }
+
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate {
+        float: none !important;
+        text-align: left !important;
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .filters {
+        gap: 0.75rem;
+        padding: 0.875rem;
+        grid-template-columns: 1fr;
+    }
+
+    .filter-control {
+        font-size: 0.875rem;
+    }
+
+    table.dataTable thead th,
+    table.dataTable tbody td {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.625rem;
+    }
+
+    .dataTables_scrollHeadInner, .dataTables_scrollBody > table { 
+        min-width: 50rem !important; 
+    }
 }

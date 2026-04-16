@@ -37,6 +37,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Chart.js может посчитать размеры до того, как layout окончательно стабилизировался.
+    // Пересчитаем размеры графика на resize окна.
+    let resizeTimer = null;
+    window.addEventListener('resize', function() {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (mainChart) mainChart.resize();
+        }, 150);
+    });
 });
 
 function setupEventListeners() {
@@ -1505,6 +1515,10 @@ function renderDrillChart(title, rows, onBarClick) {
                 scales: { x: { beginAtZero: true } }
             }
         });
+
+    requestAnimationFrame(function() {
+        if (mainChart) mainChart.resize();
+    });
     }
 }
 

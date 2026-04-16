@@ -79,7 +79,11 @@ const MainDashboard = {
         });
 
         tableHTML += '</tbody></table>';
-        document.getElementById('metricsTable').innerHTML = tableHTML;
+        const metricsTableContainer = document.getElementById('metricsTable');
+        metricsTableContainer.innerHTML = tableHTML;
+        if (typeof wrapTablesResponsive === 'function') {
+            wrapTablesResponsive(metricsTableContainer);
+        }
     },
 
     // Таблица метрик по ключевым линиям (используем реальные данные из main_lines_online)
@@ -130,7 +134,12 @@ const MainDashboard = {
 
             tableHTML += '</tbody></table>';
             const container = document.getElementById('metricsTable-lines');
-            if (container) container.innerHTML = tableHTML;
+            if (container) {
+                container.innerHTML = tableHTML;
+                if (typeof wrapTablesResponsive === 'function') {
+                    wrapTablesResponsive(container);
+                }
+            }
 
         } catch (error) {
             console.error('Ошибка при загрузке данных ключевых линий:', error);
@@ -166,7 +175,12 @@ const MainDashboard = {
             });
             tableHTML += '</tbody></table>';
             const currentContainer = document.getElementById('topBreakdownsCurrentTable');
-            if (currentContainer) currentContainer.innerHTML = tableHTML;
+            if (currentContainer) {
+                currentContainer.innerHTML = tableHTML;
+                if (typeof wrapTablesResponsive === 'function') {
+                    wrapTablesResponsive(currentContainer);
+                }
+            }
         }
 
         // Добавляем в заголовки дату прошедших суток и текущую дату

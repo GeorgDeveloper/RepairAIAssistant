@@ -3,6 +3,7 @@
 #diagnosticsTable {
     width: 100% !important;
     table-layout: auto;
+    min-width: 75rem;
 }
 
 #diagnosticsTable thead th {
@@ -22,31 +23,19 @@
     font-size: 12px;
 }
 
-/* Column widths - более точные значения */
-#diagnosticsTable thead th:nth-child(1) { width: 30px !important; min-width: 30px; } /* details-control */
-#diagnosticsTable thead th:nth-child(2) { width: 50px !important; min-width: 50px; } /* ID */
-#diagnosticsTable thead th:nth-child(3) { width: 110px !important; min-width: 110px; } /* ДАТА ОБНАРУЖЕНИЯ */
-#diagnosticsTable thead th:nth-child(4) { width: 140px !important; min-width: 140px; } /* ТИП ДИАГНОСТИКИ */
-#diagnosticsTable thead th:nth-child(5) { width: 180px !important; min-width: 180px; } /* ОБОРУДОВАНИЕ */
-#diagnosticsTable thead th:nth-child(6) { width: 100px !important; min-width: 100px; } /* УЗЕЛ */
-#diagnosticsTable thead th:nth-child(7) { width: 120px !important; min-width: 120px; } /* УЧАСТОК */
-#diagnosticsTable thead th:nth-child(8) { width: 180px !important; min-width: 180px; } /* НЕИСПРАВНОСТЬ */
-#diagnosticsTable thead th:nth-child(9) { width: 120px !important; min-width: 120px; } /* ДОП. КОМПЛЕКТ */
-#diagnosticsTable thead th:nth-child(10) { width: 180px !important; min-width: 180px; } /* ПРИЧИНЫ */
-#diagnosticsTable thead th:nth-child(11) { width: 80px !important; min-width: 80px; } /* ФОТО */
-#diagnosticsTable thead th:nth-child(12) { width: 80px !important; min-width: 80px; } /* ДОКУМЕНТ */
-#diagnosticsTable thead th:nth-child(13) { width: 100px !important; min-width: 100px; } /* ОТЧЕТ */
-#diagnosticsTable thead th:nth-child(14) { width: 100px !important; min-width: 100px; } /* СТАТУС */
-#diagnosticsTable thead th:nth-child(15) { width: 110px !important; min-width: 110px; } /* ДАТА УСТРАНЕНИЯ */
-#diagnosticsTable thead th:nth-child(16) { width: 180px !important; min-width: 180px; } /* СОСТОЯНИЕ ПОСЛЕ УСТРАНЕНИЯ */
-#diagnosticsTable thead th:nth-child(17) { width: 140px !important; min-width: 140px; } /* ОТВЕТСТВЕННЫЙ */
-#diagnosticsTable thead th:nth-child(18) { width: 180px !important; min-width: 180px; } /* ПРИЧИНА НЕУСТРАНЕНИЯ */
-#diagnosticsTable thead th:nth-child(19) { width: 180px !important; min-width: 180px; } /* МЕРОПРИЯТИЯ */
-#diagnosticsTable thead th:nth-child(20) { width: 180px !important; min-width: 180px; } /* КОММЕНТАРИИ */
-#diagnosticsTable thead th:nth-child(21) { width: 80px !important; min-width: 80px; } /* ФОТО ИТОГ */
-#diagnosticsTable thead th:nth-child(22) { width: 100px !important; min-width: 100px; } /* ОТЧЕТ ИТОГ */
-#diagnosticsTable thead th:nth-child(23) { width: 130px !important; min-width: 130px; } /* Создано */
-#diagnosticsTable thead th:nth-child(24) { width: 130px !important; min-width: 130px; } /* Обновлено */
+/* Column width caps to avoid overly wide columns */
+#diagnosticsTable thead th,
+#diagnosticsTable tbody td {
+    max-width: 10rem;
+}
+
+#diagnosticsTable thead th:nth-child(1),
+#diagnosticsTable thead th:nth-child(2),
+#diagnosticsTable tbody td:nth-child(1),
+#diagnosticsTable tbody td:nth-child(2) {
+    max-width: 3.5rem;
+    min-width: 2rem;
+}
 
 /* File thumbnails */
 .file-thumbnail {
@@ -105,7 +94,7 @@
 #diagnosticsTable tbody td:nth-child(20) {
     white-space: normal;
     word-wrap: break-word;
-    max-width: 180px;
+    max-width: 12rem;
 }
 
 /* DataTables scroll container */
@@ -118,5 +107,23 @@
 .dataTables_scrollHead table,
 .dataTables_scrollBody table {
     margin: 0 !important;
+}
+
+@media (max-width: 1024px) {
+    #diagnosticsTable {
+        min-width: 62.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #diagnosticsTable {
+        min-width: 50rem;
+    }
+
+    #diagnosticsTable thead th,
+    #diagnosticsTable tbody td {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.625rem;
+    }
 }
 

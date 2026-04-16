@@ -753,7 +753,11 @@ const IndexDashboard = {
             });
             
             tableHTML += '</tbody></table>';
-            document.getElementById('metricsTable').innerHTML = tableHTML;
+            const metricsTableContainer = document.getElementById('metricsTable');
+            metricsTableContainer.innerHTML = tableHTML;
+            if (typeof wrapTablesResponsive === 'function') {
+                wrapTablesResponsive(metricsTableContainer);
+            }
         },
         
         createTopBreakdowns(data, containerId, isWeekly = false, drilldownOptions = null) {
@@ -1108,7 +1112,11 @@ IndexDashboard.showIndicatorTable = async function(date) {
         });
         
         tableHTML += '</tbody></table>';
-        document.getElementById('indicatorTableContainer').innerHTML = tableHTML;
+        const indicatorTableContainer = document.getElementById('indicatorTableContainer');
+        indicatorTableContainer.innerHTML = tableHTML;
+        if (typeof wrapTablesResponsive === 'function') {
+            wrapTablesResponsive(indicatorTableContainer);
+        }
         
         // Add click event listeners to clickable cells
         addClickListenersToIndicatorTable();

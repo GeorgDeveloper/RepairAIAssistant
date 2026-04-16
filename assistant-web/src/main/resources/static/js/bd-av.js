@@ -6,6 +6,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     await loadYears();
     await applyFilters();
+
+    // Chart.js может посчитать размеры до полного применения layout высоты
+    // (flex/grid + height). Пересчитаем при изменении размера окна.
+    let resizeTimer = null;
+    window.addEventListener('resize', function() {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (chart) chart.resize();
+        }, 150);
+    });
 });
 
 function setupEventListeners() {
@@ -395,6 +405,10 @@ function renderChart(rows, metric, areas) {
                 x: { title: { display: true, text: xAxisTitle() } }
             }
         }
+    });
+
+    requestAnimationFrame(function() {
+        if (chart) chart.resize();
     });
 }
 

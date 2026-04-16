@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/static/styles/final.css">
     <script src="/static/jquery/jquery-3.6.0.min.js"></script>
 </head>
-<body>
+<body class="infopanel-screen">
     <div th:replace="~{fragments/navigation :: nav}"></div>
 
     <div class="total-content">
@@ -30,12 +30,14 @@
                     <button id="applyBtn" class="btn-apply">Показать</button>
                 </div>
             </div>
-            <table class="summary-table">
-                <thead id="summaryHead"></thead>
-                <tbody id="summaryBody">
-                <!-- rows filled via /final/data -->
-                </tbody>
-            </table>
+            <div class="summary-table-scroll" role="region" aria-label="Таблица итогов по месяцам">
+                <table class="summary-table">
+                    <thead id="summaryHead"></thead>
+                    <tbody id="summaryBody">
+                    <!-- rows filled via /final/data -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

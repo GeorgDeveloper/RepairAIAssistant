@@ -11,7 +11,7 @@
     <script src="/static/lib/chartjs-plugin-datalabels.min.js"></script>
 </head>
 
-<body>
+<body class="breakdowns-screen">
     <!-- Use the navigation fragment -->
     <div th:replace="~{fragments/navigation :: nav}"></div>
 
@@ -128,7 +128,7 @@
                         <button id="toggleLabels" class="btn btn-toggle">Значения: выкл</button>
                         <button id="toggleType" class="btn btn-toggle">Столбики</button>
                     </div>
-                    <canvas id="chart" height="480"></canvas>
+                    <canvas id="chart"></canvas>
                 </div>
             </div>
         </div>

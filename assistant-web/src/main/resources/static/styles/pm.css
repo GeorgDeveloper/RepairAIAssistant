@@ -8,16 +8,17 @@
 /* Фиксируем страницу в пределах видимой области */
 html, body { 
     height: 100%; 
-    overflow: hidden !important; 
+    overflow-x: hidden !important; 
+    overflow-y: auto !important;
 }
 
 /* Основной контент прокручиваемый только внутри по вертикали при необходимости */
 .main-content { 
     height: calc(100vh - 80px);
-    width: 85%; 
+    width: 100%; 
     overflow-y: auto !important; 
     overflow-x: visible !important; 
-    padding-right: 100px; 
+    padding-right: 0; 
 }
 
 /* Родители не должны обрезать полосы прокрутки */
@@ -39,7 +40,7 @@ html, body {
 
 /* Ensure inner tables are wider than viewport to trigger horizontal scroll */
 .dataTables_scrollHeadInner, .dataTables_scrollBody > table { 
-    min-width: 2200px !important; 
+    min-width: 75rem !important; 
 }
 
 .dataTables_scrollHead, .dataTables_scrollBody {
@@ -104,7 +105,7 @@ table.details-table th, table.details-table td {
 
 .filters { 
     display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
     gap: 15px; 
     margin: 16px 0 8px 0; 
     padding: 15px; 
@@ -163,5 +164,43 @@ table.details-table th, table.details-table td {
 
 .dataTables_wrapper .dataTables_filter { 
     float: right !important; 
+}
+
+@media (max-width: 1024px) {
+    .filters {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .dataTables_scrollBody { 
+        height: calc(55vh - 80px) !important; 
+        max-height: calc(55vh - 80px) !important; 
+    }
+
+    .dataTables_scrollHeadInner, .dataTables_scrollBody > table { 
+        min-width: 62.5rem !important; 
+    }
+}
+
+@media (max-width: 768px) {
+    .filters {
+        gap: 0.75rem;
+        padding: 0.875rem;
+    }
+
+    .filter-control {
+        font-size: 0.875rem;
+    }
+
+    table.dataTable thead th,
+    table.dataTable tbody td {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.625rem;
+    }
+
+    .dataTables_scrollHeadInner, .dataTables_scrollBody > table { 
+        min-width: 50rem !important; 
+    }
 }
 

@@ -10,7 +10,7 @@
     <link href="https://canvasjs.com/assets/css/jquery-ui.1.11.2.min.css" rel="stylesheet" />
 </head>
 
-<body>
+<body class="graf-dashboard-screen infopanel-screen">
 
     <div th:replace="~{fragments/navigation :: nav}"></div>
 
@@ -21,9 +21,9 @@
             </div>
         </div>
 
-        <div class="main-content">
-            <div class="container">
-                <div class="stack">
+        <div class="main-content graf-dashboard-page">
+            <div class="container graf-dashboard-container">
+                <div class="stack graf-dashboard-stack">
                     <div class="card">
                         <div class="chart-header">
                             <button id="toggleAllBD" class="btn-toggle-all">Отключить все</button>
