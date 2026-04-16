@@ -1644,20 +1644,35 @@ body.graf-dashboard-screen .btn-toggle-all {
 
     body.index-dashboard-screen .right-pane .metrics-table th:nth-child(1),
     body.index-dashboard-screen .right-pane .metrics-table td:nth-child(1) {
-        width: 38% !important;
+    width: 25% !important;
     }
 
     body.index-dashboard-screen .right-pane .metrics-table th:nth-child(2),
     body.index-dashboard-screen .right-pane .metrics-table td:nth-child(2) {
-        width: 16% !important;
+    width: 19% !important;
     }
 
     body.index-dashboard-screen .right-pane .metrics-table th:nth-child(3),
     body.index-dashboard-screen .right-pane .metrics-table td:nth-child(3),
     body.index-dashboard-screen .right-pane .metrics-table th:nth-child(4),
     body.index-dashboard-screen .right-pane .metrics-table td:nth-child(4) {
-        width: 23% !important;
+    width: 28% !important;
     }
+
+/* Weekly/monthly top tables (2 columns): tighten machine_name width */
+body.index-dashboard-screen .right-pane #topBreakdownsWeekKeyLinesTable .metrics-table th:nth-child(1),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekKeyLinesTable .metrics-table td:nth-child(1),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekTable .metrics-table th:nth-child(1),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekTable .metrics-table td:nth-child(1) {
+    width: 44% !important;
+}
+
+body.index-dashboard-screen .right-pane #topBreakdownsWeekKeyLinesTable .metrics-table th:nth-child(2),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekKeyLinesTable .metrics-table td:nth-child(2),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekTable .metrics-table th:nth-child(2),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekTable .metrics-table td:nth-child(2) {
+    width: 56% !important;
+}
 
     body.index-dashboard-screen .right-pane .breakdown-details-table th:nth-child(1),
     body.index-dashboard-screen .right-pane .breakdown-details-table td:nth-child(1) {
