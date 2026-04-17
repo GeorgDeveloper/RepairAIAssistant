@@ -1009,3 +1009,27 @@ body.infopanel-screen .main-content {
 .modal-backdrop.show {
     z-index: 20040 !important;
 }
+
+.sidebar .bottom-logo {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    padding: 12px;
+    border-top: 1px solid #262626;
+    background: #000;
+}
+
+.sidebar .bottom-logo img {
+    display: block;
+    width: 100%;
+    max-width: 220px;
+    height: auto;
+    margin: 0 auto;
+}
+
+/* Reserve space so menu items don't overlap bottom logo */
+.sidebar .nav-container {
+    padding-bottom: 84px;
+}
