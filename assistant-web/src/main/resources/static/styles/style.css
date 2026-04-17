@@ -997,3 +997,15 @@ body.infopanel-screen .main-content {
 .sidebar .submenu {
     z-index: 10010 !important;
 }
+
+/* Keep all modal layers above the fixed left sidebar */
+.modal,
+.modal.show,
+.modal[style*="display: block"] {
+    z-index: 20050 !important;
+}
+
+.modal-backdrop,
+.modal-backdrop.show {
+    z-index: 20040 !important;
+}
