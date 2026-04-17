@@ -53,15 +53,44 @@ const DashboardUtils = {
     }
 };
 
+function wrapTablesResponsive(root) {
+    if (!root) return;
+    const tables = root.querySelectorAll('table');
+    tables.forEach(table => {
+        const parent = table.parentElement;
+        if (!parent) return;
+        if (parent.classList.contains('table-responsive')) return;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-responsive';
+        parent.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+    });
+}
+
 // Common chart functions used across dashboard pages
 const DashboardCharts = {
     createChart(containerId, chartId, title, dataPoints, yAxisSuffix = "%") {
         const options = {
             animationEnabled: true,
+            responsive: true,
             title: { text: title },
             axisX: {
                 title: "Время",
-                labelAngle: -45
+                labelAngle: -45,
+                valueFormatString: "YYYY.MM.DD HH.mm",
+                labelFormatter: function(e) {
+                    if (e.value === null || e.value === undefined) return "";
+                    const date = new Date(e.value);
+                    if (isNaN(date.getTime())) return e.value;
+                    
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    
+                    return `${year}.${month}.${day} ${hours}.${minutes}`;
+                }
             },
             axisY: {
                 title: "Значение",
@@ -108,14 +137,35 @@ const DashboardCharts = {
     processChartData(rawData) {
         const groupedData = {};
         
+        // Функция для преобразования timestamp в объект Date
+        const parseTimestamp = (timestamp) => {
+            if (!timestamp) return null;
+            
+            try {
+                const date = new Date(timestamp);
+                if (isNaN(date.getTime())) {
+                    // Если не удалось распарсить как Date, возвращаем null
+                    console.warn('Не удалось распарсить timestamp:', timestamp);
+                    return null;
+                }
+                return date;
+            } catch (e) {
+                console.warn('Ошибка при парсинге timestamp:', timestamp, e);
+                return null;
+            }
+        };
+        
         (rawData || []).forEach(item => {
             if (!groupedData[item.area]) {
                 groupedData[item.area] = [];
             }
-            groupedData[item.area].push({
-                label: item.timestamp,
-                y: item.value
-            });
+            const date = parseTimestamp(item.timestamp);
+            if (date) {
+                groupedData[item.area].push({
+                    x: date,
+                    y: item.value
+                });
+            }
         });
 
         return Object.keys(groupedData).map(area => ({
@@ -153,7 +203,7 @@ const DashboardCharts = {
 
 // Common table functions used across dashboard pages
 const DashboardTables = {
-    createTopBreakdownsTable(data, containerId, isWeekly = false) {
+    createTopBreakdownsTable(data, containerId, isWeekly = false, drilldownOptions = null) {
         if (!data || !Array.isArray(data) || data.length === 0) {
             document.getElementById(containerId).innerHTML = '<p>Нет данных для отображения</p>';
             return;
@@ -182,14 +232,25 @@ const DashboardTables = {
                     return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
                 };
                 const downtime = (row.machine_downtime_seconds != null) ? formatSeconds(row.machine_downtime_seconds) : (row.machine_downtime || '');
-                tableHTML += `<td>${row.machine_name || ''}</td><td>${downtime}</td>`;
+                const machineEnc = encodeURIComponent(row.machine_name || '');
+                const canDrill = drilldownOptions && downtime;
+                const dd = drilldownOptions || {};
+                const yAttr = dd.year != null ? String(dd.year) : '';
+                const mAttr = dd.month != null ? String(dd.month) : '';
+                const pAttr = dd.period || 'week';
+                const downtimeCell = canDrill
+                    ? `<td class="top-breakdown-downtime-cell clickable-cell" data-machine="${machineEnc}" data-period="${pAttr}" data-year="${yAttr}" data-month="${mAttr}" title="Кликните для детализации нарядов">${downtime}</td>`
+                    : `<td>${downtime}</td>`;
+                tableHTML += `<td>${row.machine_name || ''}</td>${downtimeCell}`;
             } else {
                 tableHTML += `<td>${row.code || ''}</td><td>${row.machine_name || ''}</td><td>${row.machine_downtime || ''}</td><td>${row.cause || ''}</td>`;
             }
             tableHTML += '</tr>';
         });
         tableHTML += '</tbody></table>';
-        document.getElementById(containerId).innerHTML = tableHTML;
+        const container = document.getElementById(containerId);
+        container.innerHTML = tableHTML;
+        wrapTablesResponsive(container);
     },
     
     createWorkOrdersTable(data, containerId) {
@@ -213,20 +274,59 @@ const DashboardTables = {
         
         data.forEach(row => {
             const statusClass = getStatusClass(row.status);
+            const duration = this.calculateWorkOrderDuration(row);
+            const downtimeType = row.downtimeType || 'unknown';
+            const rowClass = getDowntimeTypeClass(downtimeType);
             
             tableHTML += `
-                <tr>
+                <tr class="${rowClass}">
                     <td>${row.machineName || ''}</td>
                     <td>${row.type || ''}</td>
                     <td><span class="${statusClass}">${row.status || ''}</span></td>
-                    <td>${row.sDuration || row.duration || '0.00:00'}</td>
+                    <td>${duration}</td>
                 </tr>
             `;
         });
         
         tableHTML += '</tbody></table>';
-        document.getElementById(containerId).innerHTML = tableHTML;
-    }
+        const container = document.getElementById(containerId);
+        container.innerHTML = tableHTML;
+        wrapTablesResponsive(container);
+    },
+    
+    // Функция для расчета продолжительности наряда на работы
+    calculateWorkOrderDuration(row) {
+        const status = (row.status || '').toLowerCase();
+        const isCompleted = status.includes('выполнено') || status.includes('закрыто') || 
+                           status.includes('completed') || status.includes('closed');
+        
+        if (isCompleted) {
+            // Если статус "Выполнено" или "Закрыто", используем sDuration
+            return row.sDuration || row.duration || '0.00:00';
+        } else {
+            // Если статус не завершен, рассчитываем от sDateT1 до текущего времени
+            if (row.sDateT1) {
+                try {
+                    const startDate = new Date(row.sDateT1);
+                    const currentDate = new Date();
+                    const diffMs = currentDate - startDate;
+                    
+                    if (diffMs > 0) {
+                        const diffSeconds = Math.floor(diffMs / 1000);
+                        return DashboardUtils.formatSecondsToHHMMSS(diffSeconds);
+                    } else {
+                        return '0.00:00';
+                    }
+                } catch (error) {
+                    console.warn('Ошибка при парсинге даты sDateT1:', row.sDateT1, error);
+                    return row.sDuration || row.duration || '0.00:00';
+                }
+            } else {
+                return row.sDuration || row.duration || '0.00:00';
+            }
+        }
+    },
+    
 };
 
 // Функция для определения CSS класса статуса
@@ -238,6 +338,8 @@ function getStatusClass(status) {
         return 'status-requested';
     } else if (statusLower.includes('исполнении') || statusLower.includes('progress')) {
         return 'status-in-progress';
+    } else if (statusLower.includes('запланированно') || statusLower.includes('planned') || statusLower.includes('scheduled')) {
+        return 'status-planned';
     } else if (statusLower.includes('условный') || statusLower.includes('conditional')) {
         return 'status-conditional';
     } else if (statusLower.includes('выполнено') || statusLower.includes('completed')) {
@@ -247,6 +349,20 @@ function getStatusClass(status) {
     }
     
     return 'status-conditional';
+}
+
+// Функция для определения CSS класса типа причины простоя
+function getDowntimeTypeClass(downtimeType) {
+    switch (downtimeType) {
+        case 'electrical':
+            return 'downtime-electrical';
+        case 'electronic':
+            return 'downtime-electronic';
+        case 'mechanical':
+            return 'downtime-mechanical';
+        default:
+            return 'downtime-unknown';
+    }
 }
 
 // Dashboard initialization functions
@@ -268,5 +384,32 @@ const DashboardInit = {
         return setInterval(() => {
             window.location.reload();
         }, interval);
+    },
+
+    initResponsiveTables() {
+        wrapTablesResponsive(document);
+    },
+
+    initChartResizeHandling() {
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            if (resizeTimer) clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                ['#breakDown', '#availability', '#availabilityOnline', '#breakDownOnline', '#pmChart']
+                    .forEach(selector => {
+                        try {
+                            const chart = $(selector).CanvasJSChart();
+                            chart?.render();
+                        } catch (e) {
+                            // CanvasJS chart may not exist on current page.
+                        }
+                    });
+            }, 120);
+        });
     }
 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    DashboardInit.initResponsiveTables();
+    DashboardInit.initChartResizeHandling();
+});

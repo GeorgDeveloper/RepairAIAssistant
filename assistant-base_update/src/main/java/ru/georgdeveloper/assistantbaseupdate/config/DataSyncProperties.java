@@ -16,7 +16,8 @@ import java.util.List;
 public class DataSyncProperties {
 
     private boolean enabled = true;
-    private String schedule = "0 */3 * * * ?";
+    /** Минуты 1,4,7,… — вне совпадения с автопереносом BD в 8:02 и Tag в 8:08 */
+    private String schedule = "0 1/3 * * * ?";
     private SqlServer sqlServer = new SqlServer();
     private Mysql mysql = new Mysql();
     private List<Area> areas;
@@ -76,6 +77,7 @@ public class DataSyncProperties {
      */
     public static class SqlServer {
         private String url;
+        private List<String> fallbackUrls;
         private String username;
         private String password;
         private String driver;
@@ -88,6 +90,14 @@ public class DataSyncProperties {
 
         public void setUrl(String url) {
             this.url = url;
+        }
+
+        public List<String> getFallbackUrls() {
+            return fallbackUrls;
+        }
+
+        public void setFallbackUrls(List<String> fallbackUrls) {
+            this.fallbackUrls = fallbackUrls;
         }
 
         public String getUsername() {

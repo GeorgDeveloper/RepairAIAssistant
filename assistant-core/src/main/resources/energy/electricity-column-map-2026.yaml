@@ -1,0 +1,107 @@
+# Электроэнергия — колонки листа «2026» файла «2026 год ЗАО ВШЗ.xlsx»
+# Группа строки 1: «эл.энергия, кВтч» (колонка G). Подписи строки 2 — ниже.
+
+file: "2026 год  ЗАО ВШЗ.xlsx"
+sheet: "2026"
+data_first_excel_row: 3
+date_column:
+  excel_letter: A
+  zero_based_index: 0
+  format: "dd.MM"
+
+resource: ELECTRICITY
+metrics:
+  - id: electricity_plan_mr_kwh
+    label_ru: "Электроэнергия — план (МР), кВт·ч"
+    unit: "кВт·ч"
+    excel_column_letter: G
+    zero_based_index: 6
+    row1_group: "эл.энергия, кВтч"
+    row2_kind: "план(МР)"
+    chart_default: true
+
+  - id: electricity_op_kwh
+    label_ru: "Электроэнергия — OP, кВт·ч"
+    unit: "кВт·ч"
+    excel_column_letter: H
+    zero_based_index: 7
+    row1_group: "эл.энергия, кВтч"
+    row2_kind: "OP"
+    chart_default: true
+
+  - id: electricity_fact_total_caf_kwh
+    label_ru: "Электроэнергия — факт ВСЕГО (CAF+прочие), кВт·ч"
+    unit: "кВт·ч"
+    excel_column_letter: I
+    zero_based_index: 8
+    row1_group: "эл.энергия, кВтч"
+    row2_kind: "ВСЕГО факт (CAF+прочие)"
+    chart_default: true
+
+  - id: electricity_kwh_per_tonne
+    label_ru: "Удельный расход э/э, кВт·ч/т"
+    unit: "кВт·ч/т"
+    excel_column_letter: K
+    zero_based_index: 10
+    row1_group: "эл.энергия, кВтч"
+    row2_kind: "т.кВтч/т"
+    chart_default: true
+
+  - id: electricity_delta_mr_kwh
+    label_ru: "Электроэнергия — Δ(МР), кВт·ч"
+    unit: "кВт·ч"
+    excel_column_letter: L
+    zero_based_index: 11
+    row1_group: "эл.энергия, кВтч"
+    row2_kind: "∆(МР)"
+    chart_default: false
+
+  - id: electricity_delta_op_kwh
+    label_ru: "Электроэнергия — Δ(OP), кВт·ч"
+    unit: "кВт·ч"
+    excel_column_letter: M
+    zero_based_index: 12
+    row1_group: "эл.энергия, кВтч"
+    row2_kind: "∆(OP )"
+    chart_default: false
+
+  - id: air_compressors_running_count
+    label_ru: "Компрессоры в работе, шт"
+    unit: "шт"
+    excel_column_letter: O
+    zero_based_index: 14
+    row1_group: "эл.энергия, кВтч"
+    row2_kind: "количество компрессоров в работе, шт"
+    chart_default: false
+
+  - id: compressed_air_l_per_s
+    label_ru: "Сжатый воздух, л/сек"
+    unit: "л/сек"
+    excel_column_letter: P
+    zero_based_index: 15
+    row1_group: "эл.энергия, кВтч"
+    row2_kind: "количество сжатого воздуха, л/сек"
+    chart_default: false
+
+  - id: compressed_air_m3_per_min
+    label_ru: "Сжатый воздух, м³/мин"
+    unit: "м³/мин"
+    excel_column_letter: Q
+    zero_based_index: 16
+    row1_group: "эл.энергия, кВтч"
+    row2_kind: "количество сжатого воздуха, м³/мин"
+    chart_default: false
+
+charts_recommended:
+  - id: electricity_main
+    title_ru: "Электроэнергия: план / OP / факт"
+    series:
+      - metric_id: electricity_plan_mr_kwh
+        role: plan
+      - metric_id: electricity_op_kwh
+        role: operational_plan
+      - metric_id: electricity_fact_total_caf_kwh
+        role: fact
+
+import_notes:
+  - "Показатель J (индекс 9) в дампе заголовков отсутствует — в Excel может быть пустой столбец; не использовать до проверки файла."

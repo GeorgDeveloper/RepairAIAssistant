@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Динамика диагностики</title>
+    <link rel="stylesheet" href="static/styles/style.css">
+    <link rel="stylesheet" href="static/styles/dinamic-pm.css">
+    <script src="/static/lib/chart.min.js"></script>
+</head>
+
+<body>
+    <!-- Use the navigation fragment -->
+    <div th:replace="~{fragments/navigation :: nav}"></div>
+
+    <div class="total-content">
+        <div class="header">
+            <div class="user_logo">
+                Привет, <a href="#">user</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="container">
+                <h1>Динамика диагностики</h1>
+                
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="yearSelect">Год:</label>
+                        <div class="single-select" id="year-singleselect">
+                            <button type="button" class="single-select-button" id="year-button">
+                                <span id="year-text">Все</span>
+                            </button>
+                            <div class="single-select-dropdown" id="year-dropdown">
+                                <div class="single-select-option">
+                                    <input type="radio" name="year" id="year-all" value="all" checked>
+                                    <label for="year-all">Все</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="monthSelect">Месяц:</label>
+                        <div class="single-select" id="month-singleselect">
+                            <button type="button" class="single-select-button" id="month-button">
+                                <span id="month-text">Все</span>
+                            </button>
+                            <div class="single-select-dropdown" id="month-dropdown">
+                                <div class="single-select-option">
+                                    <input type="radio" name="month" id="month-all" value="all" checked>
+                                    <label for="month-all">Все</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="areaSelect">Участок:</label>
+                        <div class="single-select" id="area-singleselect">
+                            <button type="button" class="single-select-button" id="area-button">
+                                <span id="area-text">Все участки</span>
+                            </button>
+                            <div class="single-select-dropdown" id="area-dropdown">
+                                <div class="single-select-option">
+                                    <input type="radio" name="area" id="area-all" value="all" checked>
+                                    <label for="area-all">Все участки</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="equipmentSelect">Оборудование:</label>
+                        <div class="single-select" id="equipment-singleselect">
+                            <button type="button" class="single-select-button" id="equipment-button">
+                                <span id="equipment-text">Всё оборудование</span>
+                            </button>
+                            <div class="single-select-dropdown" id="equipment-dropdown">
+                                <div class="single-select-option">
+                                    <input type="radio" name="equipment" id="equipment-all" value="all" checked>
+                                    <label for="equipment-all">Всё оборудование</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="diagnosticsTypeSelect">Тип диагностики:</label>
+                        <div class="single-select" id="diagnostics-type-singleselect">
+                            <button type="button" class="single-select-button" id="diagnostics-type-button">
+                                <span id="diagnostics-type-text">Все типы</span>
+                            </button>
+                            <div class="single-select-dropdown" id="diagnostics-type-dropdown">
+                                <div class="single-select-option">
+                                    <input type="radio" name="diagnosticsType" id="diagnostics-type-all" value="all" checked>
+                                    <label for="diagnostics-type-all">Все типы</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="apply-filters" class="btn-apply">Применить фильтры</button>
+                </div>
+                
+                <div class="loading" id="loading">Загрузка данных...</div>
+                <div class="error" id="error"></div>
+                
+                <div class="charts-wrapper">
+                    <div class="charts-column">
+                        <div class="chart-controls">
+                            <button id="toggleChartType" class="btn-toggle">
+                                Накопительная
+                            </button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="mainChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                    <div class="legend-column">
+                        <h4>Легенда</h4>
+                        <button id="toggleAllLegend" class="btn-toggle-all">Отключить все</button>
+                        <div id="customLegend"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External JavaScript file -->
+    <script src="static/js/dinamic-diagnostics.js"></script>
+</body>
+
+</html>
+

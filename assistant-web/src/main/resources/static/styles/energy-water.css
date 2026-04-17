@@ -1,0 +1,145 @@
+.container > h1 {
+    margin-bottom: 0.4em;
+}
+
+.energy-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 15px;
+    margin-top: 0 !important;
+    margin-bottom: 10px;
+    padding: 15px;
+    background-color: #f5f5f5;
+    border-radius: 6px;
+    align-items: end;
+}
+
+.energy-filters .filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.energy-filters .filter-group label {
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.energy-filters .filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: #fff;
+}
+
+.energy-filters .filter-group select:hover {
+    border-color: #e74c3c;
+}
+
+.energy-filters .filter-group-actions {
+    justify-content: flex-start;
+}
+
+.energy-filters .btn-apply {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 600;
+    min-height: 38px;
+}
+
+.energy-filters .btn-apply:hover {
+    background-color: #c0392b;
+}
+
+.energy-chart-wrap {
+    margin-top: 0;
+    margin-bottom: 24px;
+    min-height: 260px;
+    height: var(--chart-height, 25rem);
+    padding: 16px;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+}
+
+.energy-chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.energy-table-wrap {
+    overflow-x: auto;
+    padding: 12px;
+}
+
+.energy-table {
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.energy-table th,
+.energy-table td {
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    text-align: right;
+}
+
+.energy-table th:first-child,
+.energy-table td:first-child {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    background: #f8f9fa;
+    z-index: 1;
+}
+
+.energy-table th {
+    background: #e9ecef;
+    font-weight: 600;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.2;
+}
+
+.energy-msg {
+    padding: 12px;
+    border-radius: 6px;
+    margin: 12px 0;
+}
+
+.energy-msg.warn {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+}
+
+.energy-msg.err {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+}
+
+@media (max-width: 768px) {
+    .energy-filters {
+        gap: 0.75rem;
+        padding: 0.875rem;
+        grid-template-columns: 1fr;
+    }
+
+    .energy-chart-wrap {
+        padding: 0.875rem;
+    }
+
+    .energy-table th,
+    .energy-table td {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.625rem;
+    }
+}

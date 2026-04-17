@@ -1,6 +1,6 @@
 .gantt-filters {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
     gap: 15px;
     margin-bottom: 20px;
     padding: 15px;
@@ -75,59 +75,132 @@
 }
 
 .gantt-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
     overflow-x: auto;
+    overflow-y: auto;
     margin-top: 20px;
     border: 1px solid #ddd;
     border-radius: 6px;
     position: relative;
     background: white;
+    /* Оптимизация для плавной прокрутки */
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
 }
 
 .gantt-header {
+    display: -webkit-box; /* Для старых браузеров */
+    display: -ms-flexbox; /* Для IE */
     display: flex;
     border-bottom: 1px solid #ddd;
     background-color: #f5f5f5;
+    position: -webkit-sticky; /* Для Safari */
     position: sticky;
     top: 0;
     z-index: 10;
+    will-change: transform;
 }
 
 .machine-name {
-    min-width: 250px;
-    max-width: 250px;
+    min-width: 13.75rem;
+    max-width: 13.75rem;
     padding: 10px;
     font-weight: 600;
     border-right: 1px solid #ddd;
+    position: -webkit-sticky; /* Для Safari */
     position: sticky;
     left: 0;
     background-color: #f5f5f5;
     z-index: 5;
+    /* Оптимизация для sticky позиционирования */
+    will-change: transform;
 }
 
 .time-slots {
+    display: -webkit-box; /* Для старых браузеров */
+    display: -ms-flexbox; /* Для IE */
     display: flex;
-    min-width: 1440px;
+    min-width: 56.25rem;
+    /* Оптимизация рендеринга */
+    will-change: contents;
 }
 
 .time-slot {
+    -webkit-box-flex: 0;
+    -ms-flex: none;
     flex: none;
     min-width: 60px;
     padding: 10px 5px;
     text-align: center;
     border-right: 1px solid #ddd;
     font-size: 12px;
+    -webkit-box-sizing: border-box;
     box-sizing: border-box;
+    /* Предотвращение размытия текста */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .gantt-body {
     position: relative;
+    /* Оптимизация для большого количества элементов */
+    contain: layout style paint;
+    will-change: contents;
+}
+
+.area-header {
+    display: flex;
+    border-bottom: 2px solid #333;
+    position: relative;
+    height: 40px;
+    background-color: #e8f4f8;
+    font-weight: bold;
+}
+
+.area-header:hover {
+    background-color: #d1e7dd;
+}
+
+.area-header.collapsed {
+    background-color: #f8d7da;
+    border-bottom: 2px solid #dc3545;
+}
+
+.area-header.collapsed:hover {
+    background-color: #f5c6cb;
+}
+
+.area-name {
+    min-width: 13.75rem;
+    max-width: 13.75rem;
+    padding: 10px;
+    font-weight: 600;
+    border-right: 1px solid #ddd;
+    position: -webkit-sticky; /* Для Safari */
+    position: sticky;
+    left: 0;
+    background-color: inherit;
+    z-index: 5;
+    display: -webkit-box; /* Для старых браузеров */
+    display: -ms-flexbox; /* Для IE */
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    will-change: transform;
 }
 
 .machine-row {
+    display: -webkit-box; /* Для старых браузеров */
+    display: -ms-flexbox; /* Для IE */
     display: flex;
     border-bottom: 1px solid #ddd;
     position: relative;
     height: 50px;
+    /* Оптимизация рендеринга */
+    contain: layout style;
 }
 
 .machine-row:hover {
@@ -142,8 +215,17 @@
     background-color: #3498db;
     opacity: 0.8;
     cursor: pointer;
+    -webkit-transition: opacity 0.3s;
     transition: opacity 0.3s;
     z-index: 2;
+    /* Оптимизация для плавной анимации */
+    will-change: opacity, transform;
+    /* Использование GPU ускорения */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    /* Предотвращение размытия */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .repair-bar:hover {
@@ -152,21 +234,59 @@
 }
 
 .tooltip {
-    position: absolute;
-    background-color: rgba(0, 0, 0, 0.8);
+    position: fixed; /* Используем fixed для лучшей совместимости */
+    background-color: rgba(0, 0, 0, 0.9);
     color: white;
     padding: 8px;
     border-radius: 4px;
     font-size: 12px;
-    z-index: 100;
+    z-index: 10000;
     pointer-events: none;
     max-width: 300px;
+    /* Оптимизация рендеринга */
+    will-change: transform, opacity;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    /* Для старых браузеров без поддержки rgba */
+    background-color: #000000;
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+.toggle-icon {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    transition: transform 0.2s ease;
+}
+
+.toggle-icon:hover {
+    color: #007bff;
+    transform: scale(1.1);
 }
 
 .legend {
     display: flex;
-    gap: 20px;
+    gap: 30px;
     margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.legend-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.legend-section h4 {
+    margin: 0;
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.legend-items {
+    display: flex;
+    gap: 15px;
     flex-wrap: wrap;
 }
 
@@ -180,6 +300,43 @@
     width: 20px;
     height: 20px;
     border-radius: 3px;
+}
+
+.area-controls {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.area-control-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+}
+
+.area-control-button:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.area-control-button.collapsed {
+    background-color: #e2e3e5;
+    opacity: 0.7;
+}
+
+.area-control-icon {
+    font-size: 12px;
+    font-weight: bold;
+    color: #495057;
+    min-width: 12px;
 }
 
 .summary {
@@ -197,7 +354,7 @@
 
 .summary-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
     gap: 15px;
 }
 
@@ -249,17 +406,81 @@
 }
 
 .total-content {
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
+    overflow: visible;
 }
 
 .main-content {
-    height: calc(100vh - 80px);
-    overflow: hidden;
+    height: calc(100vh - 5rem) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
 }
 
 .container {
     height: 100%;
     display: flex;
     flex-direction: column;
+    min-height: 0;
+}
+
+@media (max-width: 1024px) {
+    .gantt-filters {
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .zoom-controls {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .machine-name,
+    .area-name {
+        min-width: 11.875rem;
+        max-width: 11.875rem;
+        padding: 0.625rem;
+        font-size: 0.9375rem;
+    }
+
+    .time-slots {
+        min-width: 50rem;
+    }
+
+    .time-slot {
+        min-width: 3.375rem;
+        font-size: 0.6875rem;
+        padding: 0.5rem 0.25rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .gantt-filters {
+        gap: 0.75rem;
+        padding: 0.875rem;
+        grid-template-columns: 1fr;
+    }
+
+    .machine-name,
+    .area-name {
+        min-width: 10.625rem;
+        max-width: 10.625rem;
+        font-size: 0.875rem;
+    }
+
+    .time-slots {
+        min-width: 45rem;
+    }
+
+    .time-slot {
+        min-width: 3rem;
+        font-size: 0.625rem;
+    }
+
+    .legend {
+        gap: 1rem;
+    }
+
+    .summary {
+        margin-bottom: 1rem;
+    }
 }

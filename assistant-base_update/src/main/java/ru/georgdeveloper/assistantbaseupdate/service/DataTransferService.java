@@ -3,6 +3,7 @@ package ru.georgdeveloper.assistantbaseupdate.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -11,19 +12,24 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
- * Сервис для ежедневного переноса данных из SQL Server в MySQL
- * Выполняется каждый день в 8:00 утра
+ * Сервис для ежедневного переноса данных из SQL Server в MySQL.
+ * Автозапуск каждый день в 08:02 Europe/Moscow (сдвиг от :00, чтобы не упираться в онлайн-синхронизацию в :00;
+ * минуты 1,4,7… заняты {@code data-sync.schedule} вида {@code 0 1/3 * * * ?}).
  */
 @Service
 public class DataTransferService {
 
     private static final Logger logger = LoggerFactory.getLogger(DataTransferService.class);
+
+    /** Календарь «сегодня» для производственных суток 08:00–08:00 — только эта зона, как у cron */
+    private static final ZoneId PRODUCTION_ZONE = ZoneId.of("Europe/Moscow");
 
     @Autowired
     private JdbcTemplate sqlServerJdbcTemplate;
@@ -32,199 +38,556 @@ public class DataTransferService {
     private JdbcTemplate mysqlJdbcTemplate;
 
     /**
-     * Ежедневный перенос данных в 8:00 утра
+     * Прокси на этот же бин: вызов через {@code self} гарантирует срабатывание {@code @Transactional}
+     * (у {@code @Scheduled} метод часто вызывается на raw-target и обходит AOP — см. PreventiveMaintenanceTransferService).
      */
-    @Scheduled(cron = "0 0 8 * * *", zone = "Europe/Moscow")
-    @Transactional
+    private DataTransferService self;
+
+    @Autowired
+    public void setSelf(@Lazy DataTransferService self) {
+        this.self = self;
+    }
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+
+    /**
+     * Ежедневный автоматический перенос BD — 08:02 Москва (окно выборки по-прежнему вчера 08:00 — сегодня 08:00).
+     * Без {@code @Transactional} здесь: транзакции открываются в {@link #orchestrateBdTransfer} через прокси.
+     */
+    @Scheduled(cron = "0 2 8 * * *", zone = "Europe/Moscow")
     public void transferDataDaily() {
-        try {
-            java.time.ZonedDateTime triggerTime = java.time.ZonedDateTime.now(java.time.ZoneId.of("Europe/Moscow"));
-            logger.info("=== Начало ежедневного переноса данных... Trigger at {} (zone Europe/Moscow)", triggerTime);
-            
-            // Получаем текущую дату и время для фильтрации
-            LocalDate today = LocalDate.now();
-            LocalDateTime startDateTime = today.minusDays(1).atTime(8, 0);
-            LocalDateTime endDateTime = today.atTime(8, 0);
-            
-            logger.info("Фильтрация данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
-            logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
-            logger.info("SQL params: startDateTime={}, endDateTime={}", startDateTime, endDateTime);
-            
-            // Выполняем перенос данных
-            int transferredCount = transferDataFromSqlServer(startDateTime, endDateTime);
-            
-            if (transferredCount > 0) {
-                // Обрабатываем дополнительные поля
-                processAdditionalFields();
-                
-                // Удаляем отфильтрованные записи
-                int deletedCount = cleanupFilteredRecords();
-                
-                logger.info("Итог: перенесено {} записей, удалено {} отфильтрованных записей", 
-                    transferredCount, deletedCount);
-            } else {
-                logger.warn("Нет данных для обработки");
-            }
-            
-        } catch (Exception e) {
-            logger.error("Критическая ошибка при переносе данных: {}", e.getMessage(), e);
-            throw e;
-        }
+        ZonedDateTime triggerTime = ZonedDateTime.now(PRODUCTION_ZONE);
+        logger.info("=== Начало ежедневного переноса данных... Trigger at {} (zone Europe/Moscow)", triggerTime);
+
+        // Важно: брать «сегодня» в той же зоне, что и cron (Europe/Moscow), а не LocalDate.now() JVM по умолчанию —
+        // иначе на сервере с UTC (и др.) окно выборки съезжает на календарный день и из SQL приходит 0 строк.
+        LocalDate today = LocalDate.now(PRODUCTION_ZONE);
+        LocalDateTime startDateTime = today.minusDays(1).atTime(8, 0);
+        LocalDateTime endDateTime = today.atTime(8, 0);
+
+        logger.info("Фильтрация данных: Date_T1 >= {} OR Date_T4 >= {}", startDateTime, startDateTime);
+        logger.info("И Date_T1 < {} OR Date_T4 < {}", endDateTime, endDateTime);
+        logger.info("SQL params: startDateTime={}, endDateTime={}", startDateTime, endDateTime);
+
+        self.orchestrateBdTransfer(startDateTime, endDateTime, false);
     }
 
     /**
      * Ручной запуск переноса данных с указанным интервалом времени
      */
-    @Transactional
     public void runTransfer(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        logger.info("=== Ручной запуск переноса данных... Интервал [{} .. {}] (Europe/Moscow)", startDateTime,
+                endDateTime);
+        self.orchestrateBdTransfer(startDateTime, endDateTime, true);
+    }
+
+    /**
+     * Сценарий переноса: две отдельные транзакции (вставки, затем постобработка), чтобы при сбое длинной фазы
+     * уже вставленные строки оставались в MySQL; вызов только через {@code self}, чтобы транзакции применялись.
+     */
+    public void orchestrateBdTransfer(LocalDateTime startDateTime, LocalDateTime endDateTime, boolean manual) {
         try {
-            logger.info("=== Ручной запуск переноса данных... Интервал [{} .. {}] (Europe/Moscow)", startDateTime, endDateTime);
-
-            int transferredCount = transferDataFromSqlServer(startDateTime, endDateTime);
-
+            int transferredCount = self.transferBatchFromSqlServerTransactional(startDateTime, endDateTime);
             if (transferredCount > 0) {
-                processAdditionalFields();
-                int deletedCount = cleanupFilteredRecords();
-                logger.info("Ручной запуск: перенесено {} записей, удалено {} отфильтрованных записей", transferredCount, deletedCount);
+                logger.info(
+                        "Вставки BD зафиксированы в БД ({} строк). Постобработка и очистка — в отдельной транзакции.",
+                        transferredCount);
+                int deletedCount = self.postProcessBdRecordsTransactional();
+                if (manual) {
+                    logger.info("Ручной запуск: перенесено {} записей, удалено {} отфильтрованных записей",
+                            transferredCount, deletedCount);
+                } else {
+                    logger.info("Итог: перенесено {} записей, удалено {} отфильтрованных записей",
+                            transferredCount, deletedCount);
+                }
             } else {
-                logger.warn("Ручной запуск: нет данных для обработки");
+                if (manual) {
+                    logger.warn("Ручной запуск: нет данных для обработки");
+                } else {
+                    logger.warn(
+                            "Вставлено 0 строк: в SQL за расчётное окно нет записей, либо все отфильтрованы как дубликаты. "
+                                    + "Сверьте лог «Найдено N записей для переноса» и «Пропуск дубликата» выше.");
+                }
             }
         } catch (Exception e) {
-            logger.error("Критическая ошибка при ручном переносе данных: {}", e.getMessage(), e);
+            if (manual) {
+                logger.error("Критическая ошибка при ручном переносе данных: {}", e.getMessage(), e);
+            } else {
+                logger.error("Критическая ошибка при переносе данных: {}", e.getMessage(), e);
+            }
             throw e;
         }
     }
 
+    @Transactional
+    public int transferBatchFromSqlServerTransactional(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return transferDataFromSqlServer(startDateTime, endDateTime);
+    }
+
+    @Transactional
+    public int postProcessBdRecordsTransactional() {
+        processAdditionalFields();
+        return cleanupFilteredRecords();
+    }
+
     /**
-     * Перенос данных из SQL Server в MySQL
+     * Перенос данных из SQL Server в MySQL с автоматической разбивкой длинных
+     * нарядов
      */
     private int transferDataFromSqlServer(LocalDateTime startDateTime, LocalDateTime endDateTime) {
         String sql = """
-            SELECT 
-                MachineName, Assembly, SubAssembly, InitialComment, WOCodeName,
-                TYPEWO, Date_T1, Date_T2, Date_T3, Date_T4, SDuration, STTR,
-                SLogisticTimeMin, WOStatusLocalDescr, Maintainers, comment,
-                PlantDepartmentGeographicalCodeName
-            FROM REP_BreakdownReport
-            WHERE 
-                ((Date_T1 >= ? AND Date_T1 < ?)
-                OR 
-                (Date_T4 >= ? AND Date_T4 < ?))
-            """;
+                SELECT
+                    MachineName, Assembly, SubAssembly, InitialComment, WOCodeName,
+                    TYPEWO, Date_T1, Date_T2, Date_T3, Date_T4, SDuration, STTR,
+                    SLogisticTimeMin, WOStatusLocalDescr, Maintainers, comment,
+                    PlantDepartmentGeographicalCodeName
+                FROM REP_BreakdownReport
+                WHERE
+                    ((Date_T1 >= ? AND Date_T1 < ?)
+                    OR
+                    (Date_T4 >= ? AND Date_T4 < ?))
+                """;
 
-        List<Map<String, Object>> rows = sqlServerJdbcTemplate.queryForList(sql, 
-            startDateTime, endDateTime, startDateTime, endDateTime);
-        
+        List<Map<String, Object>> rows = sqlServerJdbcTemplate.queryForList(sql,
+                startDateTime, endDateTime, startDateTime, endDateTime);
+
         logger.info("Найдено {} записей для переноса (диапазон [{} .. {}])", rows.size(), startDateTime, endDateTime);
-        
-        String insertSql = """
-            INSERT INTO equipment_maintenance_records (
-                machine_name, mechanism_node, additional_kit, description, code, 
-                hp_bd, start_bd_t1, start_maint_t2, stop_maint_t3, stop_bd_t4,
-                machine_downtime, ttr, t2_minus_t1, status, maintainers, comments, area,
-                created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """;
 
         int successCount = 0;
+        int skippedDuplicateCount = 0;
         int errorCount = 0;
+        int splitOrdersCount = 0;
 
         for (int i = 0; i < rows.size(); i++) {
             try {
                 Map<String, Object> row = rows.get(i);
-                
-                // Преобразование времени из строкового формата
-                Time machineDowntime = parseSqlTime((String) row.get("SDuration"));
-                Time ttr = parseSqlTime((String) row.get("STTR"));
-                Time t2MinusT1 = parseSqlTime((String) row.get("SLogisticTimeMin"));
-                
-                // Подготовка данных для вставки
-                Object[] data = {
-                    getStringValue(row.get("MachineName")),
-                    getStringValue(row.get("Assembly")),
-                    getStringValue(row.get("SubAssembly")),
-                    getStringValue(row.get("InitialComment")),
-                    getStringValue(row.get("WOCodeName")),
-                    getStringValue(row.get("TYPEWO")),
-                    row.get("Date_T1"),
-                    row.get("Date_T2"),
-                    row.get("Date_T3"),
-                    row.get("Date_T4"),
-                    machineDowntime,
-                    ttr,
-                    t2MinusT1,
-                    getStringValue(row.get("WOStatusLocalDescr")),
-                    getStringValue(row.get("Maintainers")),
-                    getStringValue(row.get("comment")),
-                    getStringValue(row.get("PlantDepartmentGeographicalCodeName")),
-                    LocalDateTime.now()
-                };
-                
-                mysqlJdbcTemplate.update(insertSql, data);
-                successCount++;
-                
+                String codeValue = getStringValue(row.get("WOCodeName"));
+
+                logger.info("--- Обработка наряда код: {} ---", codeValue);
+
+                // Парсим даты из SQL Server
+                LocalDateTime startBdT1 = parseSqlServerDateTime(row.get("Date_T1"));
+                LocalDateTime startMaintT2 = parseSqlServerDateTime(row.get("Date_T2"));
+                LocalDateTime stopMaintT3 = parseSqlServerDateTime(row.get("Date_T3"));
+                LocalDateTime stopBdT4 = parseSqlServerDateTime(row.get("Date_T4"));
+
+                logger.info("Времена из SQL Server:");
+                logger.info("  T1: {}", startBdT1);
+                logger.info("  T2: {}", startMaintT2);
+                logger.info("  T3: {}", stopMaintT3);
+                logger.info("  T4: {}", stopBdT4);
+                logger.info("  SDuration: {}", row.get("SDuration"));
+
+                // Проверяем длительность в SQL Server
+                int durationMinutes = parseDurationToMinutes(getStringValue(row.get("SDuration")));
+                logger.info("Длительность наряда из SDuration: {} минут ({:.2f} часов)",
+                        durationMinutes, durationMinutes / 60.0);
+
+                // Проверяем, нужно ли разбивать наряд (более 23:59)
+                if (durationMinutes > 1439 && startBdT1 != null && stopBdT4 != null) {
+                    logger.info("⚡ НАЙДЕН ДЛИТЕЛЬНЫЙ НАРЯД, ВЫПОЛНЯЕМ РАЗБИВКУ ПО СМЕНАМ...");
+
+                    int[] splitStats = splitAndTransferOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4);
+                    successCount += splitStats[0];
+                    skippedDuplicateCount += splitStats[1];
+                    splitOrdersCount++;
+                    logger.info("✅ Наряд разбит: вставлено частей {}, пропущено дубликатов {}", splitStats[0], splitStats[1]);
+                } else {
+                    if (transferSingleOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4)) {
+                        successCount++;
+                    } else {
+                        skippedDuplicateCount++;
+                    }
+                }
+
                 if ((i + 1) % 50 == 0) {
                     logger.info("Обработано {} записей", i + 1);
                 }
-                
+
             } catch (Exception e) {
                 errorCount++;
-                logger.error("Ошибка при обработке записи {}: {}", i + 1, e.getMessage());
+                logger.error("Ошибка при обработке записи {}: {}", i + 1, e.getMessage(), e);
             }
         }
-        
-        logger.info("Перенос данных завершен. Успешно: {}, Ошибок: {}", successCount, errorCount);
+
+        logger.info("Перенос данных завершен. Вставлено: {}, Пропущено (дубликат code+t1+t4): {}, Ошибок: {}, Разбито нарядов: {}",
+                successCount, skippedDuplicateCount, errorCount, splitOrdersCount);
         return successCount;
+    }
+
+    /**
+     * Разбивка длинного наряда на части по границам смен.
+     *
+     * @return [вставлено частей, пропущено дубликатов]
+     */
+    private int[] splitAndTransferOrder(Map<String, Object> row, LocalDateTime startBdT1,
+            LocalDateTime startMaintT2, LocalDateTime stopMaintT3,
+            LocalDateTime stopBdT4) {
+        List<LocalDateTime> shiftBoundaries = getAllShiftBoundaries(startBdT1, stopBdT4);
+        logger.info("Все границы смен: {}", formatDateTimeList(shiftBoundaries));
+
+        // Все точки разбивки: начало + все границы смен + конец
+        List<LocalDateTime> splitPoints = new ArrayList<>();
+        splitPoints.add(startBdT1);
+        splitPoints.addAll(shiftBoundaries);
+        splitPoints.add(stopBdT4);
+
+        int partsInserted = 0;
+        int partsSkipped = 0;
+        logger.info("Всего будет создано {} частей", splitPoints.size() - 1);
+
+        // Создаем части наряда
+        for (int i = 0; i < splitPoints.size() - 1; i++) {
+            LocalDateTime partStart = splitPoints.get(i);
+            LocalDateTime partEnd = splitPoints.get(i + 1);
+
+            // Определяем T2 и T3 для каждой части
+            LocalDateTime partStartMaintT2;
+            LocalDateTime partStopMaintT3;
+
+            if (i == 0) {
+                // Первая часть - используем оригинальные T2 и T3 (ограниченные)
+                partStartMaintT2 = (startMaintT2 != null && !startMaintT2.isBefore(partStart)) ? startMaintT2
+                        : partStart;
+                partStopMaintT3 = (stopMaintT3 != null && stopMaintT3.isBefore(partEnd)) ? stopMaintT3 : partEnd;
+            } else {
+                // Остальные части - T2 и T3 равны границам смен
+                partStartMaintT2 = partStart;
+                partStopMaintT3 = partEnd;
+            }
+
+            // Рассчитываем все необходимые поля
+            int partDuration = calculateDurationMinutes(partStart, partEnd);
+            Time partDowntime = formatDowntime(partDuration);
+
+            // Расчет TTR (Time To Repair) - разница между T1 и T4
+            int partTtrMinutes = calculateDurationMinutes(partStart, partEnd);
+            Time partTtr = formatDowntime(partTtrMinutes);
+
+            // Расчет T2_minus_T1 - разница между T2 и T1
+            int partT2MinusT1Minutes = calculateDurationMinutes(partStart, partStartMaintT2);
+            Time partT2MinusT1 = formatDowntime(partT2MinusT1Minutes);
+
+            if (transferOrderPart(row, partStart, partStartMaintT2, partStopMaintT3, partEnd,
+                    partDowntime, partTtr, partT2MinusT1)) {
+                partsInserted++;
+                logger.info("✅ Часть {}:", i + 1);
+                logger.info("   T1: {}", formatDateTime(partStart));
+                logger.info("   T2: {}", formatDateTime(partStartMaintT2));
+                logger.info("   T3: {}", formatDateTime(partStopMaintT3));
+                logger.info("   T4: {}", formatDateTime(partEnd));
+                logger.info("   downtime: {}", partDowntime);
+                logger.info("   ttr: {}", partTtr);
+                logger.info("   t2_minus_t1: {}", partT2MinusT1);
+            } else {
+                partsSkipped++;
+            }
+        }
+
+        return new int[] { partsInserted, partsSkipped };
+    }
+
+    /**
+     * Получить ВСЕ границы смен (08:00) между startTime и endTime
+     */
+    private List<LocalDateTime> getAllShiftBoundaries(LocalDateTime startTime, LocalDateTime endTime) {
+        List<LocalDateTime> boundaries = new ArrayList<>();
+
+        // Начинаем с дня startTime
+        LocalDate currentDay = startTime.toLocalDate();
+
+        // Первая граница - 08:00 текущего дня (если startTime раньше 08:00)
+        LocalDateTime firstShiftBoundary = currentDay.atTime(8, 0);
+        if (startTime.isBefore(firstShiftBoundary) && firstShiftBoundary.isBefore(endTime)) {
+            boundaries.add(firstShiftBoundary);
+        }
+
+        // Добавляем границы следующих дней
+        currentDay = currentDay.plusDays(1);
+        while (true) {
+            LocalDateTime shiftBoundary = currentDay.atTime(8, 0);
+            if (shiftBoundary.isBefore(endTime)) {
+                boundaries.add(shiftBoundary);
+                currentDay = currentDay.plusDays(1);
+            } else {
+                break;
+            }
+        }
+
+        Collections.sort(boundaries);
+        return boundaries;
+    }
+
+    /**
+     * Перенос одной части наряда.
+     *
+     * @return {@code true} если выполнена вставка, {@code false} если запись с тем же номером BD и границами T1/T4 уже есть
+     */
+    private boolean transferOrderPart(Map<String, Object> row, LocalDateTime startBdT1,
+            LocalDateTime startMaintT2, LocalDateTime stopMaintT3,
+            LocalDateTime stopBdT4, Time machineDowntime, Time ttr,
+            Time t2MinusT1) {
+        String code = getStringValue(row.get("WOCodeName"));
+        if (maintenanceRecordExists(code, startBdT1, stopBdT4)) {
+            if (startBdT1 == null || stopBdT4 == null) {
+                logger.warn("Пропуск BD с NULL датами (возможная проблема): code={}, start_bd_t1={}, stop_bd_t4={}. " +
+                           "Проверьте, не блокирует ли это перенос новых записей.", code, startBdT1, stopBdT4);
+            } else {
+                logger.info("Пропуск дубликата BD: code={}, start_bd_t1={}, stop_bd_t4={}", code, startBdT1, stopBdT4);
+            }
+            return false;
+        }
+
+        String insertSql = """
+                INSERT INTO equipment_maintenance_records (
+                    machine_name, mechanism_node, additional_kit, description, code,
+                    hp_bd, start_bd_t1, start_maint_t2, stop_maint_t3, stop_bd_t4,
+                    machine_downtime, ttr, t2_minus_t1, status, maintainers, comments, area,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
+
+        Object[] data = {
+                getStringValue(row.get("MachineName")),
+                getStringValue(row.get("Assembly")),
+                getStringValue(row.get("SubAssembly")),
+                getStringValue(row.get("InitialComment")),
+                code,
+                getStringValue(row.get("TYPEWO")),
+                startBdT1,
+                startMaintT2,
+                stopMaintT3,
+                stopBdT4,
+                machineDowntime,
+                ttr,
+                t2MinusT1,
+                getStringValue(row.get("WOStatusLocalDescr")),
+                getStringValue(row.get("Maintainers")),
+                getStringValue(row.get("comment")),
+                getStringValue(row.get("PlantDepartmentGeographicalCodeName")),
+                LocalDateTime.now()
+        };
+
+        mysqlJdbcTemplate.update(insertSql, data);
+        return true;
+    }
+
+    /**
+     * Совпадение по номеру наряда (code) и границам простоя в MySQL (как в вставляемой строке).
+     * Для разбитых нарядов у частей разные start_bd_t1/stop_bd_t4 — каждая часть проверяется отдельно.
+     *
+     * Проблема: оператор <=> (NULL-safe equality) может приводить к ложным срабатываниям,
+     * когда в таблице уже есть запись с NULL значениями, а мы пытаемся вставить новую
+     * запись также с NULL значениями. Это приводит к пропуску легитимных записей.
+     *
+     * Решение: добавляем дополнительную проверку - если все три поля совпадают
+     * (включая NULL значения), то считаем запись дубликатом только если
+     * она была создана в течение последних 7 дней (для решения проблемы "раз в несколько дней").
+     */
+    private boolean maintenanceRecordExists(String code, LocalDateTime startBdT1, LocalDateTime stopBdT4) {
+        if (code == null || code.isBlank()) {
+            return false;
+        }
+        
+        // Сначала проверяем по code + точным значениям дат (включая NULL)
+        String sql = """
+                SELECT COUNT(*) FROM equipment_maintenance_records
+                WHERE code = ?
+                  AND (start_bd_t1 <=> ?)
+                  AND (stop_bd_t4 <=> ?)
+                """;
+        Integer cnt = mysqlJdbcTemplate.queryForObject(sql, Integer.class, code, startBdT1, stopBdT4);
+        
+        if (cnt != null && cnt > 0) {
+            // Запись с такими же значениями существует
+            // Дополнительная проверка: если даты NULL, проверяем когда была создана запись
+            if (startBdT1 == null || stopBdT4 == null) {
+                String checkRecentSql = """
+                    SELECT COUNT(*) FROM equipment_maintenance_records
+                    WHERE code = ?
+                      AND (start_bd_t1 <=> ?)
+                      AND (stop_bd_t4 <=> ?)
+                      AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                    """;
+                Integer recentCnt = mysqlJdbcTemplate.queryForObject(checkRecentSql, Integer.class,
+                    code, startBdT1, stopBdT4);
+                // Если запись создана более 7 дней назад, позволяем вставить новую
+                if (recentCnt == null || recentCnt == 0) {
+                    logger.warn("Обнаружена устаревшая запись с NULL датами (code={}), разрешаем вставку новой", code);
+                    return false;
+                }
+                return true;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Перенос обычного наряда (без разбивки) - ВСЕГДА берем значения из SQL Server
+     *
+     * @return {@code true} если строка вставлена, {@code false} если дубликат
+     */
+    private boolean transferSingleOrder(Map<String, Object> row, LocalDateTime startBdT1,
+            LocalDateTime startMaintT2, LocalDateTime stopMaintT3,
+            LocalDateTime stopBdT4) {
+        // ✅ ВСЕГДА берем SDuration, STTR, SLogisticTimeMin из SQL Server
+        int downtimeMinutes = parseDurationToMinutes(getStringValue(row.get("SDuration")));
+        Time downtime = formatDowntime(downtimeMinutes);
+
+        int ttrMinutes = parseDurationToMinutes(getStringValue(row.get("STTR")));
+        Time ttr = formatDowntime(ttrMinutes);
+
+        int t2MinusT1Minutes = parseDurationToMinutes(getStringValue(row.get("SLogisticTimeMin")));
+        Time t2MinusT1 = formatDowntime(t2MinusT1Minutes);
+
+        boolean inserted = transferOrderPart(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4,
+                downtime, ttr, t2MinusT1);
+
+        if (inserted) {
+            logger.info("✓ Обычный наряд, создана запись:");
+            logger.info("   downtime: {} (из SQL Server)", downtime);
+            logger.info("   ttr: {} (из SQL Server)", ttr);
+            logger.info("   t2_minus_t1: {} (из SQL Server)", t2MinusT1);
+        }
+        return inserted;
+    }
+
+    /**
+     * Вспомогательные методы для работы с датами и временем
+     */
+
+    private LocalDateTime parseSqlServerDateTime(Object dateValue) {
+        if (dateValue == null)
+            return null;
+
+        try {
+            if (dateValue instanceof LocalDateTime) {
+                return (LocalDateTime) dateValue;
+            } else if (dateValue instanceof java.sql.Timestamp) {
+                return ((java.sql.Timestamp) dateValue).toLocalDateTime();
+            } else if (dateValue instanceof java.sql.Date) {
+                return ((java.sql.Date) dateValue).toLocalDate().atStartOfDay();
+            } else {
+                // Попробуем распарсить строку
+                String dateStr = dateValue.toString().trim();
+                // Добавьте здесь логику парсинга строки при необходимости
+                return LocalDateTime.parse(dateStr.replace(' ', 'T')); // упрощенный парсинг
+            }
+        } catch (Exception e) {
+            logger.warn("Ошибка парсинга даты '{}': {}", dateValue, e.getMessage());
+            return null;
+        }
+    }
+
+    private int parseDurationToMinutes(String durationStr) {
+        if (durationStr == null || durationStr.trim().isEmpty()) {
+            return 0;
+        }
+
+        try {
+            // Форматы: "26:10", "2:35", "123:45"
+            if (durationStr.contains(":")) {
+                String[] parts = durationStr.split(":");
+                if (parts.length == 2) {
+                    int hours = Integer.parseInt(parts[0]);
+                    int minutes = Integer.parseInt(parts[1]);
+                    return hours * 60 + minutes;
+                }
+            }
+            return 0;
+        } catch (Exception e) {
+            logger.warn("Ошибка парсинга длительности '{}': {}", durationStr, e.getMessage());
+            return 0;
+        }
+    }
+
+    private int calculateDurationMinutes(LocalDateTime start, LocalDateTime end) {
+        if (start == null || end == null)
+            return 0;
+
+        try {
+            return (int) java.time.Duration.between(start, end).toMinutes();
+        } catch (Exception e) {
+            logger.warn("Ошибка расчета длительности: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    private Time formatDowntime(int minutes) {
+        if (minutes <= 0) {
+            return Time.valueOf(LocalTime.of(0, 0));
+        }
+
+        // Ограничиваем максимум 23:59 (1439 минут)
+        if (minutes > 1439) {
+            minutes = 1439;
+        }
+
+        int hours = minutes / 60;
+        int mins = minutes % 60;
+        return Time.valueOf(LocalTime.of(hours, mins));
+    }
+
+    private String formatDateTime(LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATE_FORMATTER) : "null";
+    }
+
+    private List<String> formatDateTimeList(List<LocalDateTime> dateTimes) {
+        return dateTimes.stream()
+                .map(this::formatDateTime)
+                .toList();
     }
 
     /**
      * Парсинг времени из SQL Server формата
      */
-    private Time parseSqlTime(String timeStr) {
-        if (timeStr == null || timeStr.trim().isEmpty()) {
-            return null;
-        }
-        
-        try {
-            timeStr = timeStr.trim();
-            
-            if (timeStr.contains(":")) {
-                String[] parts = timeStr.split(":");
-                
-                if (parts.length == 2) {
-                    // Формат "часы:минуты"
-                    int hours = Integer.parseInt(parts[0]);
-                    int minutes = Integer.parseInt(parts[1]);
-                    return Time.valueOf(LocalTime.of(hours, minutes, 0));
-                } else if (parts.length == 3) {
-                    // Формат "часы:минуты:секунды"
-                    int hours = Integer.parseInt(parts[0]);
-                    int minutes = Integer.parseInt(parts[1]);
-                    String secondsPart = parts[2];
-                    int seconds = secondsPart.contains(".") ? 
-                        (int) Double.parseDouble(secondsPart) : 
-                        Integer.parseInt(secondsPart);
-                    return Time.valueOf(LocalTime.of(hours, minutes, seconds));
-                }
-            } else if (timeStr.matches("\\d+")) {
-                // Время в минутах
-                int totalMinutes = Integer.parseInt(timeStr);
-                int hours = totalMinutes / 60;
-                int minutes = totalMinutes % 60;
-                return Time.valueOf(LocalTime.of(hours, minutes, 0));
-            }
-            
-        } catch (Exception e) {
-            logger.warn("Ошибка преобразования времени '{}': {}", timeStr, e.getMessage());
-        }
-        
-        return null;
-    }
+    // private Time parseSqlTime(String timeStr) {
+    // if (timeStr == null || timeStr.trim().isEmpty()) {
+    // return null;
+    // }
+
+    // try {
+    // timeStr = timeStr.trim();
+
+    // if (timeStr.contains(":")) {
+    // String[] parts = timeStr.split(":");
+
+    // if (parts.length == 2) {
+    // // Формат "часы:минуты"
+    // int hours = Integer.parseInt(parts[0]);
+    // int minutes = Integer.parseInt(parts[1]);
+    // return Time.valueOf(LocalTime.of(hours, minutes, 0));
+    // } else if (parts.length == 3) {
+    // // Формат "часы:минуты:секунды"
+    // int hours = Integer.parseInt(parts[0]);
+    // int minutes = Integer.parseInt(parts[1]);
+    // String secondsPart = parts[2];
+    // int seconds = secondsPart.contains(".") ?
+    // (int) Double.parseDouble(secondsPart) :
+    // Integer.parseInt(secondsPart);
+    // return Time.valueOf(LocalTime.of(hours, minutes, seconds));
+    // }
+    // } else if (timeStr.matches("\\d+")) {
+    // // Время в минутах
+    // int totalMinutes = Integer.parseInt(timeStr);
+    // int hours = totalMinutes / 60;
+    // int minutes = totalMinutes % 60;
+    // return Time.valueOf(LocalTime.of(hours, minutes, 0));
+    // }
+
+    // } catch (Exception e) {
+    // logger.warn("Ошибка преобразования времени '{}': {}", timeStr,
+    // e.getMessage());
+    // }
+
+    // return null;
+    // }
 
     private int executeWithRetry(java.util.function.Supplier<Integer> operation, String operationName) {
         int maxRetries = 3;
         int retryDelay = 1000; // 1 секунда
-        
+
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 return operation.get();
@@ -233,7 +596,8 @@ public class DataTransferService {
                     logger.error("Критическая ошибка при {}: исчерпаны все попытки ({})", operationName, maxRetries);
                     throw e;
                 }
-                logger.warn("Deadlock при {} (попытка {}/{}), повтор через {} мс", operationName, attempt, maxRetries, retryDelay);
+                logger.warn("Deadlock при {} (попытка {}/{}), повтор через {} мс", operationName, attempt, maxRetries,
+                        retryDelay);
                 try {
                     Thread.sleep(retryDelay);
                 } catch (InterruptedException ie) {
@@ -253,237 +617,243 @@ public class DataTransferService {
     public void processAdditionalFields() {
         try {
             logger.info("Начало обработки дополнительных полей...");
-            
+
             // 1. Извлекаем причину из comments (только для пустого cause)
             String updateCause = """
-                UPDATE equipment_maintenance_records
-                SET cause = TRIM(
-                    SUBSTRING(
-                        comments,
-                        LOCATE('Cause:', comments) + CHAR_LENGTH('Cause:'),
-                        COALESCE(
-                            NULLIF(
-                                LEAST(
-                                    LOCATE('[', comments, LOCATE('Cause:', comments)),
-                                    LOCATE(']', comments, LOCATE('Cause:', comments))
+                    UPDATE equipment_maintenance_records
+                    SET cause = TRIM(
+                        SUBSTRING(
+                            comments,
+                            LOCATE('Cause:', comments) + CHAR_LENGTH('Cause:'),
+                            COALESCE(
+                                NULLIF(
+                                    LEAST(
+                                        LOCATE('[', comments, LOCATE('Cause:', comments)),
+                                        LOCATE(']', comments, LOCATE('Cause:', comments))
+                                    ),
+                                    0
                                 ),
-                                0
-                            ),
-                            CHAR_LENGTH(comments) + 1
-                        ) - (LOCATE('Cause:', comments) + CHAR_LENGTH('Cause:'))
+                                CHAR_LENGTH(comments) + 1
+                            ) - (LOCATE('Cause:', comments) + CHAR_LENGTH('Cause:'))
+                        )
                     )
-                )
-                WHERE (cause IS NULL OR cause = '') 
-                  AND comments LIKE '%Cause:%'
-                """;
-            
+                    WHERE (cause IS NULL OR cause = '')
+                      AND comments LIKE '%Cause:%'
+                    """;
+
             int causeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateCause), "извлечение cause");
             logger.info("Извлечение cause из comments: обработано {} записей", causeCount);
-            
+
             // 2. Очистка символов в cause
             String cleanCause = """
-                UPDATE equipment_maintenance_records
-                SET cause = REPLACE(REPLACE(REPLACE(REPLACE(cause, '#', ''), 'Cause:', ''), ';', ''), '---', '')
-                WHERE cause IS NOT NULL AND cause != ''
-                """;
-            
+                    UPDATE equipment_maintenance_records
+                    SET cause = REPLACE(REPLACE(REPLACE(REPLACE(cause, '#', ''), 'Cause:', ''), ';', ''), '---', '')
+                    WHERE cause IS NOT NULL AND cause != ''
+                    """;
+
             int cleanCount = executeWithRetry(() -> mysqlJdbcTemplate.update(cleanCause), "очистка символов в cause");
             logger.info("Очистка символов в cause: обработано {} записей", cleanCount);
-            
+
             // 3. Удаление пробелов в cause
             String trimCause = """
-                UPDATE equipment_maintenance_records
-                SET cause = TRIM(cause)
-                WHERE cause IS NOT NULL AND cause != ''
-                """;
-            
+                    UPDATE equipment_maintenance_records
+                    SET cause = TRIM(cause)
+                    WHERE cause IS NOT NULL AND cause != ''
+                    """;
+
             int trimCount = executeWithRetry(() -> mysqlJdbcTemplate.update(trimCause), "удаление пробелов в cause");
             logger.info("Удаление пробелов в cause: обработано {} записей", trimCount);
-            
+
             // 4. Заполнение поля staff
             String updateStaff = """
-                UPDATE equipment_maintenance_records
-                SET staff = TRIM(
-                    SUBSTRING_INDEX(
+                    UPDATE equipment_maintenance_records
+                    SET staff = TRIM(
                         SUBSTRING_INDEX(
-                            SUBSTRING_INDEX(comments, ']', 1),
-                            '(',
-                            -1
-                        ),
-                        ')',
-                        1
+                            SUBSTRING_INDEX(
+                                SUBSTRING_INDEX(comments, ']', 1),
+                                '(',
+                                -1
+                            ),
+                            ')',
+                            1
+                        )
                     )
-                )
-                WHERE (staff IS NULL OR staff = '')
-                  AND comments LIKE '%(%' 
-                  AND comments LIKE '%)%'
-                  AND comments LIKE '%[%]%'
-                """;
-            
+                    WHERE (staff IS NULL OR staff = '')
+                      AND comments LIKE '%(%'
+                      AND comments LIKE '%)%'
+                      AND comments LIKE '%[%]%'
+                    """;
+
             int staffCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateStaff), "заполнение поля staff");
             logger.info("Заполнение поля staff: обработано {} записей", staffCount);
-            
+
             // 5. Заполнение поля date
             String updateDate = """
-                UPDATE equipment_maintenance_records
-                SET date = DATE_FORMAT(start_bd_t1, '%d.%m.%Y')
-                WHERE (date IS NULL OR date = '') 
-                  AND start_bd_t1 IS NOT NULL
-                """;
-            
+                    UPDATE equipment_maintenance_records
+                    SET date = DATE_FORMAT(start_bd_t1, '%d.%m.%Y')
+                    WHERE (date IS NULL OR date = '')
+                      AND start_bd_t1 IS NOT NULL
+                    """;
+
             int dateCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateDate), "заполнение поля date");
             logger.info("Заполнение поля date: обработано {} записей", dateCount);
-            
+
             // 6. Заполнение поля week_number
             String updateWeek = """
-                UPDATE equipment_maintenance_records
-                SET week_number = WEEK(STR_TO_DATE(date, '%d.%m.%Y'), 3)
-                WHERE (week_number IS NULL OR week_number = '') 
-                  AND date IS NOT NULL AND date != ''
-                """;
-            
+                    UPDATE equipment_maintenance_records
+                    SET week_number = WEEK(STR_TO_DATE(date, '%d.%m.%Y'), 3)
+                    WHERE (week_number IS NULL OR week_number = '')
+                      AND date IS NOT NULL AND date != ''
+                    """;
+
             int weekCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateWeek), "заполнение поля week_number");
             logger.info("Заполнение поля week_number: обработано {} записей", weekCount);
-            
+
             // 7. Заполнение поля month_name
             String updateMonth = """
-                UPDATE equipment_maintenance_records
-                SET month_name = 
-                    CASE MONTH(STR_TO_DATE(date, '%d.%m.%Y'))
-                        WHEN 1 THEN 'Январь'
-                        WHEN 2 THEN 'Февраль'
-                        WHEN 3 THEN 'Март'
-                        WHEN 4 THEN 'Апрель'
-                        WHEN 5 THEN 'Май'
-                        WHEN 6 THEN 'Июнь'
-                        WHEN 7 THEN 'Июль'
-                        WHEN 8 THEN 'Август'
-                        WHEN 9 THEN 'Сентябрь'
-                        WHEN 10 THEN 'Октябрь'
-                        WHEN 11 THEN 'Ноябрь'
-                        WHEN 12 THEN 'Декабрь'
-                    END
-                WHERE (month_name IS NULL OR month_name = '') 
-                  AND date IS NOT NULL AND date != ''
-                """;
-            
-            int monthCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateMonth), "заполнение поля month_name");
+                    UPDATE equipment_maintenance_records
+                    SET month_name =
+                        CASE MONTH(STR_TO_DATE(date, '%d.%m.%Y'))
+                            WHEN 1 THEN 'Январь'
+                            WHEN 2 THEN 'Февраль'
+                            WHEN 3 THEN 'Март'
+                            WHEN 4 THEN 'Апрель'
+                            WHEN 5 THEN 'Май'
+                            WHEN 6 THEN 'Июнь'
+                            WHEN 7 THEN 'Июль'
+                            WHEN 8 THEN 'Август'
+                            WHEN 9 THEN 'Сентябрь'
+                            WHEN 10 THEN 'Октябрь'
+                            WHEN 11 THEN 'Ноябрь'
+                            WHEN 12 THEN 'Декабрь'
+                        END
+                    WHERE (month_name IS NULL OR month_name = '')
+                      AND date IS NOT NULL AND date != ''
+                    """;
+
+            int monthCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateMonth),
+                    "заполнение поля month_name");
             logger.info("Заполнение поля month_name: обработано {} записей", monthCount);
-            
+
             // 8. Заполнение поля shift
             String updateShift = """
-                UPDATE equipment_maintenance_records
-                SET shift = 
-                    CASE 
-                        WHEN HOUR(start_bd_t1) BETWEEN 8 AND 19 THEN '1'
-                        WHEN HOUR(start_bd_t1) BETWEEN 20 AND 23 
-                              OR HOUR(start_bd_t1) BETWEEN 0 AND 7 THEN '2'
-                        ELSE 'Не определено'
-                    END
-                WHERE (shift IS NULL OR shift = '') 
-                  AND start_bd_t1 IS NOT NULL
-                """;
-            
+                    UPDATE equipment_maintenance_records
+                    SET shift =
+                        CASE
+                            WHEN HOUR(start_bd_t1) BETWEEN 8 AND 19 THEN '1'
+                            WHEN HOUR(start_bd_t1) BETWEEN 20 AND 23
+                                  OR HOUR(start_bd_t1) BETWEEN 0 AND 7 THEN '2'
+                            ELSE 'Не определено'
+                        END
+                    WHERE (shift IS NULL OR shift = '')
+                      AND start_bd_t1 IS NOT NULL
+                    """;
+
             int shiftCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateShift), "заполнение поля shift");
             logger.info("Заполнение поля shift: обработано {} записей", shiftCount);
-            
+
             // 9. Обновление failure_type из staff_technical
             String updateFailureType = """
-                UPDATE equipment_maintenance_records rp
-                JOIN staff_technical rpp ON rp.staff = rpp.staff
-                SET rp.failure_type = rpp.directivity
-                WHERE (rp.failure_type IS NULL OR rp.failure_type = '')
-                """;
-            
-            int failureTypeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateFailureType), "заполнение поля failure_type");
+                    UPDATE equipment_maintenance_records rp
+                    JOIN staff_technical rpp ON rp.staff = rpp.staff
+                    SET rp.failure_type = rpp.directivity
+                    WHERE (rp.failure_type IS NULL OR rp.failure_type = '')
+                    """;
+
+            int failureTypeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateFailureType),
+                    "заполнение поля failure_type");
             logger.info("Заполнение поля failure_type: обработано {} записей", failureTypeCount);
-            
+
             // 10. Обновление crew_de_facto из staff_technical
             String updateCrewDeFacto = """
-                UPDATE equipment_maintenance_records rp
-                JOIN staff_technical rpp ON rp.staff = rpp.staff
-                SET rp.crew_de_facto = rpp.shift
-                WHERE (rp.crew_de_facto IS NULL OR rp.crew_de_facto = '')
-                """;
-            
-            int crewDeFactoCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateCrewDeFacto), "заполнение поля crew_de_facto");
+                    UPDATE equipment_maintenance_records rp
+                    JOIN staff_technical rpp ON rp.staff = rpp.staff
+                    SET rp.crew_de_facto = rpp.shift
+                    WHERE (rp.crew_de_facto IS NULL OR rp.crew_de_facto = '')
+                    """;
+
+            int crewDeFactoCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateCrewDeFacto),
+                    "заполнение поля crew_de_facto");
             logger.info("Заполнение поля crew_de_facto: обработано {} записей", crewDeFactoCount);
-            
+
             // 11. Обновление crew из график_работы_104
             String updateCrew = """
-                UPDATE equipment_maintenance_records AS emr
-                JOIN график_работы_104 AS g 
-                    ON g.Дата = emr.date 
-                    AND CAST(g.Смена AS CHAR) = emr.shift
-                SET emr.crew = g.Бригада
-                WHERE (emr.crew IS NULL OR emr.crew = '') 
-                  AND emr.date IS NOT NULL 
-                  AND emr.shift IS NOT NULL
-                """;
-            
+                    UPDATE equipment_maintenance_records AS emr
+                    JOIN график_работы_104 AS g
+                        ON g.Дата = emr.date
+                        AND CAST(g.Смена AS CHAR) = emr.shift
+                    SET emr.crew = g.Бригада
+                    WHERE (emr.crew IS NULL OR emr.crew = '')
+                      AND emr.date IS NOT NULL
+                      AND emr.shift IS NOT NULL
+                    """;
+
             int crewCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateCrew), "заполнение поля crew");
             logger.info("Заполнение поля crew: обработано {} записей", crewCount);
-            
+
             // 12. Заполнение production_day
             String updateProductionDay = """
-                UPDATE equipment_maintenance_records
-                SET production_day = 
-                    CASE 
-                        WHEN start_bd_t1 IS NULL THEN NULL
-                        WHEN stop_bd_t4 IS NULL THEN 
-                            DATE_FORMAT(
-                                CASE 
-                                    WHEN TIME(start_bd_t1) >= '08:00:00' THEN start_bd_t1
-                                    ELSE DATE_SUB(start_bd_t1, INTERVAL 1 DAY)
-                                END, 
-                                '%d.%m.%Y'
-                            )
-                        ELSE 
-                            DATE_FORMAT(
-                                CASE 
-                                    WHEN 
-                                        CASE 
-                                            WHEN TIME(start_bd_t1) >= '08:00:00' THEN DATE(start_bd_t1)
-                                            ELSE DATE(DATE_SUB(start_bd_t1, INTERVAL 1 DAY))
-                                        END < 
-                                        CASE 
-                                            WHEN TIME(stop_bd_t4) >= '08:00:00' THEN DATE(stop_bd_t4)
-                                            ELSE DATE(DATE_SUB(stop_bd_t4, INTERVAL 1 DAY))
-                                        END
-                                    THEN 
-                                        CASE 
-                                            WHEN TIME(stop_bd_t4) >= '08:00:00' THEN DATE(stop_bd_t4)
-                                            ELSE DATE(DATE_SUB(stop_bd_t4, INTERVAL 1 DAY))
-                                        END
-                                    ELSE 
-                                        CASE 
-                                            WHEN TIME(start_bd_t1) >= '08:00:00' THEN DATE(start_bd_t1)
-                                            ELSE DATE(DATE_SUB(start_bd_t1, INTERVAL 1 DAY))
-                                        END
-                                END,
-                                '%d.%m.%Y'
-                            )
-                    END
-                WHERE (production_day IS NULL OR production_day = '')
-                """;
-            
-            int productionDayCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateProductionDay), "заполнение поля production_day");
+                    UPDATE equipment_maintenance_records
+                    SET production_day =
+                        CASE
+                            WHEN start_bd_t1 IS NULL THEN NULL
+                            WHEN stop_bd_t4 IS NULL THEN
+                                DATE_FORMAT(
+                                    CASE
+                                        WHEN TIME(start_bd_t1) >= '08:00:00' THEN start_bd_t1
+                                        ELSE DATE_SUB(start_bd_t1, INTERVAL 1 DAY)
+                                    END,
+                                    '%d.%m.%Y'
+                                )
+                            ELSE
+                                DATE_FORMAT(
+                                    CASE
+                                        WHEN
+                                            CASE
+                                                WHEN TIME(start_bd_t1) >= '08:00:00' THEN DATE(start_bd_t1)
+                                                ELSE DATE(DATE_SUB(start_bd_t1, INTERVAL 1 DAY))
+                                            END <
+                                            CASE
+                                                WHEN TIME(stop_bd_t4) >= '08:00:00' THEN DATE(stop_bd_t4)
+                                                ELSE DATE(DATE_SUB(stop_bd_t4, INTERVAL 1 DAY))
+                                            END
+                                        THEN
+                                            CASE
+                                                WHEN TIME(stop_bd_t4) >= '08:00:00' THEN DATE(stop_bd_t4)
+                                                ELSE DATE(DATE_SUB(stop_bd_t4, INTERVAL 1 DAY))
+                                            END
+                                        ELSE
+                                            CASE
+                                                WHEN TIME(start_bd_t1) >= '08:00:00' THEN DATE(start_bd_t1)
+                                                ELSE DATE(DATE_SUB(start_bd_t1, INTERVAL 1 DAY))
+                                            END
+                                    END,
+                                    '%d.%m.%Y'
+                                )
+                        END
+                    WHERE (production_day IS NULL OR production_day = '')
+                    """;
+
+            int productionDayCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateProductionDay),
+                    "заполнение поля production_day");
             logger.info("Заполнение поля production_day: обработано {} записей", productionDayCount);
-            
+
             // 13. Обновление failure_type для специфичных причин
             String updateSpecificFailureType = """
-                UPDATE equipment_maintenance_records
-                SET failure_type = 'Другие'
-                WHERE cause LIKE '%Наладка%' 
-                   OR cause LIKE '%Простой по вине производства%' 
-                   OR cause LIKE '%Простой по вине с. качества%'
-                """;
-            
-            int specificFailureTypeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateSpecificFailureType), "заполнение поля failure_type (specific)");
-            logger.info("Обновление failure_type для специфичных причин: обработано {} записей", specificFailureTypeCount);
-            
+                    UPDATE equipment_maintenance_records
+                    SET failure_type = 'Другие'
+                    WHERE cause LIKE '%Наладка%'
+                       OR cause LIKE '%Простой по вине производства%'
+                       OR cause LIKE '%Простой по вине с. качества%'
+                    """;
+
+            int specificFailureTypeCount = executeWithRetry(() -> mysqlJdbcTemplate.update(updateSpecificFailureType),
+                    "заполнение поля failure_type (specific)");
+            logger.info("Обновление failure_type для специфичных причин: обработано {} записей",
+                    specificFailureTypeCount);
+
             logger.info("Обработка всех дополнительных полей завершена успешно");
-            
+
         } catch (Exception e) {
             logger.error("Ошибка при обработке дополнительных полей: {}", e.getMessage(), e);
             throw e;
@@ -497,25 +867,26 @@ public class DataTransferService {
     public int cleanupFilteredRecords() {
         try {
             logger.info("Начало удаления отфильтрованных записей...");
-            
+
             String deleteQuery = """
-                DELETE FROM equipment_maintenance_records
-                WHERE 
-                    (comments LIKE '%Cause:%Ошибочный запрос%' OR comments LIKE '%Cause:%Ложный вызов%')
-                    OR (
-                        LENGTH(comments) BETWEEN 15 AND 19 
-                        AND (status LIKE '%Закрыто%'
-                        OR status LIKE '%Выполнено%')
-                    )
-                    OR hp_bd LIKE '%Tag%'
-                    OR status LIKE '%В исполнении%'
-                """;
-            
-            int deletedCount = executeWithRetry(() -> mysqlJdbcTemplate.update(deleteQuery), "удаление отфильтрованных записей");
+                    DELETE FROM equipment_maintenance_records
+                    WHERE
+                        (comments LIKE '%Cause:%Ошибочный запрос%' OR comments LIKE '%Cause:%Ложный вызов%')
+                        OR (
+                            LENGTH(comments) BETWEEN 15 AND 19
+                            AND (status LIKE '%Закрыто%'
+                            OR status LIKE '%Выполнено%')
+                        )
+                        OR hp_bd LIKE '%Tag%'
+                        OR status LIKE '%В исполнении%'
+                    """;
+
+            int deletedCount = executeWithRetry(() -> mysqlJdbcTemplate.update(deleteQuery),
+                    "удаление отфильтрованных записей");
             logger.info("Удалено отфильтрованных записей: {}", deletedCount);
-            
+
             return deletedCount;
-            
+
         } catch (Exception e) {
             logger.error("Ошибка при удалении отфильтрованных записей: {}", e.getMessage(), e);
             throw e;

@@ -56,6 +56,29 @@ public class ManualController {
         }
     }
 
+    @GetMapping("/view/{id}")
+    @ResponseBody
+    public ResponseEntity<?> viewManual(@PathVariable Long id) {
+        return manualRepository.findById(id)
+                .map(manual -> {
+                    if (manual.getFiles() == null || manual.getFiles().length == 0) {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body("Файл не найден");
+                    }
+
+                    HttpHeaders headers = new HttpHeaders();
+                    String fileName = manual.getFileName();
+                    MediaType mediaType = getMediaType(fileName);
+                    headers.setContentType(mediaType);
+                    // Не устанавливаем Content-Disposition: attachment, чтобы браузер мог отобразить файл
+                    return new ResponseEntity<>(manual.getFiles(), headers, HttpStatus.OK);
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("Файл не найден"));
+    }
+
     @GetMapping("/download/{id}")
     @ResponseBody
     public ResponseEntity<?> downloadManual(@PathVariable Long id) {
@@ -83,6 +106,32 @@ public class ManualController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .contentType(MediaType.APPLICATION_JSON)
                         .body("Файл не найден"));
+    }
+
+    private MediaType getMediaType(String fileName) {
+        if (fileName == null) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+        String lowerFileName = fileName.toLowerCase();
+        if (lowerFileName.endsWith(".pdf")) {
+            return MediaType.APPLICATION_PDF;
+        } else if (lowerFileName.endsWith(".jpg") || lowerFileName.endsWith(".jpeg")) {
+            return MediaType.IMAGE_JPEG;
+        } else if (lowerFileName.endsWith(".png")) {
+            return MediaType.IMAGE_PNG;
+        } else if (lowerFileName.endsWith(".gif")) {
+            return MediaType.IMAGE_GIF;
+        } else if (lowerFileName.endsWith(".bmp")) {
+            return MediaType.valueOf("image/bmp");
+        } else if (lowerFileName.endsWith(".webp")) {
+            return MediaType.valueOf("image/webp");
+        } else if (lowerFileName.endsWith(".doc")) {
+            return MediaType.valueOf("application/msword");
+        } else if (lowerFileName.endsWith(".docx")) {
+            return MediaType.valueOf("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        } else {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
     }
 
         // Добавлены эндпоинты для удаления и обновления записей

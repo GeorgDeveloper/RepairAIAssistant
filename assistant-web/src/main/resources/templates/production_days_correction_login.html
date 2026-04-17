@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход — Корректировка производственных дней</title>
+    <link rel="icon" type="image/png" href="/static/images/LogoPirelli3.png">
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/dashboard.css">
+    <link rel="stylesheet" href="/static/styles/production-days-correction.css">
+</head>
+<body class="infopanel-screen">
+    <div th:replace="~{fragments/navigation :: nav}"></div>
+
+    <div class="total-content production-days-login-page">
+        <div class="header">
+            <div class="user_logo">Привет, <a href="#">user</a></div>
+        </div>
+        <div class="main-content">
+            <div class="container">
+                <h2>Доступ к корректировке производственных дней</h2>
+                <p class="help-text">Введите пароль для доступа к странице.</p>
+
+                <div class="correction-form">
+                    <form th:action="@{/production-days-correction/login}" method="post">
+                        <div class="form-row">
+                            <label for="password">Пароль</label>
+                            <input type="password" id="password" name="password" required autofocus>
+                        </div>
+                        <div th:if="${error}" class="form-error" th:text="${error}"></div>
+                        <div class="form-row">
+                            <button type="submit" class="btn-apply">Войти</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
