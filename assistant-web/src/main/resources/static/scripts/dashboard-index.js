@@ -740,9 +740,9 @@ const IndexDashboard = {
                     </tr>
                     <tr>
                         <td>BD</td>
-                        <td>2%</td>
-                        <td class="${getClass(bdMonth, 2)}">${formatValue(bdMonth)}</td>
-                        <td class="${getClass(bdToday, 2)}">${formatValue(bdToday)}</td>
+                        <td>1.8%</td>
+                        <td class="${getClass(bdMonth, 1.8)}">${formatValue(bdMonth)}</td>
+                        <td class="${getClass(bdToday, 1.8)}">${formatValue(bdToday)}</td>
                     </tr>
                     <tr>
                         <td>Доступность</td>
@@ -1095,9 +1095,9 @@ IndexDashboard.showIndicatorTable = async function(date) {
                 </tr>
                 <tr>
                     <td>BD</td>
-                    <td>2%</td>
-                    <td class="${getClass(bdMonth, 2)}">${formatValue(bdMonth)}</td>
-                    <td class="${getClass(bdToday, 2)} clickable-cell" 
+                    <td>1.8%</td>
+                    <td class="${getClass(bdMonth, 1.8)}">${formatValue(bdMonth)}</td>
+                    <td class="${getClass(bdToday, 1.8)} clickable-cell" 
                         data-date="${date}" 
                         data-area="${section.name}" 
                         data-metric="BD" 

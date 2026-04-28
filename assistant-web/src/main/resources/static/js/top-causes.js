@@ -187,12 +187,20 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function openModal(title){
         document.getElementById('drillTitle').textContent = title;
+        resetDrillModalContent();
         document.getElementById('drillModal').style.display = 'flex';
     }
     
+    function resetDrillModalContent() {
+        const body = document.querySelector('#drillModal .modal-body');
+        body.innerHTML = '<canvas id="drillChart" class="chart-canvas"></canvas>';
+        document.getElementById('backBtn').style.display = 'none';
+    }
+
     function closeModal(){
         document.getElementById('drillModal').style.display = 'none';
         if (drillChart) { drillChart.destroy(); drillChart = null; }
+        resetDrillModalContent();
         drillLevel = 'machines';
         cachedMachines = null;
         cachedMechanisms = null;

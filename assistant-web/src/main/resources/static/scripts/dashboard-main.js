@@ -63,8 +63,8 @@ const MainDashboard = {
             </tr>
             <tr>
                 <td>BD</td>
-                <td>2%</td>
-                <td class="${bdValue <= 2 ? 'target-met' : 'target-not-met'}">
+                <td>1.8%</td>
+                <td class="${bdValue <= 1.8 ? 'target-met' : 'target-not-met'}">
                     ${bdValue.toFixed(2)}%
                 </td>
             </tr>
@@ -121,8 +121,8 @@ const MainDashboard = {
                 </tr>
                 <tr>
                     <td>BD</td>
-                    <td>2%</td>
-                    <td class="${bdValue <= 2 ? 'target-met' : 'target-not-met'}">${bdValue.toFixed(2)}%</td>
+                    <td>1.8%</td>
+                    <td class="${bdValue <= 1.8 ? 'target-met' : 'target-not-met'}">${bdValue.toFixed(2)}%</td>
                 </tr>
                 <tr>
                     <td>Доступность</td>

@@ -1,15 +1,58 @@
 // Common API functions used across dashboard pages
 const DashboardAPI = {
+    DEFAULT_TIMEOUT_MS: 10000,
+    SLOW_REQUEST_MS: 3000,
+    _requestSeq: 0,
+
     async fetchData(url) {
+        const requestId = ++this._requestSeq;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.DEFAULT_TIMEOUT_MS);
+        const startedAt = performance.now();
+        console.log(`[DashboardAPI][#${requestId}] START ${url}`);
+
+        let slowLogTimeoutId = null;
+        slowLogTimeoutId = setTimeout(() => {
+            const elapsed = Math.round(performance.now() - startedAt);
+            console.warn(
+                `[DashboardAPI][#${requestId}] SLOW ${url} - still pending after ${elapsed} ms`
+            );
+        }, this.SLOW_REQUEST_MS);
+
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                signal: controller.signal,
+                cache: 'no-store'
+            });
+            const elapsed = Math.round(performance.now() - startedAt);
             if (!response.ok) {
+                console.error(
+                    `[DashboardAPI][#${requestId}] HTTP_ERROR ${url} - status=${response.status}, elapsed=${elapsed} ms`
+                );
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
+            console.log(
+                `[DashboardAPI][#${requestId}] OK ${url} - status=${response.status}, elapsed=${elapsed} ms`
+            );
             return await response.json();
         } catch (error) {
-            console.error('Ошибка при получении данных:', error);
+            const elapsed = Math.round(performance.now() - startedAt);
+            if (error && error.name === 'AbortError') {
+                console.error(
+                    `[DashboardAPI][#${requestId}] TIMEOUT ${url} - elapsed=${elapsed} ms (limit ${this.DEFAULT_TIMEOUT_MS} ms)`
+                );
+                return null;
+            }
+            console.error(
+                `[DashboardAPI][#${requestId}] FAIL ${url} - elapsed=${elapsed} ms`,
+                error
+            );
             return null;
+        } finally {
+            if (slowLogTimeoutId) {
+                clearTimeout(slowLogTimeoutId);
+            }
+            clearTimeout(timeoutId);
         }
     },
     
@@ -27,7 +70,7 @@ const DashboardUtils = {
     },
     
     getColorForPoint(value, type) {
-        if (type === "breakDown" && value > 2) return "#dc3545";
+        if (type === "breakDown" && value > 1.8) return "#dc3545";
         if (type === "availability" && value < 97) return "#dc3545";
         return "#007bff";
     },

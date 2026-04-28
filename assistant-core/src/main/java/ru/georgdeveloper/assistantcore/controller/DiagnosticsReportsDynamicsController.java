@@ -32,20 +32,6 @@ public class DiagnosticsReportsDynamicsController {
             // Получаем все отчеты
             List<DiagnosticsReport> allReports = reportRepository.findAll();
             
-            // Фильтруем по году
-            if (year != null) {
-                allReports = allReports.stream()
-                        .filter(r -> r.getDetectionDate() != null && r.getDetectionDate().getYear() == year)
-                        .collect(Collectors.toList());
-            }
-            
-            // Фильтруем по месяцу
-            if (month != null && month >= 1 && month <= 12) {
-                allReports = allReports.stream()
-                        .filter(r -> r.getDetectionDate() != null && r.getDetectionDate().getMonthValue() == month)
-                        .collect(Collectors.toList());
-            }
-            
             // Фильтруем по участку
             if (area != null && !area.isEmpty()) {
                 allReports = allReports.stream()
@@ -78,44 +64,27 @@ public class DiagnosticsReportsDynamicsController {
             Map<String, Map<String, Object>> dataByPeriod = new TreeMap<>();
             
             for (DiagnosticsReport report : allReports) {
-                if (report.getDetectionDate() == null) {
-                    continue; // Пропускаем отчеты без даты обнаружения
-                }
-                
-                String periodKey;
-                if (groupByMonth) {
-                    // Группируем по месяцам: YYYY-MM
-                    LocalDate reportDate = report.getDetectionDate();
-                    periodKey = String.format("%04d-%02d", reportDate.getYear(), reportDate.getMonthValue());
-                } else {
-                    // Группируем по датам: YYYY-MM-DD
-                    periodKey = report.getDetectionDate().toString();
-                }
-                
-                Map<String, Object> periodData = dataByPeriod.computeIfAbsent(periodKey, k -> {
-                    Map<String, Object> d = new HashMap<>();
-                    d.put("date", periodKey);
-                    d.put("groupByMonth", groupByMonth);
-                    d.put("detected", 0L);      // Обнаружено дефектов (все отчеты)
-                    d.put("opened", 0L);        // Открыто
-                    d.put("inWork", 0L);        // В работе
-                    d.put("closed", 0L);        // Закрыто
-                    return d;
-                });
-                
-                // Увеличиваем счетчик обнаруженных дефектов (все отчеты)
-                periodData.put("detected", ((Long) periodData.get("detected")) + 1);
-                
-                // Увеличиваем счетчик по статусу
-                String status = report.getStatus();
-                if (status != null) {
+                LocalDate detectionDate = report.getDetectionDate();
+                if (detectionDate != null && matchesPeriodFilter(detectionDate, year, month)) {
+                    String detectionPeriodKey = toPeriodKey(detectionDate, groupByMonth);
+                    Map<String, Object> periodData = dataByPeriod.computeIfAbsent(detectionPeriodKey, k -> createPeriodData(k, groupByMonth));
+                    periodData.put("detected", ((Long) periodData.get("detected")) + 1);
+
+                    String status = report.getStatus();
                     if ("ОТКРЫТО".equals(status)) {
                         periodData.put("opened", ((Long) periodData.get("opened")) + 1);
                     } else if ("В РАБОТЕ".equals(status)) {
                         periodData.put("inWork", ((Long) periodData.get("inWork")) + 1);
-                    } else if ("ЗАКРЫТО".equals(status)) {
-                        periodData.put("closed", ((Long) periodData.get("closed")) + 1);
                     }
+                }
+
+                // Закрытые считаем по дате закрытия, а не по дате обнаружения
+                String status = report.getStatus();
+                LocalDate eliminationDate = report.getEliminationDate();
+                if ("ЗАКРЫТО".equals(status) && eliminationDate != null && matchesPeriodFilter(eliminationDate, year, month)) {
+                    String closePeriodKey = toPeriodKey(eliminationDate, groupByMonth);
+                    Map<String, Object> closedPeriodData = dataByPeriod.computeIfAbsent(closePeriodKey, k -> createPeriodData(k, groupByMonth));
+                    closedPeriodData.put("closed", ((Long) closedPeriodData.get("closed")) + 1);
                 }
             }
             
@@ -221,6 +190,37 @@ public class DiagnosticsReportsDynamicsController {
         } catch (Exception e) {
             return ResponseEntity.ok(Collections.emptyList());
         }
+    }
+
+    private boolean matchesPeriodFilter(LocalDate date, Integer year, Integer month) {
+        if (date == null) {
+            return false;
+        }
+        if (year != null && date.getYear() != year) {
+            return false;
+        }
+        if (month != null && month >= 1 && month <= 12 && date.getMonthValue() != month) {
+            return false;
+        }
+        return true;
+    }
+
+    private String toPeriodKey(LocalDate date, boolean groupByMonth) {
+        if (groupByMonth) {
+            return String.format("%04d-%02d", date.getYear(), date.getMonthValue());
+        }
+        return date.toString();
+    }
+
+    private Map<String, Object> createPeriodData(String periodKey, boolean groupByMonth) {
+        Map<String, Object> d = new HashMap<>();
+        d.put("date", periodKey);
+        d.put("groupByMonth", groupByMonth);
+        d.put("detected", 0L);
+        d.put("opened", 0L);
+        d.put("inWork", 0L);
+        d.put("closed", 0L);
+        return d;
     }
 }
 
