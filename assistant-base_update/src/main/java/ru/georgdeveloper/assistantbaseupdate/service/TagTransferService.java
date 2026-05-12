@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -94,6 +95,7 @@ public class TagTransferService {
 
         int successCount = 0;
         int errorCount = 0;
+        List<String> transferErrorSummary = new ArrayList<>();
 
         for (int i = 0; i < rows.size(); i++) {
             try {
@@ -135,11 +137,15 @@ public class TagTransferService {
                 
             } catch (Exception e) {
                 errorCount++;
-                logger.error("Ошибка при обработке Tag записи {}: {}", i + 1, e.getMessage());
+                String errCode = rows.get(i) != null ? getStringValue(rows.get(i).get("WOCodeName")) : "?";
+                logger.error("Ошибка при обработке Tag записи {} (code={}): {}", i + 1, errCode, e.getMessage(), e);
+                transferErrorSummary.add(String.format(
+                        "Tag ошибка переноса | code=%s | строка_SQL=%d | %s", errCode, i + 1, e.getMessage()));
             }
         }
         
         logger.info("Перенос Tag данных завершен. Успешно: {}, Ошибок: {}", successCount, errorCount);
+        logTagTransferSummaryBlock("Tag: не перенесены из-за ошибки", transferErrorSummary);
         return successCount;
     }
 
@@ -476,20 +482,45 @@ public class TagTransferService {
     public int cleanupTagFilteredRecords() {
         try {
             logger.info("Начало удаления отфильтрованных Tag записей...");
-            
-            String deleteQuery = """
-                DELETE FROM tag_maintenance_records
-                WHERE 
+
+            String filterWhere = """
                     (comments LIKE '%Cause:%Ошибочный запрос%' OR comments LIKE '%Cause:%Ложный вызов%')
                     OR (
-                        LENGTH(comments) BETWEEN 15 AND 19 
+                        LENGTH(comments) BETWEEN 15 AND 19
                         AND (status LIKE '%Закрыто%'
                         OR status LIKE '%Выполнено%')
                     )
                     OR hp_bd LIKE '%BD%'
                     OR status LIKE '%В исполнении%'
-                """;
-            
+                    """;
+
+            String selectFiltered = """
+                    SELECT id, code, status, hp_bd, LENGTH(comments) AS comment_len,
+                        CASE
+                            WHEN (comments LIKE '%Cause:%Ошибочный запрос%' OR comments LIKE '%Cause:%Ложный вызов%')
+                                THEN 'Cause: Ошибочный запрос / Ложный вызов'
+                            WHEN (LENGTH(comments) BETWEEN 15 AND 19
+                                AND (status LIKE '%Закрыто%' OR status LIKE '%Выполнено%'))
+                                THEN 'короткий comments (LENGTH 15-19) и Закрыто/Выполнено'
+                            WHEN hp_bd LIKE '%BD%' THEN 'hp_bd содержит BD'
+                            WHEN status LIKE '%В исполнении%' THEN 'статус В исполнении'
+                            ELSE 'прочее'
+                        END AS filter_reason
+                    FROM tag_maintenance_records
+                    WHERE
+                    """ + filterWhere;
+
+            List<Map<String, Object>> rowsToDelete = mysqlJdbcTemplate.queryForList(selectFiltered);
+            logger.info("--- Tag: удаляются как отфильтрованные ({} шт.) ---", rowsToDelete.size());
+            for (Map<String, Object> r : rowsToDelete) {
+                logger.info(
+                        "Tag удаление фильтром | id={} | code={} | причина={} | status={} | hp_bd={} | LENGTH(comments)={}",
+                        r.get("id"), r.get("code"), r.get("filter_reason"), r.get("status"), r.get("hp_bd"),
+                        r.get("comment_len"));
+            }
+
+            String deleteQuery = "DELETE FROM tag_maintenance_records WHERE " + filterWhere;
+
             int deletedCount = executeTagWithRetry(() -> mysqlJdbcTemplate.update(deleteQuery), "удаление отфильтрованных записей");
             logger.info("Удалено отфильтрованных Tag записей: {}", deletedCount);
             
@@ -542,6 +573,16 @@ public class TagTransferService {
     public int postProcessTagRecordsTransactional() {
         processTagAdditionalFields();
         return cleanupTagFilteredRecords();
+    }
+
+    private void logTagTransferSummaryBlock(String title, List<String> lines) {
+        if (lines == null || lines.isEmpty()) {
+            return;
+        }
+        logger.info("{} (всего {}):", title, lines.size());
+        for (String line : lines) {
+            logger.info("  {}", line);
+        }
     }
 
     /**

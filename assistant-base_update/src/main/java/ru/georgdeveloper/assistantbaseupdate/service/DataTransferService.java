@@ -157,6 +157,8 @@ public class DataTransferService {
         int skippedDuplicateCount = 0;
         int errorCount = 0;
         int splitOrdersCount = 0;
+        List<String> skippedDuplicateSummary = new ArrayList<>();
+        List<String> transferErrorSummary = new ArrayList<>();
 
         for (int i = 0; i < rows.size(); i++) {
             try {
@@ -187,13 +189,14 @@ public class DataTransferService {
                 if (durationMinutes > 1439 && startBdT1 != null && stopBdT4 != null) {
                     logger.info("⚡ НАЙДЕН ДЛИТЕЛЬНЫЙ НАРЯД, ВЫПОЛНЯЕМ РАЗБИВКУ ПО СМЕНАМ...");
 
-                    int[] splitStats = splitAndTransferOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4);
+                    int[] splitStats = splitAndTransferOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4,
+                            skippedDuplicateSummary);
                     successCount += splitStats[0];
                     skippedDuplicateCount += splitStats[1];
                     splitOrdersCount++;
                     logger.info("✅ Наряд разбит: вставлено частей {}, пропущено дубликатов {}", splitStats[0], splitStats[1]);
                 } else {
-                    if (transferSingleOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4)) {
+                    if (transferSingleOrder(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4, skippedDuplicateSummary)) {
                         successCount++;
                     } else {
                         skippedDuplicateCount++;
@@ -206,12 +209,17 @@ public class DataTransferService {
 
             } catch (Exception e) {
                 errorCount++;
-                logger.error("Ошибка при обработке записи {}: {}", i + 1, e.getMessage(), e);
+                String errCode = rows.get(i) != null ? getStringValue(rows.get(i).get("WOCodeName")) : "?";
+                logger.error("Ошибка при обработке записи {} (code={}): {}", i + 1, errCode, e.getMessage(), e);
+                transferErrorSummary.add(String.format(
+                        "BD ошибка переноса | code=%s | строка_SQL=%d | %s", errCode, i + 1, e.getMessage()));
             }
         }
 
         logger.info("Перенос данных завершен. Вставлено: {}, Пропущено (дубликат code+t1+t4): {}, Ошибок: {}, Разбито нарядов: {}",
                 successCount, skippedDuplicateCount, errorCount, splitOrdersCount);
+        logTransferSummaryBlock("BD: пропущены как дубликаты (code+start_bd_t1+stop_bd_t4)", skippedDuplicateSummary);
+        logTransferSummaryBlock("BD: не перенесены из-за ошибки", transferErrorSummary);
         return successCount;
     }
 
@@ -222,7 +230,7 @@ public class DataTransferService {
      */
     private int[] splitAndTransferOrder(Map<String, Object> row, LocalDateTime startBdT1,
             LocalDateTime startMaintT2, LocalDateTime stopMaintT3,
-            LocalDateTime stopBdT4) {
+            LocalDateTime stopBdT4, List<String> skippedDuplicateSummary) {
         List<LocalDateTime> shiftBoundaries = getAllShiftBoundaries(startBdT1, stopBdT4);
         logger.info("Все границы смен: {}", formatDateTimeList(shiftBoundaries));
 
@@ -269,7 +277,7 @@ public class DataTransferService {
             Time partT2MinusT1 = formatDowntime(partT2MinusT1Minutes);
 
             if (transferOrderPart(row, partStart, partStartMaintT2, partStopMaintT3, partEnd,
-                    partDowntime, partTtr, partT2MinusT1)) {
+                    partDowntime, partTtr, partT2MinusT1, skippedDuplicateSummary)) {
                 partsInserted++;
                 logger.info("✅ Часть {}:", i + 1);
                 logger.info("   T1: {}", formatDateTime(partStart));
@@ -326,7 +334,7 @@ public class DataTransferService {
     private boolean transferOrderPart(Map<String, Object> row, LocalDateTime startBdT1,
             LocalDateTime startMaintT2, LocalDateTime stopMaintT3,
             LocalDateTime stopBdT4, Time machineDowntime, Time ttr,
-            Time t2MinusT1) {
+            Time t2MinusT1, List<String> skippedDuplicateSummary) {
         String code = getStringValue(row.get("WOCodeName"));
         if (maintenanceRecordExists(code, startBdT1, stopBdT4)) {
             if (startBdT1 == null || stopBdT4 == null) {
@@ -334,6 +342,13 @@ public class DataTransferService {
                            "Проверьте, не блокирует ли это перенос новых записей.", code, startBdT1, stopBdT4);
             } else {
                 logger.info("Пропуск дубликата BD: code={}, start_bd_t1={}, stop_bd_t4={}", code, startBdT1, stopBdT4);
+            }
+            if (skippedDuplicateSummary != null) {
+                String reason = (startBdT1 == null || stopBdT4 == null)
+                        ? "дубликат (NULL T1/T4 или недавняя запись с NULL)"
+                        : "дубликат";
+                skippedDuplicateSummary.add(String.format(
+                        "BD %s | code=%s | start_bd_t1=%s | stop_bd_t4=%s", reason, code, startBdT1, stopBdT4));
             }
             return false;
         }
@@ -430,7 +445,7 @@ public class DataTransferService {
      */
     private boolean transferSingleOrder(Map<String, Object> row, LocalDateTime startBdT1,
             LocalDateTime startMaintT2, LocalDateTime stopMaintT3,
-            LocalDateTime stopBdT4) {
+            LocalDateTime stopBdT4, List<String> skippedDuplicateSummary) {
         // ✅ ВСЕГДА берем SDuration, STTR, SLogisticTimeMin из SQL Server
         int downtimeMinutes = parseDurationToMinutes(getStringValue(row.get("SDuration")));
         Time downtime = formatDowntime(downtimeMinutes);
@@ -442,7 +457,7 @@ public class DataTransferService {
         Time t2MinusT1 = formatDowntime(t2MinusT1Minutes);
 
         boolean inserted = transferOrderPart(row, startBdT1, startMaintT2, stopMaintT3, stopBdT4,
-                downtime, ttr, t2MinusT1);
+                downtime, ttr, t2MinusT1, skippedDuplicateSummary);
 
         if (inserted) {
             logger.info("✓ Обычный наряд, создана запись:");
@@ -868,9 +883,7 @@ public class DataTransferService {
         try {
             logger.info("Начало удаления отфильтрованных записей...");
 
-            String deleteQuery = """
-                    DELETE FROM equipment_maintenance_records
-                    WHERE
+            String filterWhere = """
                         (comments LIKE '%Cause:%Ошибочный запрос%' OR comments LIKE '%Cause:%Ложный вызов%')
                         OR (
                             LENGTH(comments) BETWEEN 15 AND 19
@@ -880,6 +893,33 @@ public class DataTransferService {
                         OR hp_bd LIKE '%Tag%'
                         OR status LIKE '%В исполнении%'
                     """;
+
+            String selectFiltered = """
+                    SELECT id, code, status, hp_bd, LENGTH(comments) AS comment_len,
+                        CASE
+                            WHEN (comments LIKE '%Cause:%Ошибочный запрос%' OR comments LIKE '%Cause:%Ложный вызов%')
+                                THEN 'Cause: Ошибочный запрос / Ложный вызов'
+                            WHEN (LENGTH(comments) BETWEEN 15 AND 19
+                                AND (status LIKE '%Закрыто%' OR status LIKE '%Выполнено%'))
+                                THEN 'короткий comments (LENGTH 15-19) и Закрыто/Выполнено'
+                            WHEN hp_bd LIKE '%Tag%' THEN 'hp_bd содержит Tag'
+                            WHEN status LIKE '%В исполнении%' THEN 'статус В исполнении'
+                            ELSE 'прочее'
+                        END AS filter_reason
+                    FROM equipment_maintenance_records
+                    WHERE
+                    """ + filterWhere;
+
+            List<Map<String, Object>> rowsToDelete = mysqlJdbcTemplate.queryForList(selectFiltered);
+            logger.info("--- BD: удаляются как отфильтрованные ({} шт.) ---", rowsToDelete.size());
+            for (Map<String, Object> r : rowsToDelete) {
+                logger.info(
+                        "BD удаление фильтром | id={} | code={} | причина={} | status={} | hp_bd={} | LENGTH(comments)={}",
+                        r.get("id"), r.get("code"), r.get("filter_reason"), r.get("status"), r.get("hp_bd"),
+                        r.get("comment_len"));
+            }
+
+            String deleteQuery = "DELETE FROM equipment_maintenance_records WHERE " + filterWhere;
 
             int deletedCount = executeWithRetry(() -> mysqlJdbcTemplate.update(deleteQuery),
                     "удаление отфильтрованных записей");
@@ -898,5 +938,15 @@ public class DataTransferService {
      */
     private String getStringValue(Object value) {
         return value != null ? value.toString() : "";
+    }
+
+    private void logTransferSummaryBlock(String title, List<String> lines) {
+        if (lines == null || lines.isEmpty()) {
+            return;
+        }
+        logger.info("{} (всего {}):", title, lines.size());
+        for (String line : lines) {
+            logger.info("  {}", line);
+        }
     }
 }
