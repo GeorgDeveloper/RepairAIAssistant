@@ -48,24 +48,21 @@ function toIsoLocal(d) {
     return `${y}-${m}-${day}`;
 }
 
-function monthBounds(year, month) {
-    const from = new Date(year, month - 1, 1);
-    const to = new Date(year, month, 0);
+/** Первый и последний день календарного месяца для указанной даты (локально). */
+function monthRangeForDate(ref) {
+    const y = ref.getFullYear();
+    const mo = ref.getMonth();
+    const from = new Date(y, mo, 1);
+    const to = new Date(y, mo + 1, 0);
     return { from: toIsoLocal(from), to: toIsoLocal(to) };
 }
 
-function fillYearSelect() {
-    const sel = document.getElementById('erYear');
-    if (!sel) return;
-    const y = new Date().getFullYear();
-    sel.innerHTML = '';
-    for (let i = y - 2; i <= y + 3; i++) {
-        const o = document.createElement('option');
-        o.value = String(i);
-        o.textContent = String(i);
-        if (i === y) o.selected = true;
-        sel.appendChild(o);
-    }
+function setDefaultDateRange() {
+    const { from, to } = monthRangeForDate(new Date());
+    const df = document.getElementById('erDateFrom');
+    const dt = document.getElementById('erDateTo');
+    if (df) df.value = from;
+    if (dt) dt.value = to;
 }
 
 function getMetrics(mapRoot) {
@@ -84,8 +81,7 @@ async function loadColumnMap() {
     return fetchJson(`/api/energy/column-map/${ER_RESOURCE}`);
 }
 
-async function loadDaily(year, month) {
-    const { from, to } = monthBounds(year, month);
+async function loadDaily(from, to) {
     const q = new URLSearchParams({ resource: ER_RESOURCE, from, to });
     return fetchJson(`/api/energy/daily-values?${q.toString()}`);
 }
@@ -167,12 +163,27 @@ function renderTable(metricsDefs, byDate, dates) {
 
 const ER_COLORS = ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#dc3545', '#20c997', '#6610f2'];
 
+/** Подписи оси X: в одном календарном месяце — дд.мм, иначе дд.мм.гггг (чтобы не дублировались). */
+function chartAxisLabels(dates) {
+    if (!dates.length) return [];
+    const first = dates[0];
+    const last = dates[dates.length - 1];
+    const singleCalendarMonth = first.slice(0, 7) === last.slice(0, 7);
+    return dates.map((d) => {
+        const dd = d.slice(8, 10);
+        const mm = d.slice(5, 7);
+        const yy = d.slice(0, 4);
+        if (singleCalendarMonth) return `${dd}.${mm}`;
+        return `${dd}.${mm}.${yy}`;
+    });
+}
+
 function renderChart(metricsDefs, byDate, dates) {
     const chartMetrics = metricsDefs.filter((m) => m.chart_default === true);
     const canvas = document.getElementById('erChart');
     if (!canvas || typeof Chart === 'undefined') return;
 
-    const labels = dates.map((d) => d.slice(8, 10) + '.' + d.slice(5, 7));
+    const labels = chartAxisLabels(dates);
     const datasets = chartMetrics.map((m, i) => ({
         label: m.label_ru || m.id,
         data: dates.map((d) => {
@@ -222,10 +233,23 @@ function renderChart(metricsDefs, byDate, dates) {
     });
 }
 
+function readDateRange() {
+    const from = (document.getElementById('erDateFrom') || {}).value || '';
+    const to = (document.getElementById('erDateTo') || {}).value || '';
+    return { from, to };
+}
+
 async function apply() {
     showMsg('', '');
-    const year = parseInt(document.getElementById('erYear').value, 10);
-    const month = parseInt(document.getElementById('erMonth').value, 10);
+    const { from, to } = readDateRange();
+    if (!from || !to) {
+        showMsg('Укажите дату с и дату по.', 'warn');
+        return;
+    }
+    if (to < from) {
+        showMsg('Дата «по» не может быть раньше даты «с».', 'warn');
+        return;
+    }
     try {
         if (!erColumnMap) {
             erColumnMap = await loadColumnMap();
@@ -235,9 +259,9 @@ async function apply() {
             showMsg('Не удалось прочитать карту колонок (metrics пусто).', 'warn');
             return;
         }
-        const rows = await loadDaily(year, month);
+        const rows = await loadDaily(from, to);
         if (!rows.length) {
-            showMsg(`Нет данных за выбранный месяц для ресурса ${ER_TITLE}.`, 'warn');
+            showMsg(`Нет данных за выбранный период для ресурса ${ER_TITLE}.`, 'warn');
             renderTable(metricsDefs, new Map(), []);
             if (erChart) {
                 erChart.destroy();
@@ -255,10 +279,7 @@ async function apply() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    fillYearSelect();
-    const m = new Date().getMonth() + 1;
-    const ms = document.getElementById('erMonth');
-    if (ms) ms.value = String(m);
+    setDefaultDateRange();
     document.getElementById('erApply').addEventListener('click', apply);
 
     requestAnimationFrame(() => apply());

@@ -1061,13 +1061,22 @@ IndexDashboard.showIndicatorTable = async function(date) {
             { name: 'Завод', prefix: 'report_plant' }
         ];
         
+        const monthNamesLower = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+            'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+        const dateMatch = String(date).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+        let monthIdx = dateMatch ? parseInt(dateMatch[2], 10) - 1 : null;
+        if (monthIdx == null || monthIdx < 0 || monthIdx > 11) {
+            monthIdx = IndexDashboard.currentDate ? IndexDashboard.currentDate.getMonth() : new Date().getMonth();
+        }
+        const monthColumnHeader = monthNamesLower[monthIdx];
+        
         let tableHTML = `
             <table class="metrics-table">
                 <thead>
                     <tr>
                         <th>Показатель</th>
                         <th>Цель</th>
-                        <th>октябрь</th>
+                        <th>${monthColumnHeader}</th>
                         <th>${date}</th>
                     </tr>
                 </thead>

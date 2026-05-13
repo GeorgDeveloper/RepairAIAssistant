@@ -25,15 +25,19 @@
     color: #333;
 }
 
-.energy-filters .filter-group select {
+.energy-filters .filter-group select,
+.energy-filters .filter-group .energy-date-input {
     padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
     background: #fff;
+    min-height: 38px;
+    box-sizing: border-box;
 }
 
-.energy-filters .filter-group select:hover {
+.energy-filters .filter-group select:hover,
+.energy-filters .filter-group .energy-date-input:hover {
     border-color: #e74c3c;
 }
 

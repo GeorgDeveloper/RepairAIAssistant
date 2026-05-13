@@ -27,25 +27,14 @@
 
             <div class="filters energy-filters">
                 <div class="filter-group">
-                    <label for="erYear">Год</label>
-                    <select id="erYear"></select>
+                    <label for="erDateFrom">Дата с</label>
+                    <input type="date" id="erDateFrom" class="energy-date-input" required
+                           title="Начало периода">
                 </div>
                 <div class="filter-group">
-                    <label for="erMonth">Месяц</label>
-                    <select id="erMonth">
-                        <option value="1">Январь</option>
-                        <option value="2">Февраль</option>
-                        <option value="3">Март</option>
-                        <option value="4">Апрель</option>
-                        <option value="5">Май</option>
-                        <option value="6">Июнь</option>
-                        <option value="7">Июль</option>
-                        <option value="8">Август</option>
-                        <option value="9">Сентябрь</option>
-                        <option value="10">Октябрь</option>
-                        <option value="11">Ноябрь</option>
-                        <option value="12">Декабрь</option>
-                    </select>
+                    <label for="erDateTo">Дата по</label>
+                    <input type="date" id="erDateTo" class="energy-date-input" required
+                           title="Конец периода">
                 </div>
                 <div class="filter-group filter-group-actions">
                     <button type="button" id="erApply" class="btn-apply">Показать</button>
