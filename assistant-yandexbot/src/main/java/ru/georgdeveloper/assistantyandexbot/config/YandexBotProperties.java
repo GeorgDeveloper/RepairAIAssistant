@@ -18,5 +18,12 @@ public class YandexBotProperties {
 	public static class Polling {
 		private boolean enabled;
 		private long intervalMs = 1500;
+		/** Файл с последним подтверждённым offset (max(update_id)+1). */
+		private String offsetFile = "./data/yandex-polling.offset";
+		/**
+		 * Не выполнять бизнес-логику для обновлений старше N секунд (защита при потере offset-файла).
+		 * 0 — отключено.
+		 */
+		private long maxReplayAgeSeconds = 3600;
 	}
 }

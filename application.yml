@@ -83,6 +83,8 @@ yandex:
     polling:
       enabled: true
       interval-ms: 1500
+      offset-file: ./data/yandex-polling.offset
+      max-replay-age-seconds: 3600
 
 # Файловая система
 files:

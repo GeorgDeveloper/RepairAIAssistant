@@ -1,0 +1,7 @@
+# MySQL (обязательно)
+pymysql>=1.1.0
+
+# SQL Server / CMMS (обязательно для догрузки из REP_BreakdownReport)
+# На Windows используйте pyodbc + ODBC Driver 17/18 (pymssql часто не собирается/не коннектится):
+# https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server
+pyodbc>=5.1.0
