@@ -107,7 +107,7 @@ public class YandexMessengerClient {
 		}
 	}
 
-	public JsonNode getUpdates(int limit, int offset) throws Exception {
+	public JsonNode getUpdates(int limit, long offset) throws Exception {
 		// Polling режим: получаем следующую пачку обновлений.
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("limit", limit);

@@ -15,8 +15,6 @@ import java.nio.file.StandardOpenOption;
 
 /**
  * Персистентный offset для {@code getUpdates}.
- * Без сохранения на диск перезапуск бота сбрасывает offset в 0 и повторно обрабатывает
- * всю накопленную очередь — это приводит к массовой рассылке старых ответов.
  */
 @Component
 public class YandexPollingOffsetStore {
@@ -25,44 +23,56 @@ public class YandexPollingOffsetStore {
 
 	private final YandexBotProperties properties;
 	private final Path offsetFile;
-	private volatile int nextOffset;
+	private volatile long nextOffset;
+	private volatile boolean drainingBacklog;
 
 	public YandexPollingOffsetStore(YandexBotProperties properties) {
 		this.properties = properties;
 		this.offsetFile = Path.of(properties.getPolling().getOffsetFile()).toAbsolutePath().normalize();
-		this.nextOffset = 0;
+		this.nextOffset = 0L;
 	}
 
 	@PostConstruct
 	void loadOnStartup() {
-		if (!Files.isRegularFile(offsetFile)) {
-			log.warn("Файл offset не найден ({}). При первом getUpdates(offset=0) возможна повторная "
-					+ "обработка накопленной очереди. После успешного polling offset будет сохранён.", offsetFile);
-			return;
-		}
-		try {
-			String raw = Files.readString(offsetFile, StandardCharsets.UTF_8).trim();
-			int loaded = Integer.parseInt(raw);
-			if (loaded < 0) {
-				log.warn("Некорректный offset в файле {}: {}", offsetFile, raw);
-				return;
+		if (Files.isRegularFile(offsetFile)) {
+			try {
+				String raw = Files.readString(offsetFile, StandardCharsets.UTF_8).trim();
+				nextOffset = Long.parseLong(raw);
+				log.info("Загружен polling offset={} из {}", nextOffset, offsetFile);
+			} catch (Exception e) {
+				log.error("Не удалось прочитать offset из {}: {}", offsetFile, e.getMessage(), e);
 			}
-			nextOffset = loaded;
-			log.info("Загружен polling offset={} из {}", nextOffset, offsetFile);
-		} catch (Exception e) {
-			log.error("Не удалось прочитать offset из {}: {}", offsetFile, e.getMessage(), e);
+		} else {
+			log.warn("Файл offset не найден ({}), начинаем с offset=0", offsetFile);
+		}
+
+		if (properties.getPolling().isDrainBacklogOnStartup()) {
+			drainingBacklog = true;
+			log.info("Старт: сброс накопленной очереди getUpdates без ответов пользователям "
+					+ "(отключите yandex.bot.polling.drain-backlog-on-startup=false, если не нужно)");
 		}
 	}
 
-	public int getNextOffset() {
+	public long getNextOffset() {
 		return nextOffset;
 	}
 
-	public void advanceTo(int updateId) {
-		if (updateId <= 0) {
+	public boolean isDrainingBacklog() {
+		return drainingBacklog;
+	}
+
+	public void finishBacklogDrain() {
+		if (drainingBacklog) {
+			drainingBacklog = false;
+			log.info("Очередь getUpdates сброшена (offset={}). Обрабатываются только новые сообщения.", nextOffset);
+		}
+	}
+
+	public void advanceTo(long updateId) {
+		if (updateId == 0L) {
 			return;
 		}
-		int newOffset = updateId + 1;
+		long newOffset = updateId + 1L;
 		if (newOffset <= nextOffset) {
 			return;
 		}
@@ -70,14 +80,14 @@ public class YandexPollingOffsetStore {
 		persist(newOffset);
 	}
 
-	private void persist(int offset) {
+	private void persist(long offset) {
 		try {
 			Path parent = offsetFile.getParent();
 			if (parent != null) {
 				Files.createDirectories(parent);
 			}
 			Path tmp = offsetFile.resolveSibling(offsetFile.getFileName() + ".tmp");
-			Files.writeString(tmp, Integer.toString(offset), StandardCharsets.UTF_8,
+			Files.writeString(tmp, Long.toString(offset), StandardCharsets.UTF_8,
 					StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 			Files.move(tmp, offsetFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 		} catch (IOException e) {

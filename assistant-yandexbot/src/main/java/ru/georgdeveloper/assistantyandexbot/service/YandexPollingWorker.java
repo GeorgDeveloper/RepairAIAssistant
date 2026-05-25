@@ -10,12 +10,7 @@ import ru.georgdeveloper.assistantyandexbot.client.YandexMessengerClient;
 import ru.georgdeveloper.assistantyandexbot.config.YandexBotProperties;
 
 /**
- * Альтернатива вебхуку: polling {@code getUpdates}
- * (<a href="https://yandex.ru/dev/messenger/doc/ru/api-requests/update-polling">документация</a>).
- *
- * <p>Алгоритм полностью следует рекомендации API:
- * берем пачку, обрабатываем, затем двигаем {@code offset = max(update_id)+1}.
- * Offset сохраняется на диск после каждого обновления, чтобы перезапуск не воспроизводил очередь.
+ * Polling {@code getUpdates} с персистентным offset.
  */
 @Component
 @ConditionalOnProperty(prefix = "yandex.bot.polling", name = "enabled", havingValue = "true")
@@ -43,24 +38,39 @@ public class YandexPollingWorker {
 		if (properties.getToken() == null || properties.getToken().isBlank()) {
 			return;
 		}
-		int offset = offsetStore.getNextOffset();
+		long offset = offsetStore.getNextOffset();
+		boolean draining = offsetStore.isDrainingBacklog();
+		int batchLimit = draining ? 1000 : 100;
 		try {
-			JsonNode root = messengerClient.getUpdates(100, offset);
+			JsonNode root = messengerClient.getUpdates(batchLimit, offset);
 			if (!root.path("ok").asBoolean(false)) {
 				log.warn("getUpdates: {}", root);
 				return;
 			}
 			JsonNode updates = root.path("updates");
 			if (!updates.isArray() || updates.isEmpty()) {
+				if (offsetStore.isDrainingBacklog()) {
+					offsetStore.finishBacklogDrain();
+				}
 				return;
 			}
+
+			boolean drainOnly = draining;
 			long maxReplayAgeSec = properties.getPolling().getMaxReplayAgeSeconds();
 			long nowEpochSec = System.currentTimeMillis() / 1000L;
 
+			if (drainOnly) {
+				log.info("Сброс очереди: подтверждаем {} апдейтов без ответов (offset={})", updates.size(), offset);
+			}
+
 			for (JsonNode u : updates) {
-				int updateId = u.path("update_id").asInt(0);
+				long updateId = readUpdateId(u);
 				try {
-					if (shouldSkipStaleUpdate(u, maxReplayAgeSec, nowEpochSec)) {
+					if (drainOnly) {
+						if (log.isDebugEnabled()) {
+							log.debug("Сброс очереди (без ответа): update_id={}", updateId);
+						}
+					} else if (shouldSkipStaleUpdate(u, maxReplayAgeSec, nowEpochSec)) {
 						log.info("Пропуск устаревшего update_id={} (timestamp={})", updateId, u.path("timestamp").asLong(0));
 					} else {
 						yandexBotService.processUpdate(u);
@@ -68,13 +78,21 @@ public class YandexPollingWorker {
 				} catch (Exception e) {
 					log.error("Ошибка обработки update_id={}: {}", updateId, e.getMessage(), e);
 				} finally {
-					// Подтверждаем доставку даже при сбое обработки, иначе API отдаёт те же updates снова.
 					offsetStore.advanceTo(updateId);
 				}
 			}
 		} catch (Exception e) {
 			log.error("Ошибка polling: {}", e.getMessage(), e);
 		}
+	}
+
+	/** API отдаёт update_id как int32; большие значения приходят отрицательными. */
+	static long readUpdateId(JsonNode update) {
+		JsonNode id = update.path("update_id");
+		if (id.isMissingNode() || id.isNull()) {
+			return 0L;
+		}
+		return id.asLong();
 	}
 
 	private static boolean shouldSkipStaleUpdate(JsonNode update, long maxReplayAgeSec, long nowEpochSec) {
@@ -85,6 +103,7 @@ public class YandexPollingWorker {
 		if (ts <= 0) {
 			return false;
 		}
-		return (nowEpochSec - ts) > maxReplayAgeSec;
+		long age = nowEpochSec - ts;
+		return age > maxReplayAgeSec || age < -300L;
 	}
 }

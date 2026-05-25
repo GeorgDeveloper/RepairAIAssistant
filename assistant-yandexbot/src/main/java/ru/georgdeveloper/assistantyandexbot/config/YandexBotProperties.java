@@ -25,5 +25,10 @@ public class YandexBotProperties {
 		 * 0 — отключено.
 		 */
 		private long maxReplayAgeSeconds = 3600;
+		/**
+		 * При каждом старте бота: сначала подтвердить всю накопленную очередь getUpdates
+		 * без ответов пользователям (сброс кликов, пока бот был недоступен).
+		 */
+		private boolean drainBacklogOnStartup = true;
 	}
 }

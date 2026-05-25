@@ -50,7 +50,7 @@ public class YandexBotService {
 	 * Локальный anti-dup cache по {@code update_id}.
 	 * Нужен, потому что webhook доставляется по схеме "at least once".
 	 */
-	private final Map<Integer, Boolean> processedUpdates = new ConcurrentHashMap<>();
+	private final Map<Long, Boolean> processedUpdates = new ConcurrentHashMap<>();
 	/**
 	 * Временное хранилище соответствий "вопрос-ответ" для кнопок фидбэка.
 	 */
@@ -91,9 +91,9 @@ public class YandexBotService {
 	}
 
 	public void processUpdate(JsonNode update) {
-		// 1) Отбрасываем уже обработанные update_id.
-		int updateId = update.path("update_id").asInt(0);
-		if (updateId > 0) {
+		// 1) Отбрасываем уже обработанные update_id (в т.ч. отрицательные int32 от API).
+		long updateId = YandexPollingWorker.readUpdateId(update);
+		if (updateId != 0L) {
 			if (processedUpdates.size() > 100_000) {
 				processedUpdates.clear();
 			}
