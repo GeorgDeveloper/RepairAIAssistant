@@ -1,12 +1,14 @@
 package ru.georgdeveloper.assistantweb.controller;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,12 +52,8 @@ public class DiagnosticsWebController {
             if (malfunction != null) body.add("malfunction", malfunction);
             if (additionalKit != null) body.add("additional_kit", additionalKit);
             if (causes != null) body.add("causes", causes);
-            if (photo != null && !photo.isEmpty()) {
-                body.add("photo", photo.getResource());
-            }
-            if (document != null && !document.isEmpty()) {
-                body.add("document", document.getResource());
-            }
+            addMultipartFile(body, "photo", photo);
+            addMultipartFile(body, "document", document);
 
             HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity =
                     new HttpEntity<>(body, headers);
@@ -204,12 +202,8 @@ public class DiagnosticsWebController {
             if (nonEliminationReason != null) body.add("non_elimination_reason", nonEliminationReason);
             if (measures != null) body.add("measures", measures);
             if (comments != null) body.add("comments", comments);
-            if (photoResult != null && !photoResult.isEmpty()) {
-                body.add("photo_result", photoResult.getResource());
-            }
-            if (documentResult != null && !documentResult.isEmpty()) {
-                body.add("document_result", documentResult.getResource());
-            }
+            addMultipartFile(body, "photo_result", photoResult);
+            addMultipartFile(body, "document_result", documentResult);
 
             HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity =
                     new HttpEntity<>(body, headers);
@@ -281,18 +275,10 @@ public class DiagnosticsWebController {
             if (nonEliminationReason != null) body.add("non_elimination_reason", nonEliminationReason);
             if (measures != null) body.add("measures", measures);
             if (comments != null) body.add("comments", comments);
-            if (photo != null && !photo.isEmpty()) {
-                body.add("photo", photo.getResource());
-            }
-            if (document != null && !document.isEmpty()) {
-                body.add("document", document.getResource());
-            }
-            if (photoResult != null && !photoResult.isEmpty()) {
-                body.add("photo_result", photoResult.getResource());
-            }
-            if (documentResult != null && !documentResult.isEmpty()) {
-                body.add("document_result", documentResult.getResource());
-            }
+            addMultipartFile(body, "photo", photo);
+            addMultipartFile(body, "document", document);
+            addMultipartFile(body, "photo_result", photoResult);
+            addMultipartFile(body, "document_result", documentResult);
 
             HttpEntity<LinkedMultiValueMap<String, Object>> requestEntity =
                     new HttpEntity<>(body, headers);
@@ -374,6 +360,19 @@ public class DiagnosticsWebController {
             response.put("message", "Ошибка при удалении файла: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
+    }
+
+    private void addMultipartFile(LinkedMultiValueMap<String, Object> body, String name, MultipartFile file)
+            throws IOException {
+        if (file == null || file.isEmpty()) {
+            return;
+        }
+        body.add(name, new ByteArrayResource(file.getBytes()) {
+            @Override
+            public String getFilename() {
+                return file.getOriginalFilename();
+            }
+        });
     }
 }
 

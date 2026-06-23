@@ -3,7 +3,6 @@ package ru.georgdeveloper.assistantcore.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 
 
 @Entity
@@ -46,13 +45,13 @@ public class EquipmentMaintenanceRecord {
     private LocalDateTime stopBdT4;
     
     @Column(name = "machine_downtime")
-    private LocalTime machineDowntime;
-    
+    private String machineDowntime;
+
     @Column(name = "ttr")
-    private LocalTime ttr;
-    
+    private String ttr;
+
     @Column(name = "t2_minus_t1")
-    private LocalTime t2MinusT1;
+    private String t2MinusT1;
     
     @Column(name = "status")
     private String status;

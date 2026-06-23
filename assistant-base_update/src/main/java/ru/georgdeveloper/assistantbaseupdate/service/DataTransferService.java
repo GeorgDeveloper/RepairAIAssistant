@@ -883,13 +883,14 @@ public class DataTransferService {
         try {
             logger.info("Начало удаления отфильтрованных записей...");
 
+            // Отключён фильтр короткого comments (LENGTH 15–19) при статусе Закрыто/Выполнено:
+            // по необходимости ручной корректировки пустых нарядов.
+            // OR (
+            //     LENGTH(comments) BETWEEN 15 AND 19
+            //     AND (status LIKE '%Закрыто%' OR status LIKE '%Выполнено%')
+            // )
             String filterWhere = """
                         (comments LIKE '%Cause:%Ошибочный запрос%' OR comments LIKE '%Cause:%Ложный вызов%')
-                        OR (
-                            LENGTH(comments) BETWEEN 15 AND 19
-                            AND (status LIKE '%Закрыто%'
-                            OR status LIKE '%Выполнено%')
-                        )
                         OR hp_bd LIKE '%Tag%'
                         OR status LIKE '%В исполнении%'
                     """;
@@ -899,9 +900,6 @@ public class DataTransferService {
                         CASE
                             WHEN (comments LIKE '%Cause:%Ошибочный запрос%' OR comments LIKE '%Cause:%Ложный вызов%')
                                 THEN 'Cause: Ошибочный запрос / Ложный вызов'
-                            WHEN (LENGTH(comments) BETWEEN 15 AND 19
-                                AND (status LIKE '%Закрыто%' OR status LIKE '%Выполнено%'))
-                                THEN 'короткий comments (LENGTH 15-19) и Закрыто/Выполнено'
                             WHEN hp_bd LIKE '%Tag%' THEN 'hp_bd содержит Tag'
                             WHEN status LIKE '%В исполнении%' THEN 'статус В исполнении'
                             ELSE 'прочее'
@@ -909,6 +907,7 @@ public class DataTransferService {
                     FROM equipment_maintenance_records
                     WHERE
                     """ + filterWhere;
+            // Отключено в filter_reason: 'короткий comments (LENGTH 15-19) и Закрыто/Выполнено'
 
             List<Map<String, Object>> rowsToDelete = mysqlJdbcTemplate.queryForList(selectFiltered);
             logger.info("--- BD: удаляются как отфильтрованные ({} шт.) ---", rowsToDelete.size());
