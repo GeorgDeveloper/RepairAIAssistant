@@ -56,11 +56,13 @@ public class TopAreasWebController {
     public List<Map<String, Object>> categories(@RequestParam String area,
                                                 @RequestParam(required = false) String dateFrom,
                                                 @RequestParam(required = false) String dateTo,
-                                                @RequestParam(required = false) String week) {
+                                                @RequestParam(required = false) String week,
+                                                @RequestParam(required = false) String failureType) {
         StringBuilder url = new StringBuilder(coreServiceUrl + "/top-areas/drilldown/categories?area=" + area);
         if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
+        if (failureType != null) url.append("&failureType=").append(failureType);
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 
@@ -70,11 +72,13 @@ public class TopAreasWebController {
                                             @RequestParam String category,
                                             @RequestParam(required = false) String dateFrom,
                                             @RequestParam(required = false) String dateTo,
-                                            @RequestParam(required = false) String week) {
+                                            @RequestParam(required = false) String week,
+                                            @RequestParam(required = false) String failureType) {
         StringBuilder url = new StringBuilder(coreServiceUrl + "/top-areas/drilldown/causes?area=" + area + "&category=" + category);
         if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
+        if (failureType != null) url.append("&failureType=").append(failureType);
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 
@@ -85,11 +89,13 @@ public class TopAreasWebController {
                                             @RequestParam String cause,
                                             @RequestParam(required = false) String dateFrom,
                                             @RequestParam(required = false) String dateTo,
-                                            @RequestParam(required = false) String week) {
+                                            @RequestParam(required = false) String week,
+                                            @RequestParam(required = false) String failureType) {
         StringBuilder url = new StringBuilder(coreServiceUrl + "/top-areas/drilldown/events?area=" + area + "&category=" + category + "&cause=" + cause);
         if (dateFrom != null) url.append("&dateFrom=").append(dateFrom);
         if (dateTo != null) url.append("&dateTo=").append(dateTo);
         if (week != null) url.append("&week=").append(week);
+        if (failureType != null) url.append("&failureType=").append(failureType);
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
 }

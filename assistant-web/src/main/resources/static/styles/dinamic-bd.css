@@ -1,7 +1,25 @@
+/* Breakdowns layout: растягиваем контент по высоте */
+.main-content {
+    height: calc(100vh - 5rem) !important;
+    overflow-y: auto !important;
+}
+
+.container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+:root {
+    /* Верхняя граница высоты, чтобы не появлялся лишний вертикальный скролл */
+    --breakdown-chart-height: clamp(22rem, 60vh, 46rem);
+}
+
 /* Styles extracted from dinamic_bd.html */
 .filters {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
     gap: 15px;
     margin-bottom: 20px;
     padding: 15px;
@@ -124,11 +142,12 @@
 }
 
 .chart-container {
-    margin-top: 20px;
-    padding: 20px;
+    margin-top: 0;
+    padding: 0.5rem 0.75rem 0;
     background: white;
     border-radius: 6px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-sizing: border-box;
 }
 
 .loading {
@@ -167,12 +186,19 @@
 .charts-wrapper {
     display: flex; 
     gap: 20px; 
-    height: 580px;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: var(--breakdown-chart-height);
+    height: auto;
 }
 
 .charts-column {
-    flex: 2; 
+    flex: 1 1 auto; 
     position: relative;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
 .chart-controls {
@@ -195,12 +221,16 @@
 }
 
 .legend-column {
-    flex: 1; 
+    flex: 0 0 clamp(14rem, 24%, 18rem); 
     padding: 20px; 
     background: #f8f9fa; 
     border-radius: 6px; 
     display: flex; 
     flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+    min-width: 14rem;
 }
 
 .legend-column h4 {
@@ -227,4 +257,301 @@
 #customLegend {
     overflow-y: auto; 
     flex: 1;
+    min-height: 0;
+}
+
+/* Чтобы canvas/график тоже заполняли высоту */
+.charts-column .chart-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    margin-top: 0;
+    padding: 0.5rem 0.75rem 0;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.charts-column .chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    width: min(1000px, 92vw);
+    height: 80vh;
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 8px;
+}
+
+.modal-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.close-btn {
+    border: 0;
+    background: #e74c3c;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.back-btn {
+    border: 0;
+    background: #7f8c8d;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.modal-title {
+    margin: 0;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.chart-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+@media (max-width: 1600px) {
+    .filters {
+        grid-template-columns: repeat(3, minmax(10rem, 1fr));
+    }
+
+    .chart-controls {
+        top: 0.5rem;
+        right: 0.5rem;
+        gap: 0.375rem;
+    }
+
+    .btn-toggle {
+        padding: 0.4rem 0.625rem;
+        font-size: 0.6875rem;
+    }
+
+    .legend-column {
+        flex-basis: 15rem;
+        min-width: 13.5rem;
+    }
+}
+
+@media (max-width: 1280px) {
+    .filters {
+        grid-template-columns: repeat(2, minmax(10rem, 1fr));
+    }
+
+    .charts-wrapper {
+        /* height intentionally not fixed: charts-wrapper should fill remaining space */
+    }
+
+    .legend-column {
+        flex-basis: 14rem;
+        min-width: 13rem;
+    }
+}
+
+@media (max-width: 900px) {
+    .pm-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .filters {
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .charts-wrapper {
+        flex-direction: column;
+        height: auto;
+        max-height: none;
+        min-height: 0;
+    }
+
+    .legend-column {
+        padding: 1rem;
+        min-width: 0;
+        max-height: 16rem;
+        height: auto;
+    }
+
+    .chart-controls {
+        position: static;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .filters {
+        gap: 0.75rem;
+        padding: 0.875rem;
+        grid-template-columns: 1fr;
+    }
+
+    .filter-control,
+    .multi-select-button {
+        font-size: 0.875rem;
+    }
+
+    .chart-container {
+        padding: 0.875rem;
+    }
+
+    .modal-content {
+        width: 95vw;
+        height: 75vh;
+        padding: 0.875rem;
+    }
+}
+
+/* Compact spacing overrides */
+.filters {
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+}
+
+.chart-container {
+    margin-top: 0;
+    padding: 0.5rem 0.75rem 0;
+}
+
+.charts-wrapper {
+    gap: 0.75rem;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: var(--breakdown-chart-height);
+    height: auto;
+}
+
+.legend-column {
+    padding: 0.75rem;
+}
+
+/* Match /top-causes layout for dynamic pages */
+:root {
+    --breakdown-chart-height: clamp(22rem, 65vh, 48rem);
+}
+
+.charts-wrapper {
+    display: grid !important;
+    grid-template-columns: 2fr 1fr !important;
+    gap: 16px !important;
+
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: var(--breakdown-chart-height) !important;
+    height: auto !important;
+
+    align-items: stretch;
+}
+
+.charts-column {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    min-width: 0 !important;
+}
+
+.chart-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    display: flex;
+    gap: 5px;
+}
+
+.chart-container {
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+
+    padding: 16px !important;
+    background: #fff !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06) !important;
+    box-sizing: border-box;
+}
+
+.chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.legend-column {
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    padding: 16px !important;
+    background: #fff !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06) !important;
+
+    overflow-y: auto !important;
+    max-height: none !important;
+    box-sizing: border-box;
+}
+
+.legend-column h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+#customLegend {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+@media (max-width: 1024px) {
+    .charts-wrapper {
+        grid-template-columns: 1fr !important;
+    }
+
+    .chart-container,
+    .legend-column {
+        height: auto !important;
+        min-height: 18rem !important;
+        max-height: none !important;
+    }
 }

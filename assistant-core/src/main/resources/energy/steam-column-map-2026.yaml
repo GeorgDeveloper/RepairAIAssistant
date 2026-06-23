@@ -1,0 +1,55 @@
+# Пар / конденсат — колонки листа «2026» файла «2026 год ЗАО ВШЗ.xlsx»
+# Пар 9 ата в Гкал: группа от X; массы пара и конденсат — AF..AL.
+
+file: "2026 год  ЗАО ВШЗ.xlsx"
+sheet: "2026"
+data_first_excel_row: 3
+date_column:
+  excel_letter: A
+  zero_based_index: 0
+  format: "dd.MM"
+
+resource: STEAM
+metrics:
+  - id: steam9_delta_mr
+    label_ru: "Пар 9 ата — Δ(МР)"
+    unit: ""
+    excel_column_letter: AB
+    zero_based_index: 27
+    row1_group: "пар, 9ата (Гкал)"
+    row2_kind: "∆(МР)"
+    chart_default: false
+
+  - id: steam9_delta_R
+    label_ru: "Пар 9 ата — Δ(R)"
+    unit: ""
+    excel_column_letter: AC
+    zero_based_index: 28
+    row1_group: "пар, 9ата (Гкал)"
+    row2_kind: "∆(R )"
+    chart_default: false
+
+  - id: steam9_gcals_per_tonne
+    label_ru: "Пар 9 ата — Гкал/т"
+    unit: "Гкал/т"
+    excel_column_letter: AE
+    zero_based_index: 30
+    row1_group: "пар, 9ата (Гкал)"
+    row2_kind: "Гкал/т"
+    chart_default: true
+
+charts_recommended:
+  - id: steam9_remaining
+    title_ru: "Пар 9 ата: оставшиеся показатели"
+    series:
+      - metric_id: steam9_delta_mr
+        role: delta
+      - metric_id: steam9_delta_R
+        role: delta
+      - metric_id: steam9_gcals_per_tonne
+        role: intensity
+
+import_notes:
+  - "Колонка AD отнесена к газу (см. gas-column-map-2026.yaml)."
+  - "Блок CAF / котельная (BJ..CT) можно вынести отдельным YAML при необходимости."
+  - "План, факты и конденсат по пару, перечисленные заказчиком, исключены из импорта и отображения."

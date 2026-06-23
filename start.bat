@@ -101,6 +101,11 @@ REM Start assistant-telegram
 echo Starting assistant-telegram...
 start "Assistant Telegram" cmd /k "cd assistant-telegram && mvn spring-boot:run"
 
+REM ========== ЗАПУСК ЯНДЕКС-БОТА (ASSISTANT-YANDEXBOT) ==========
+REM Запуск Yandex Messenger bot на порту 8086
+echo Proceeding to start assistant-yandexbot...
+start "Assistant Yandexbot" cmd /k "cd assistant-yandexbot && mvn spring-boot:run"
+
 REM ========== ЗАПУСК МОДУЛЯ ОБНОВЛЕНИЯ БАЗЫ (ASSISTANT-BASE_UPDATE) ==========
 REM Модуль синхронизации данных между SQL Server и MySQL, запускается на 8084
 REM Start assistant-base_update
@@ -114,5 +119,6 @@ echo All services started successfully!
 echo Web interface: http://localhost:8081
 echo Core API: http://localhost:8080
 echo Telegram bot: Running on port 8082
+echo Yandex Messenger bot: Running on port 8086
 echo Base Update: http://localhost:8084
 pause

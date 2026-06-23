@@ -37,12 +37,13 @@ $(document).ready(function () {
 
     table.order([0, 'desc']).draw();
 
-    // Обработчик для скачивания файлов
+    // Обработчик для просмотра файлов
     $(document).on('click', '.download-link', function (e) {
         e.preventDefault();
         const fileId = $(this).data('id');
         const fileName = $(this).text();
-        downloadFile(fileId, fileName);
+        const fileType = getFileType(fileName);
+        openFileModal(fileId, fileName, fileType);
     });
 
     // Modal open and close functionality
@@ -359,4 +360,78 @@ function showErrorModal(message) {
     const errorMessage = document.getElementById('errorMessage');
     errorMessage.textContent = message;
     errorModal.style.display = 'flex';
+}
+
+// Функция для экранирования HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+// Функция для определения типа файла
+function getFileType(fileName) {
+    if (!fileName) return 'document';
+    const lowerFileName = fileName.toLowerCase();
+    if (/\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(lowerFileName)) {
+        return 'image';
+    }
+    return 'document';
+}
+
+// Функция для открытия модального окна просмотра файла
+function openFileModal(fileId, fileName, fileType) {
+    const modal = document.getElementById('filePreviewModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    const downloadLink = document.getElementById('downloadLink');
+    
+    const fileUrl = `/manuals/view/${fileId}`;
+    
+    modalTitle.textContent = fileName;
+    downloadLink.href = `/manuals/download/${fileId}`;
+    downloadLink.download = fileName;
+    
+    const escapedFileName = escapeHtml(fileName);
+    const escapedFileUrl = escapeHtml(fileUrl);
+    
+    if (fileType === 'image') {
+        modalBody.innerHTML = '<img src="' + escapedFileUrl + '" alt="' + escapedFileName + '" style="max-width: 100%; max-height: 70vh;">';
+    } else {
+        // Для документов используем iframe или прямую ссылку
+        if (/\.pdf$/i.test(fileName)) {
+            modalBody.innerHTML = '<iframe src="' + escapedFileUrl + '" style="width: 100%; height: 70vh; border: none;"></iframe>';
+        } else {
+            modalBody.innerHTML = '<div style="text-align: center; padding: 40px;">' +
+                '<p>Просмотр документа недоступен. Используйте кнопку "Скачать" для загрузки файла.</p>' +
+                '<p style="font-size: 48px; margin: 20px 0;">📄</p>' +
+                '<p><strong>' + escapedFileName + '</strong></p>' +
+                '</div>';
+        }
+    }
+    
+    modal.style.display = 'block';
+}
+
+// Функция для закрытия модального окна просмотра файла
+function closeFileModal() {
+    document.getElementById('filePreviewModal').style.display = 'none';
+}
+
+// Закрытие модального окна при клике вне его
+window.onclick = function(event) {
+    const fileModal = document.getElementById('filePreviewModal');
+    if (event.target === fileModal) {
+        closeFileModal();
+    }
+    const errorModal = document.getElementById('errorModal');
+    if (event.target === errorModal) {
+        errorModal.style.display = 'none';
+    }
 }

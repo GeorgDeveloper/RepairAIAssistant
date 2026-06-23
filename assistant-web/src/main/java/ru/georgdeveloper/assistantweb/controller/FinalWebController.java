@@ -27,7 +27,7 @@ public class FinalWebController {
     @GetMapping("/data")
     public List<Map<String, Object>> data(@RequestParam(required = false) List<Integer> year,
                                           @RequestParam(required = false) List<Integer> month,
-                                          @RequestParam(required = false, defaultValue = "6") Integer limit) {
+                                          @RequestParam(required = false, defaultValue = "${app.final.months-limit:12}") Integer limit) {
         StringBuilder url = new StringBuilder(coreServiceUrl + "/final/data?");
         if (year != null && !year.isEmpty()) url.append("year=").append(join(year)).append('&');
         if (month != null && !month.isEmpty()) url.append("month=").append(join(month)).append('&');
@@ -49,6 +49,12 @@ public class FinalWebController {
             url.append("?year=").append(join(year));
         }
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/config")
+    public Map<String, Object> config() {
+        return (Map<String, Object>) restTemplate.getForObject(coreServiceUrl + "/final/config", Map.class);
     }
 
     private String join(List<Integer> list) {

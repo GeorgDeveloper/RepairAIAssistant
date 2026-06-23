@@ -7,10 +7,10 @@
     <title>Динамика поломок</title>
     <link rel="stylesheet" href="static/styles/style.css">
     <link rel="stylesheet" href="static/styles/dinamic-bd.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/lib/chart.min.js"></script>
 </head>
 
-<body>
+<body class="breakdowns-screen">
     <!-- Use the navigation fragment -->
     <div th:replace="~{fragments/navigation :: nav}"></div>
 
@@ -133,7 +133,7 @@
                             </button>
                         </div>
                         <div class="chart-container">
-                            <canvas id="mainChart" width="400" height="200"></canvas>
+                            <canvas id="mainChart"></canvas>
                         </div>
                     </div>
                     <div class="legend-column">

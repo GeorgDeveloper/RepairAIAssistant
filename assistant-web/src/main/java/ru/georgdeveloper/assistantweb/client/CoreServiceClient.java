@@ -36,4 +36,36 @@ public class CoreServiceClient {
         return restTemplate.getForObject(coreServiceUrl + "/dashboard/equipment-maintenance-records?limit=" + limit, 
                 java.util.List.class);
     }
+
+    @SuppressWarnings("unchecked")
+    public java.util.List<java.util.Map<String, Object>> getEquipmentMaintenanceRecords(String dateFrom, String dateTo, String area) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/dashboard/equipment-maintenance-records");
+        boolean firstParam = true;
+        
+        if (dateFrom != null && !dateFrom.isEmpty()) {
+            url.append(firstParam ? "?" : "&").append("dateFrom=").append(java.net.URLEncoder.encode(dateFrom, java.nio.charset.StandardCharsets.UTF_8));
+            firstParam = false;
+        }
+        if (dateTo != null && !dateTo.isEmpty()) {
+            url.append(firstParam ? "?" : "&").append("dateTo=").append(java.net.URLEncoder.encode(dateTo, java.nio.charset.StandardCharsets.UTF_8));
+            firstParam = false;
+        }
+        if (area != null && !area.isEmpty() && !area.equals("all")) {
+            url.append(firstParam ? "?" : "&").append("area=").append(java.net.URLEncoder.encode(area, java.nio.charset.StandardCharsets.UTF_8));
+        }
+        
+        return restTemplate.getForObject(url.toString(), java.util.List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public java.util.List<java.util.Map<String, Object>> getPmMaintenanceRecords(int limit) {
+        return restTemplate.getForObject(coreServiceUrl + "/dashboard/pm-maintenance-records?limit=" + limit, 
+                java.util.List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public java.util.List<java.util.Map<String, Object>> getDiagnosticsReports(int limit) {
+        return restTemplate.getForObject(coreServiceUrl + "/dashboard/diagnostics-reports?limit=" + limit, 
+                java.util.List.class);
+    }
 }

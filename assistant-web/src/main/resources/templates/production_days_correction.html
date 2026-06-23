@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Корректировка производственных дней</title>
+    <link rel="icon" type="image/png" href="/static/images/LogoPirelli3.png">
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/dashboard.css">
+    <link rel="stylesheet" href="/static/styles/production-days-correction.css">
+</head>
+<body class="infopanel-screen">
+    <div th:replace="~{fragments/navigation :: nav}"></div>
+
+    <div class="total-content production-days-page">
+        <div class="header">
+            <div class="user_logo">Привет, <a href="#">user</a></div>
+        </div>
+        <div class="main-content">
+            <div class="container">
+                <h2>Корректировка производственных дней</h2>
+                <p class="help-text">Задайте для каждого месяца один или несколько диапазонов дней, по которым считаются показатели BD и доступность. Дни вне диапазонов (простой) в расчёт не попадают. ППР (плановые ремонты) из перерасчёта исключены. Пример: простой 1–9 и 15–20 марта — добавьте диапазоны 10–14 и 21–31.</p>
+
+                <div class="correction-form">
+                <h3>Добавить или изменить</h3>
+                <div class="form-row">
+                    <label>Год</label>
+                    <input type="number" id="inputYear" min="2020" max="2030" placeholder="2026">
+                </div>
+                <div class="form-row">
+                    <label>Месяц</label>
+                    <select id="inputMonth">
+                        <option value="1">Январь</option>
+                        <option value="2">Февраль</option>
+                        <option value="3">Март</option>
+                        <option value="4">Апрель</option>
+                        <option value="5">Май</option>
+                        <option value="6">Июнь</option>
+                        <option value="7">Июль</option>
+                        <option value="8">Август</option>
+                        <option value="9">Сентябрь</option>
+                        <option value="10">Октябрь</option>
+                        <option value="11">Ноябрь</option>
+                        <option value="12">Декабрь</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>Диапазоны производственных дней (день месяца 1–31)</label>
+                    <div id="rangesContainer"></div>
+                    <button type="button" id="btnAddRange" class="btn-add-range">+ Добавить диапазон</button>
+                </div>
+                <div class="form-row">
+                    <label>Комментарий (необязательно)</label>
+                    <input type="text" id="inputComment" placeholder="Например: 9 дней простоя в начале месяца">
+                </div>
+                <div class="form-row">
+                    <button type="button" id="btnSave" class="btn-apply">Сохранить</button>
+                </div>
+                </div>
+
+                <div class="table-block">
+                    <h3>Текущие корректировки</h3>
+                    <div class="table-container">
+                        <table class="metrics-table">
+                            <thead>
+                                <tr>
+                                    <th>Год</th>
+                                    <th>Месяц</th>
+                                    <th>Диапазоны дней</th>
+                                    <th>Комментарий</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="correctionTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <p id="noDataMsg" style="display:none;">Корректировок нет. Добавьте запись выше.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '/api/production-days-correction';
+        const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+        let ranges = [{ first: 1, last: 31 }];
+
+        function renderRanges() {
+            const container = document.getElementById('rangesContainer');
+            container.innerHTML = '';
+            ranges.forEach((r, i) => {
+                const div = document.createElement('div');
+                div.className = 'range-row';
+                div.innerHTML = `
+                    <label>с</label>
+                    <input type="number" class="range-first" min="1" max="31" value="${r.first}" data-idx="${i}">
+                    <label>по</label>
+                    <input type="number" class="range-last" min="1" max="31" value="${r.last}" data-idx="${i}">
+                    <button type="button" class="btn-remove-range" data-idx="${i}">Удалить</button>
+                `;
+                div.querySelector('.range-first').addEventListener('input', e => { ranges[e.target.dataset.idx].first = parseInt(e.target.value, 10) || 1; });
+                div.querySelector('.range-last').addEventListener('input', e => { ranges[e.target.dataset.idx].last = parseInt(e.target.value, 10) || 31; });
+                div.querySelector('.btn-remove-range').addEventListener('click', () => { ranges.splice(i, 1); renderRanges(); });
+                container.appendChild(div);
+            });
+        }
+
+        document.getElementById('btnAddRange').addEventListener('click', () => {
+            ranges.push({ first: 1, last: 31 });
+            renderRanges();
+        });
+
+        async function loadList() {
+            const res = await fetch(API);
+            const list = await res.json();
+            const tbody = document.getElementById('correctionTableBody');
+            const noData = document.getElementById('noDataMsg');
+            tbody.innerHTML = '';
+            if (!list || list.length === 0) {
+                noData.style.display = 'block';
+                return;
+            }
+            noData.style.display = 'none';
+            list.forEach(item => {
+                const rangesStr = (item.ranges && item.ranges.length)
+                    ? item.ranges.map(r => r.firstProductionDay + '–' + r.lastProductionDay).join(', ')
+                    : '—';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.year}</td>
+                    <td>${MONTH_NAMES[parseInt(item.month, 10) - 1]}</td>
+                    <td>${rangesStr}</td>
+                    <td>${item.comment || ''}</td>
+                    <td><button type="button" class="btn-delete" data-year="${item.year}" data-month="${item.month}">Удалить</button></td>
+                `;
+                tr.querySelector('.btn-delete').addEventListener('click', () => deleteCorrection(item.year, item.month));
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function deleteCorrection(year, month) {
+            if (!confirm('Удалить корректировку за ' + MONTH_NAMES[month - 1] + ' ' + year + '?')) return;
+            await fetch(API + '/' + year + '/' + month, { method: 'DELETE' });
+            await loadList();
+        }
+
+        document.getElementById('btnSave').addEventListener('click', async () => {
+            const year = parseInt(document.getElementById('inputYear').value, 10);
+            const month = parseInt(document.getElementById('inputMonth').value, 10);
+            const comment = document.getElementById('inputComment').value.trim();
+            if (!year || year < 2020 || year > 2030) {
+                alert('Укажите год от 2020 до 2030');
+                return;
+            }
+            const rangeList = ranges.map(r => ({ firstProductionDay: r.first, lastProductionDay: r.last }));
+            for (const r of rangeList) {
+                if (r.firstProductionDay < 1 || r.firstProductionDay > 31 || r.lastProductionDay < 1 || r.lastProductionDay > 31 || r.firstProductionDay > r.lastProductionDay) {
+                    alert('В каждом диапазоне: первый и последний день от 1 до 31, первый ≤ последний');
+                    return;
+                }
+            }
+            if (rangeList.length === 0) {
+                alert('Добавьте хотя бы один диапазон');
+                return;
+            }
+            const body = { year, month, comment: comment || null, ranges: rangeList };
+            const res = await fetch(API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) {
+                alert('Ошибка сохранения: ' + res.status);
+                return;
+            }
+            await loadList();
+        });
+
+        renderRanges();
+        loadList();
+    </script>
+</body>
+</html>

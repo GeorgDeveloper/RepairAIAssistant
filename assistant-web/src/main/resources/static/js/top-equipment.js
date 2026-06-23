@@ -14,14 +14,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     let selectedMachines = new Set();
     let equipmentsCache = [];
 
-    await Promise.all([loadWeeks(), loadAreas(), loadFailureTypes()]);
+    await Promise.all([loadAreas(), loadFailureTypes()]);
     applyFilters();
-
-    async function loadWeeks() {
-        const data = await fetch(equipmentApi + '/weeks').then(r=>r.json());
-        const sel = document.getElementById('week');
-        sel.innerHTML = '<option value="all">Все</option>' + data.map(w=>`<option value="${w.week_number}">${w.week_number}</option>`).join('');
-    }
     
     async function loadAreas() {
         const data = await fetch(equipmentApi + '/areas').then(r=>r.json());
@@ -38,15 +32,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     function getCommonParams() {
         const dateFrom = document.getElementById('dateFrom').value || '';
         const dateTo = document.getElementById('dateTo').value || '';
-        const week = document.getElementById('week').value || 'all';
         const area = document.getElementById('area').value || 'all';
         const failureType = document.getElementById('failureType').value || 'all';
-        return { dateFrom, dateTo, week, area, failureType };
+        return { dateFrom, dateTo, area, failureType };
     }
 
     async function loadLegend() {
-        const {dateFrom, dateTo, week, area, failureType} = getCommonParams();
-        const params = new URLSearchParams({ dateFrom, dateTo, week, area, failureType, limit: 30 });
+        const {dateFrom, dateTo, area, failureType} = getCommonParams();
+        const params = new URLSearchParams({ dateFrom, dateTo, area, failureType, limit: 30 });
         const data = await fetch(equipmentApi + '/data?' + params.toString()).then(r=>r.json());
         equipmentsCache = data;
         if (selectedMachines.size === 0) {
@@ -118,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             data: {
                 labels: data.map(d=>d.machine_name),
                 datasets: [
-                    { label: 'Σ простоя, ч', data: data.map(d=>Number(d.total_downtime_hours||0)), backgroundColor: 'rgba(231,76,60,0.6)' },
+                    { label: 'Время простоя, ч', data: data.map(d=>Number(d.total_downtime_hours||0)), backgroundColor: 'rgba(231,76,60,0.6)' },
                     { label: 'Кол-во вызовов', data: data.map(d=>Number(d.failure_count||0)), backgroundColor: 'rgba(52,152,219,0.6)' }
                 ]
             },
@@ -147,8 +140,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('modalTitle').innerText = `Оборудование: ${machine}`;
         document.getElementById('backBtn').style.display = 'none';
         openModal();
-        const {dateFrom, dateTo, week, area} = getCommonParams();
-        const params = new URLSearchParams({ machine, dateFrom, dateTo, week, area });
+        const {dateFrom, dateTo, area, failureType} = getCommonParams();
+        const params = new URLSearchParams({ machine, dateFrom, dateTo, area });
+        if (failureType && failureType !== 'all') params.append('failureType', failureType);
         const data = await fetch(equipmentApi + '/drilldown/causes?' + params.toString()).then(r=>r.json());
         renderDrillChart('Причины', data, item => {
             currentCause = item.label;
@@ -159,16 +153,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     async function drillToMechanisms() {
         drillLevel = 2;
         document.getElementById('backBtn').style.display = 'inline-block';
-        const {dateFrom, dateTo, week, area} = getCommonParams();
-        const params = new URLSearchParams({ machine: currentMachine, cause: currentCause, dateFrom, dateTo, week, area });
+        const {dateFrom, dateTo, area, failureType} = getCommonParams();
+        const params = new URLSearchParams({ machine: currentMachine, cause: currentCause, dateFrom, dateTo, area });
+        if (failureType && failureType !== 'all') params.append('failureType', failureType);
         const data = await fetch(equipmentApi + '/drilldown/mechanisms?' + params.toString()).then(r=>r.json());
         renderDrillChart('Узлы/механизмы', data, item => drillToEvents(item.label));
     }
 
     async function drillToEvents(mechanism) {
         drillLevel = 3;
-        const {dateFrom, dateTo, week, area} = getCommonParams();
-        const params = new URLSearchParams({ machine: currentMachine, cause: currentCause, mechanism, dateFrom, dateTo, week, area });
+        const {dateFrom, dateTo, area, failureType} = getCommonParams();
+        const params = new URLSearchParams({ machine: currentMachine, cause: currentCause, mechanism, dateFrom, dateTo, area });
+        if (failureType && failureType !== 'all') params.append('failureType', failureType);
         const events = await fetch(equipmentApi + '/drilldown/events?' + params.toString()).then(r=>r.json());
         renderEventsTable(`События: ${mechanism}`, events);
         document.getElementById('backBtn').style.display = 'inline-block';
@@ -182,7 +178,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('modalTitle').innerText = title + ` — ${currentMachine || ''} ${currentCause? ' / ' + currentCause : ''}`;
         drillChart = new Chart(ctxEl, {
             type: 'bar',
-            data: { labels, datasets: [{ label: 'Σ простоя, ч', data: values, backgroundColor: 'rgba(231,76,60,0.6)' }] },
+            data: { labels, datasets: [{ label: 'Время простоя, ч', data: values, backgroundColor: 'rgba(231,76,60,0.6)' }] },
             options: { indexAxis: 'y', maintainAspectRatio:false, onClick: (_e, els)=>{ if(els?.length){ const i=els[0].index; onBarClick({ label: labels[i], value: values[i] }); } }, plugins:{ legend:{ display:false }}, scales:{ x:{ beginAtZero:true }}}
         });
     }

@@ -1,0 +1,19 @@
+# Конфигурация assistant-yandexbot (Яндекс Мессенджер, Bot API)
+server:
+  port: ${server.yandex.port:8086}
+
+spring:
+  config:
+    import: file:../application.yml
+
+core:
+  service:
+    url: http://localhost:${server.core.port:8080}/api
+
+web:
+  service:
+    url: http://localhost:${server.web.port:8081}
+
+yandex:
+  bot:
+    token: ${YANDEX_BOT_TOKEN:${yandex.bot.token}}

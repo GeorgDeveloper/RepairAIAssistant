@@ -1,0 +1,79 @@
+# Азот — колонки листа «2026» файла «2026 год ЗАО ВШЗ.xlsx»
+
+file: "2026 год  ЗАО ВШЗ.xlsx"
+sheet: "2026"
+data_first_excel_row: 3
+date_column:
+  excel_letter: A
+  zero_based_index: 0
+  format: "dd.MM"
+
+resource: NITROGEN
+metrics:
+  - id: nitrogen_plan_m3
+    label_ru: "Потребление азота — план (МР), м³"
+    unit: "м³"
+    excel_column_letter: CG
+    zero_based_index: 84
+    row1_group: "Потребление азота"
+    row2_kind: "план (МР), м³"
+    chart_default: true
+
+  - id: nitrogen_op_m3
+    label_ru: "Потребление азота — OP, м³"
+    unit: "м³"
+    excel_column_letter: CH
+    zero_based_index: 85
+    row1_group: "Потребление азота"
+    row2_kind: "ОР, м³"
+    chart_default: true
+
+  - id: nitrogen_fact_kg
+    label_ru: "Потребление азота — факт, кг"
+    unit: "кг"
+    excel_column_letter: CI
+    zero_based_index: 86
+    row1_group: "Потребление азота"
+    row2_kind: "Факт потребления, кг"
+    chart_default: true
+
+  - id: nitrogen_fact_m3
+    label_ru: "Потребление азота — факт, м³"
+    unit: "м³"
+    excel_column_letter: CJ
+    zero_based_index: 87
+    row1_group: "Потребление азота"
+    row2_kind: "Факт потребления, м³"
+    chart_default: true
+
+  - id: nitrogen_m3_per_piece
+    label_ru: "Потребление азота — м³/шт"
+    unit: "м³/шт"
+    excel_column_letter: CK
+    zero_based_index: 88
+    row1_group: "Потребление азота"
+    row2_kind: "м³/ шт."
+    chart_default: false
+
+  - id: vulcan_autopress_count
+    label_ru: "Вулк. а/п, шт."
+    unit: "шт"
+    excel_column_letter: CL
+    zero_based_index: 89
+    row1_group: "Потребление азота"
+    row2_kind: "вулк. а/п, шт."
+    chart_default: false
+
+charts_recommended:
+  - id: nitrogen_main
+    title_ru: "Азот: план / OP / факт"
+    series:
+      - metric_id: nitrogen_plan_m3
+        role: plan
+      - metric_id: nitrogen_op_m3
+        role: operational_plan
+      - metric_id: nitrogen_fact_m3
+        role: fact
+
+import_notes:
+  - "В таблице одновременно есть факт в кг и в м³ — для сравнения на графике лучше использовать одинаковые единицы (м³)."

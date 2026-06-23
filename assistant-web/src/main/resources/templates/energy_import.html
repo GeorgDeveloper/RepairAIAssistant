@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Импорт ОГЭ</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/energy-water.css">
+</head>
+
+<body>
+<div th:replace="~{fragments/navigation :: nav}"></div>
+
+<div class="total-content">
+    <div class="header">
+        <div class="user_logo">
+            Привет, <a href="#">user</a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <h1>Импорт ОГЭ (все показатели)</h1>
+            <p class="energy-hint">
+                Загрузите один Excel-файл и выберите год. Импорт выполнится сразу для всех ресурсов:
+                <strong>Вода, Газ, Эл. энергия, Азот, Пар, Итого</strong>.
+            </p>
+
+            <div class="filters energy-filters">
+                <div class="filter-group">
+                    <label for="eiYear">Год</label>
+                    <select id="eiYear"></select>
+                </div>
+                <div class="filter-group filter-group-actions">
+                    <input type="file" id="eiFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+                    <button type="button" id="eiSelectBtn" class="btn-apply">Выбрать файл</button>
+                    <button type="button" id="eiImportBtn" class="btn-apply">Импортировать всё</button>
+                </div>
+            </div>
+
+            <div class="table-container energy-table-wrap" style="margin-top: 0;">
+                <h3 style="margin-top: 0;">Выберите разделы для импорта</h3>
+                <div id="eiResourceSelector" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 14px;">
+                    <label><input type="checkbox" class="ei-resource" value="WATER" checked> Вода</label>
+                    <label><input type="checkbox" class="ei-resource" value="GAS" checked> Газ</label>
+                    <label><input type="checkbox" class="ei-resource" value="ELECTRICITY" checked> Эл. энергия</label>
+                    <label><input type="checkbox" class="ei-resource" value="NITROGEN" checked> Азот</label>
+                    <label><input type="checkbox" class="ei-resource" value="STEAM" checked> Пар</label>
+                    <label><input type="checkbox" class="ei-resource" value="TOTAL" checked> Итого</label>
+                </div>
+            </div>
+
+            <div class="energy-import-row" style="margin-top:0">
+                <span id="eiFileName" class="energy-file-name"></span>
+            </div>
+
+            <div id="energyImportMsg"></div>
+
+            <div class="table-container energy-table-wrap" style="margin-top: 16px;">
+                <h3 style="margin-top: 0;">Что загружается</h3>
+                <table class="energy-table">
+                    <thead>
+                    <tr>
+                        <th>Раздел</th>
+                        <th>Ключ ресурса</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr><td>Вода</td><td>WATER</td></tr>
+                    <tr><td>Газ</td><td>GAS</td></tr>
+                    <tr><td>Эл. энергия</td><td>ELECTRICITY</td></tr>
+                    <tr><td>Азот</td><td>NITROGEN</td></tr>
+                    <tr><td>Пар</td><td>STEAM</td></tr>
+                    <tr><td>Итого</td><td>TOTAL</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/scripts/energy-import.js"></script>
+</body>
+</html>

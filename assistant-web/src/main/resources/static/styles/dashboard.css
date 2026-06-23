@@ -3,6 +3,91 @@
     height: 90% !important;
 }
 
+/* Clickable cell styles */
+.clickable-cell {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.clickable-cell:hover {
+    background-color: #f0f8ff !important;
+    text-decoration: underline;
+}
+
+/* Breakdown details modal styles */
+.breakdown-details-modal {
+    max-width: 90%;
+    max-height: 90%;
+    overflow: auto;
+}
+
+.breakdown-info {
+    background-color: #f5f5f5;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+.breakdown-info p {
+    margin: 5px 0;
+}
+
+.breakdown-details-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.breakdown-details-table th,
+.breakdown-details-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    font-size: 12px;
+}
+
+.breakdown-details-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.breakdown-details-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Color coding for downtime types */
+.electrical-downtime {
+    background-color: #ffebee !important;
+}
+
+.electronic-downtime {
+    background-color: #e3f2fd !important;
+}
+
+.mechanical-downtime {
+    background-color: #f3e5f5 !important;
+}
+
+.comment-cell {
+    max-width: 200px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.pm-drilldown-section {
+    margin-top: 1rem;
+}
+
+.pm-drilldown-section h3 {
+    font-size: 14px;
+    margin: 0 0 8px 0;
+    color: #333;
+}
+
+#pmChartCanvas {
+    cursor: pointer;
+}
+
 .main-content {
     height: 100% !important;
     padding-top: 16px !important;
@@ -18,9 +103,8 @@
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-gap: 16px;
-    height: calc(100vh - 128px);
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--gap, 1.5rem);
     width: 100%;
 }
 
@@ -44,7 +128,7 @@
 
 .right-stack {
     display: grid;
-    grid-gap: 16px;
+    gap: var(--gap, 1.5rem);
     height: 100%;
     min-height: 0;
     overflow: auto;
@@ -53,7 +137,7 @@
 
 .new-right-stack {
     display: grid;
-    grid-gap: 16px;
+    gap: var(--gap, 1.5rem);
     height: 100%;
     min-height: 0;
     overflow: auto;
@@ -78,18 +162,18 @@
 }
 
 .chart-container {
-    overflow: hidden;
-    padding: 20px !important;
-    height: 370px !important;
+    overflow: visible;
+    padding: var(--card-padding, 1.25rem) !important;
+    height: var(--chart-height, 25rem) !important;
     border: 1px solid gray !important;
     box-sizing: border-box !important;
 }
 
 .table-container {
     height: 100% !important;
-    max-height: 380px !important;
+    max-height: 100% !important;
     overflow-y: auto !important;
-    overflow-x: hidden !important;
+    overflow-x: auto !important;
     box-sizing: border-box !important;
     display: block !important;
 }
@@ -114,7 +198,7 @@
 
 .chart-container-metrics {
     height: 100% !important;
-    padding: 20px !important;
+    padding: var(--card-padding, 1.25rem) !important;
     border: 1px solid gray !important;
     background: #fff !important;
     box-sizing: border-box !important;
@@ -140,9 +224,8 @@
 /* Убрали dashboard-grid и правую колонку. Стек растянут на всю ширину */
 .stack {
     display: grid;
-    /* grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); */
-    grid-gap: 16px;
-    height: calc(100vh - 128px);
+    gap: var(--gap, 1.5rem);
+    grid-auto-rows: minmax(22rem, auto);
     min-height: 0;
 }
 
@@ -167,22 +250,28 @@
 /* Styles extracted from index.html */
 .dashboard-grid {
     display: grid;
-    grid-template-columns:  1fr 1fr 1fr;
-    grid-gap: 16px;
-    /* height: calc(100vh - 136px); */
-    padding: 20px 0;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--gap, 1.5rem);
+    padding: var(--gap, 1.5rem) 0;
+}
+
+.dashboard-grid-index {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(350px, 1fr);
+    gap: var(--gap, 1.5rem);
+    padding: var(--gap, 1.5rem) 0;
 }
 
 .left-pane {
     display: grid;
-    grid-template-rows: 1fr 1fr;
-    grid-row-gap: 16px;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--gap, 1.5rem);
 }
 
 .top-charts {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--gap, 1.5rem);
     height: 100%;
 }
 
@@ -200,6 +289,44 @@
 .pm-holder .table-container {
     height: 100% !important;
     max-height: none !important;
+    position: relative;
+}
+
+/* PM (Chart.js, режим «Столбики»): не задавать высоту от всего 1fr-слота сетки — иначе страница «уезжает» вниз */
+#pmChart #pmChartJsWrapper {
+    max-height: 440px;
+}
+#pmChart canvas#pmChartCanvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 440px !important;
+}
+
+.pm-chart-toolbar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    display: flex;
+    gap: 5px;
+}
+
+.pm-chart-mode-btn {
+    background: #e74c3c;
+    color: #fff;
+    border: 2px solid transparent;
+    padding: 8px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.pm-chart-mode-btn:hover {
+    filter: brightness(1.05);
+}
+
+.pm-chart-mode-btn.active {
+    border: 3px solid #111;
 }
 /* Styles for inline styles that were removed from HTML */
 #resizable_breakDownOnline.chart-container,
@@ -255,11 +382,15 @@
     padding: 20px;
     border: 1px solid #888;
     width: 80%;
-    max-width: 800px;
+    max-width: 100%;
     max-height: 80vh;
     overflow-y: auto;
     position: relative;
     border-radius: 8px;
+}
+
+.box-histotri-date {
+    max-width: 800px;
 }
 
 .close {
@@ -358,6 +489,66 @@
     text-align: center;
 }
 
+.table-responsive {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.metrics-table,
+.breakdown-details-table,
+.work-orders-table {
+    min-width: 50rem;
+}
+
+@media (min-width: 1600px) {
+    .chart-container {
+        height: 31.25rem !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid-index,
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .top-charts {
+        grid-template-columns: 1fr;
+    }
+
+    .metrics-table th,
+    .metrics-table td,
+    .breakdown-details-table th,
+    .breakdown-details-table td,
+    .work-orders-table th,
+    .work-orders-table td {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.9375rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        height: 18.75rem !important;
+    }
+
+    .metrics-table,
+    .breakdown-details-table,
+    .work-orders-table {
+        min-width: 37.5rem;
+    }
+
+    .metrics-table th,
+    .metrics-table td,
+    .breakdown-details-table th,
+    .breakdown-details-table td,
+    .work-orders-table th,
+    .work-orders-table td {
+        padding: 0.5rem 0.625rem;
+        font-size: 0.875rem;
+    }
+}
+
 .work-orders-table tbody tr:nth-child(even) {
     background-color: #f8f8f8;
 }
@@ -407,9 +598,17 @@
     font-weight: 500;
 }
 
+.status-planned {
+    background-color: #81d4fa !important;
+    color: #333 !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
 /* Контейнер для таблицы нарядов */
 #workOrdersTable {
-    max-height: 500px;
+    max-height: 100%;
     overflow-y: auto;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
@@ -431,4 +630,1152 @@
 
 #workOrdersTable::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
+}
+
+/* Стили для навигации по месяцам */
+.month-navigation {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-right: auto;
+}
+
+.nav-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.nav-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.month-display {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    min-width: 150px;
+    text-align: center;
+}
+
+/* Стили для легенды типов причин простоя */
+.downtime-legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #666;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+/* Цветовая индикация для типов причин простоя */
+.downtime-electrical {
+    background-color: #e1bee7 !important; /* Светло-фиолетовый */
+    border-left: 4px solid #9c27b0 !important;
+}
+
+.downtime-electronic {
+    background-color: #ffe0b2 !important; /* Светло-оранжевый */
+    border-left: 4px solid #ff9800 !important;
+}
+
+.downtime-mechanical {
+    background-color: #d7ccc8 !important; /* Светло-коричневый */
+    border-left: 4px solid #795548 !important;
+}
+
+.downtime-unknown {
+    background-color: #f5f5f5 !important; /* Серый для неизвестных */
+    border-left: 4px solid #9e9e9e !important;
+}
+
+/* Цвета для легенды */
+.legend-color.downtime-electrical {
+    background-color: #e1bee7;
+}
+
+.legend-color.downtime-electronic {
+    background-color: #ffe0b2;
+}
+
+.legend-color.downtime-mechanical {
+    background-color: #d7ccc8;
+}
+
+/* ===== Compact dashboard overrides ===== */
+.main-content {
+    width: 100% !important;
+    padding-top: 0.5rem !important;
+}
+
+.container {
+    padding: 0 !important;
+}
+
+.dashboard-grid,
+.dashboard-grid-index {
+    padding: 0.25rem 0 !important;
+    gap: 0.5rem !important;
+}
+
+.dashboard-grid-index {
+    height: auto !important;
+    min-height: 0;
+}
+
+.left-pane,
+.right-pane,
+.new-right-stack,
+.left-stack {
+    min-height: 0;
+    overflow: visible;
+}
+
+.card,
+.panel,
+.chart-container-metrics {
+    padding: 0.5rem !important;
+}
+
+.chart-container {
+    padding: 0.5rem !important;
+    height: 20rem !important;
+    overflow: visible !important;
+}
+
+.metrics-table {
+    table-layout: fixed;
+    font-size: 0.8125rem;
+}
+
+.metrics-table th,
+.metrics-table td {
+    padding: 0.25rem 0.35rem !important;
+    overflow-wrap: anywhere;
+}
+
+.work-orders-table {
+    table-layout: fixed;
+    min-width: 0;
+}
+
+.work-orders-table th,
+.work-orders-table td {
+    padding: 0.4rem 0.45rem;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid-index {
+        height: auto;
+    }
+
+    .chart-container {
+        height: 18rem !important;
+    }
+}
+
+/* ===== Online page targeted sizing/typography ===== */
+body.online-dashboard-screen {
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+
+body.online-dashboard-screen .total-content {
+    height: 100vh !important;
+    overflow: hidden !important;
+}
+
+body.online-dashboard-screen .main-content.online-dashboard-page {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    height: calc(100dvh - 0.7rem) !important;
+    min-height: calc(100dvh - 0.7rem) !important;
+    margin-top: 0 !important;
+    padding-top: 4.25rem !important;
+    overflow: hidden !important;
+    padding-right: 0.5rem !important;
+    padding-bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-left: 0.5rem !important;
+}
+
+.online-dashboard-page {
+    display: flex;
+    flex-direction: column;
+    height: 100% !important;
+    min-height: 100% !important;
+    overflow: hidden !important;
+    padding-bottom: 0.35rem !important;
+}
+
+.online-dashboard-container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0 !important;
+}
+
+.online-dashboard-grid {
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    height: 100%;
+    max-height: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.3rem !important;
+    align-items: stretch;
+    overflow: hidden;
+    padding-bottom: 0.3rem;
+}
+
+.online-dashboard-grid .left-stack,
+.online-dashboard-grid .right-stack,
+.online-dashboard-grid .new-right-stack {
+    height: 100%;
+    min-height: 0 !important;
+    overflow: hidden;
+    position: relative;
+    border-bottom: 1px solid #8f8f8f !important;
+    box-shadow: inset 0 -1px 0 #8f8f8f;
+}
+
+.online-dashboard-grid .left-stack,
+.online-dashboard-grid .new-right-stack {
+    grid-template-rows: minmax(0, 1fr);
+}
+
+.online-dashboard-grid .right-stack {
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.3rem !important;
+}
+
+.online-dashboard-grid .table-container-metrics,
+.online-dashboard-grid .chart-container-metrics {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem !important;
+    padding-bottom: 0.25rem !important;
+    position: relative;
+    border-bottom: 1px solid #a8a8a8 !important;
+    box-shadow: inset 0 -1px 0 #a8a8a8;
+}
+
+.online-dashboard-grid #metricsTable-lines,
+.online-dashboard-grid #metricsTable,
+.online-dashboard-grid #topBreakdownsTable,
+.online-dashboard-grid #topBreakdownsCurrentTable,
+.online-dashboard-grid #workOrdersTable {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Keep first two online tables aligned with default panel baseline */
+body.online-dashboard-screen .online-dashboard-grid .left-stack .table-container-metrics,
+body.online-dashboard-screen .online-dashboard-grid .right-stack .table-container-metrics {
+    margin-top: 0 !important;
+}
+
+/* Remove extra bottom stripe under first two tables only */
+body.online-dashboard-screen .online-dashboard-grid .left-stack .table-container-metrics::after,
+body.online-dashboard-screen .online-dashboard-grid .right-stack .table-container-metrics::after {
+    content: none !important;
+}
+
+/* Right panel: keep inner contour fully visible */
+.online-dashboard-grid .new-right-stack .chart-container-metrics {
+    overflow: visible;
+    padding-bottom: 0.65rem !important;
+}
+
+.online-dashboard-grid .new-right-stack #workOrdersTable {
+    box-sizing: border-box;
+    width: 100%;
+    height: calc(100% - 2.6rem);
+    min-height: 0;
+    position: relative;
+    overflow: visible !important;
+    border: 1px solid #d7d7d7 !important;
+    border-bottom: 1px solid #8e8e8e !important;
+    border-radius: 4px;
+    background: #fff;
+    padding: 0.2rem 0.2rem 0.45rem 0.2rem;
+    margin-bottom: 0.35rem;
+    outline: 1px solid #d7d7d7;
+    outline-offset: -1px;
+    box-shadow: inset 0 -1px 0 #8e8e8e;
+}
+
+.online-dashboard-grid .new-right-stack #workOrdersTable * {
+    box-sizing: border-box;
+}
+
+.online-dashboard-grid .new-right-stack #workOrdersTable::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: #8e8e8e;
+    pointer-events: none;
+}
+
+.online-dashboard-grid #topBreakdownsCurrentHeader {
+    margin-top: 0.35rem;
+}
+
+.online-dashboard-grid h3,
+.online-dashboard-grid .legend-item,
+.online-dashboard-grid .month-display {
+    font-size: clamp(0.72rem, 0.44vw, 0.88rem);
+    margin: 0 0 0.12rem 0;
+}
+
+.online-dashboard-grid .metrics-table,
+.online-dashboard-grid .work-orders-table,
+.online-dashboard-grid .breakdown-details-table {
+    font-size: clamp(0.68rem, 0.4vw, 0.82rem);
+    table-layout: fixed;
+    line-height: 1.08;
+}
+
+.online-dashboard-grid .metrics-table th,
+.online-dashboard-grid .metrics-table td,
+.online-dashboard-grid .work-orders-table th,
+.online-dashboard-grid .work-orders-table td,
+.online-dashboard-grid .breakdown-details-table th,
+.online-dashboard-grid .breakdown-details-table td {
+    font-size: clamp(0.66rem, 0.38vw, 0.78rem);
+    padding: clamp(0.08rem, 0.12vw, 0.16rem) clamp(0.1rem, 0.16vw, 0.24rem) !important;
+    overflow-wrap: anywhere;
+}
+
+.online-dashboard-grid .metrics-table tr,
+.online-dashboard-grid .work-orders-table tr,
+.online-dashboard-grid .breakdown-details-table tr {
+    height: clamp(0.84rem, 1.18vh, 1.02rem);
+}
+
+.online-dashboard-grid .downtime-legend {
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    padding: 0.12rem 0;
+}
+
+/* Reduce excess horizontal whitespace in Online tables */
+.online-dashboard-grid .metrics-table th:nth-child(1),
+.online-dashboard-grid .metrics-table td:nth-child(1) {
+    width: 42%;
+}
+
+.online-dashboard-grid .metrics-table th:nth-child(2),
+.online-dashboard-grid .metrics-table td:nth-child(2) {
+    width: 18%;
+}
+
+.online-dashboard-grid .metrics-table th:nth-child(3),
+.online-dashboard-grid .metrics-table td:nth-child(3) {
+    width: 18%;
+}
+
+.online-dashboard-grid .metrics-table th:nth-child(4),
+.online-dashboard-grid .metrics-table td:nth-child(4) {
+    width: 22%;
+}
+
+.online-dashboard-grid .breakdown-details-table th:nth-child(1),
+.online-dashboard-grid .breakdown-details-table td:nth-child(1) {
+    width: 18%;
+}
+
+.online-dashboard-grid .breakdown-details-table th:nth-child(2),
+.online-dashboard-grid .breakdown-details-table td:nth-child(2) {
+    width: 22%;
+}
+
+.online-dashboard-grid .breakdown-details-table th:nth-child(3),
+.online-dashboard-grid .breakdown-details-table td:nth-child(3) {
+    width: 20%;
+}
+
+.online-dashboard-grid .breakdown-details-table th:nth-child(4),
+.online-dashboard-grid .breakdown-details-table td:nth-child(4) {
+    width: 40%;
+}
+
+.online-dashboard-grid .table-container-metrics::after,
+.online-dashboard-grid .left-stack::after,
+.online-dashboard-grid .right-stack::after,
+.online-dashboard-grid .new-right-stack::after,
+.online-dashboard-grid .chart-container-metrics::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: #8f8f8f;
+    pointer-events: none;
+}
+
+/* Fine tuning for different desktop heights */
+@media (min-width: 1201px) and (max-height: 900px) {
+    body.online-dashboard-screen .main-content.online-dashboard-page {
+        padding-top: 4.35rem !important;
+    }
+
+    .online-dashboard-grid {
+        gap: 0.35rem !important;
+    }
+
+    .online-dashboard-grid .table-container-metrics,
+    .online-dashboard-grid .chart-container-metrics {
+        gap: 0.22rem !important;
+        padding-bottom: 0.32rem !important;
+    }
+
+    .online-dashboard-grid h3,
+    .online-dashboard-grid .legend-item {
+        font-size: clamp(0.72rem, 0.43vw, 0.86rem);
+    }
+
+    .online-dashboard-grid .metrics-table th,
+    .online-dashboard-grid .metrics-table td,
+    .online-dashboard-grid .work-orders-table th,
+    .online-dashboard-grid .work-orders-table td,
+    .online-dashboard-grid .breakdown-details-table th,
+    .online-dashboard-grid .breakdown-details-table td {
+        font-size: clamp(0.66rem, 0.37vw, 0.8rem);
+        padding: clamp(0.1rem, 0.14vw, 0.18rem) clamp(0.12rem, 0.2vw, 0.28rem) !important;
+    }
+
+    .online-dashboard-grid .metrics-table tr,
+    .online-dashboard-grid .work-orders-table tr,
+    .online-dashboard-grid .breakdown-details-table tr {
+        height: clamp(0.95rem, 1.35vh, 1.12rem);
+    }
+}
+
+@media (min-width: 1201px) and (max-height: 820px) {
+    body.online-dashboard-screen .main-content.online-dashboard-page {
+        padding-top: 4.2rem !important;
+        padding-bottom: 0.35rem !important;
+    }
+
+    .online-dashboard-grid h3,
+    .online-dashboard-grid .legend-item {
+        font-size: 0.72rem;
+        margin-bottom: 0.12rem;
+    }
+
+    .online-dashboard-grid .metrics-table tr,
+    .online-dashboard-grid .work-orders-table tr,
+    .online-dashboard-grid .breakdown-details-table tr {
+        height: 0.92rem;
+    }
+}
+
+@media (max-width: 1200px) {
+    body.online-dashboard-screen {
+        overflow: auto !important;
+        height: auto !important;
+    }
+
+    body.online-dashboard-screen .total-content,
+    body.online-dashboard-screen .main-content.online-dashboard-page {
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        padding-top: 0.5rem !important;
+    }
+
+    .online-dashboard-page {
+        min-height: auto !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .online-dashboard-grid {
+        height: auto !important;
+        overflow: visible;
+        grid-template-columns: 1fr;
+    }
+
+    .online-dashboard-grid h3,
+    .online-dashboard-grid .legend-item {
+        font-size: 0.9rem;
+    }
+}
+
+/* ===== Final online scaling recalculation layer ===== */
+body.online-dashboard-screen {
+    --online-header-offset: 4.25rem;
+    --online-side-pad: 0.5rem;
+    --online-bottom-gap: 0.55rem;
+    --online-grid-gap: 0.32rem;
+    --online-card-gap: 0.18rem;
+}
+
+body.online-dashboard-screen.infopanel-screen {
+    --online-header-offset: 5.05rem;
+}
+
+/* Desktop/tablet horizontal: one-screen layout without page scroll */
+@media (min-width: 1025px) {
+    body.online-dashboard-screen {
+        overflow: hidden !important;
+        height: 100dvh !important;
+    }
+
+    body.online-dashboard-screen .total-content {
+        height: 100dvh !important;
+        overflow: hidden !important;
+    }
+
+    body.online-dashboard-screen .main-content.online-dashboard-page {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        margin-top: 0 !important;
+        padding-top: var(--online-header-offset) !important;
+        padding-right: var(--online-side-pad) !important;
+        padding-left: var(--online-side-pad) !important;
+        padding-bottom: var(--online-bottom-gap) !important;
+        overflow: hidden !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-container {
+        height: 100%;
+        min-height: 0 !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid {
+        height: 100%;
+        max-height: 100%;
+        overflow: hidden !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--online-grid-gap) !important;
+        padding-top: 0.25rem !important;
+        box-sizing: border-box !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid .right-stack {
+        gap: var(--online-grid-gap) !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid .table-container-metrics,
+    body.online-dashboard-screen .online-dashboard-grid .chart-container-metrics {
+        gap: var(--online-card-gap) !important;
+        padding-bottom: 0.3rem !important;
+    }
+}
+
+/* Narrow desktop (previously broken around 1100-1300) */
+@media (min-width: 1025px) and (max-width: 1400px) {
+    body.online-dashboard-screen {
+        --online-header-offset: 4.15rem;
+        --online-side-pad: 0.4rem;
+        --online-bottom-gap: 0.45rem;
+        --online-grid-gap: 0.24rem;
+        --online-card-gap: 0.12rem;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid h3,
+    body.online-dashboard-screen .online-dashboard-grid .legend-item {
+        font-size: clamp(0.68rem, 0.38vw, 0.8rem) !important;
+        margin-bottom: 0.08rem !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid .metrics-table th,
+    body.online-dashboard-screen .online-dashboard-grid .metrics-table td,
+    body.online-dashboard-screen .online-dashboard-grid .work-orders-table th,
+    body.online-dashboard-screen .online-dashboard-grid .work-orders-table td,
+    body.online-dashboard-screen .online-dashboard-grid .breakdown-details-table th,
+    body.online-dashboard-screen .online-dashboard-grid .breakdown-details-table td {
+        font-size: clamp(0.62rem, 0.34vw, 0.74rem) !important;
+        padding: 0.08rem 0.16rem !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid .metrics-table tr,
+    body.online-dashboard-screen .online-dashboard-grid .work-orders-table tr,
+    body.online-dashboard-screen .online-dashboard-grid .breakdown-details-table tr {
+        height: clamp(0.8rem, 1.05vh, 0.95rem) !important;
+    }
+}
+
+/* Vertical layout only on truly narrow screens */
+@media (max-width: 1024px) {
+    body.online-dashboard-screen {
+        overflow: auto !important;
+        height: auto !important;
+    }
+
+    body.online-dashboard-screen .total-content,
+    body.online-dashboard-screen .main-content.online-dashboard-page {
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        padding-top: 0.5rem !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Vertical mode: force full-width tables without clipped first block */
+    body.online-dashboard-screen .online-dashboard-grid .metrics-table,
+    body.online-dashboard-screen .online-dashboard-grid .breakdown-details-table,
+    body.online-dashboard-screen .online-dashboard-grid .work-orders-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid #metricsTable-lines,
+    body.online-dashboard-screen .online-dashboard-grid #metricsTable,
+    body.online-dashboard-screen .online-dashboard-grid #topBreakdownsTable,
+    body.online-dashboard-screen .online-dashboard-grid #topBreakdownsCurrentTable,
+    body.online-dashboard-screen .online-dashboard-grid #workOrdersTable {
+        overflow: visible !important;
+    }
+}
+
+/* Low-height fallback: allow page vertical scroll when compression limit reached */
+@media (min-width: 1025px) and (max-height: 700px) {
+    body.online-dashboard-screen {
+        overflow-y: auto !important;
+        height: auto !important;
+    }
+
+    body.online-dashboard-screen .total-content {
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow: visible !important;
+    }
+
+    body.online-dashboard-screen .main-content.online-dashboard-page {
+        height: auto !important;
+        min-height: calc(100vh - 5rem) !important;
+        overflow: visible !important;
+        padding-top: 4.1rem !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+}
+
+/* Re-stabilize fit for 1366+/720-like screens (e.g. 1521x720) */
+@media (min-width: 1366px) and (max-height: 760px) {
+    body.online-dashboard-screen {
+        --online-header-offset: 4.0rem;
+        --online-side-pad: 0.38rem;
+        --online-bottom-gap: 0.38rem;
+        --online-grid-gap: 0.2rem;
+        --online-card-gap: 0.1rem;
+    }
+
+    body.online-dashboard-screen .main-content.online-dashboard-page {
+        padding-top: var(--online-header-offset) !important;
+        padding-bottom: var(--online-bottom-gap) !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid .table-container-metrics,
+    body.online-dashboard-screen .online-dashboard-grid .chart-container-metrics {
+        gap: 0.1rem !important;
+        padding-bottom: 0.18rem !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid h3,
+    body.online-dashboard-screen .online-dashboard-grid .legend-item {
+        font-size: clamp(0.66rem, 0.36vw, 0.78rem) !important;
+        margin-bottom: 0.06rem !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid .metrics-table th,
+    body.online-dashboard-screen .online-dashboard-grid .metrics-table td,
+    body.online-dashboard-screen .online-dashboard-grid .work-orders-table th,
+    body.online-dashboard-screen .online-dashboard-grid .work-orders-table td,
+    body.online-dashboard-screen .online-dashboard-grid .breakdown-details-table th,
+    body.online-dashboard-screen .online-dashboard-grid .breakdown-details-table td {
+        font-size: clamp(0.6rem, 0.32vw, 0.72rem) !important;
+        padding: 0.06rem 0.13rem !important;
+    }
+
+    body.online-dashboard-screen .online-dashboard-grid .metrics-table tr,
+    body.online-dashboard-screen .online-dashboard-grid .work-orders-table tr,
+    body.online-dashboard-screen .online-dashboard-grid .breakdown-details-table tr {
+        height: clamp(0.76rem, 0.95vh, 0.9rem) !important;
+    }
+}
+
+/* ===== dashboard_graf responsive scaling ===== */
+body.graf-dashboard-screen {
+    --graf-header-offset: 4.55rem;
+    --graf-page-padding-x: 0.5rem;
+    --graf-page-padding-bottom: 0.2rem;
+    --graf-stack-gap: 0.5rem;
+    --graf-card-padding: 0.35rem;
+    --graf-chart-min-height: 14rem;
+}
+
+body.graf-dashboard-screen.infopanel-screen {
+    --graf-header-offset: 5.05rem;
+}
+
+@media (min-width: 1025px) {
+    body.graf-dashboard-screen {
+        overflow: hidden !important;
+        height: 100dvh !important;
+    }
+
+    body.graf-dashboard-screen .total-content {
+        height: 100dvh !important;
+        overflow: hidden !important;
+    }
+
+    body.graf-dashboard-screen .main-content.graf-dashboard-page {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        margin-top: 0 !important;
+        padding-top: var(--graf-header-offset) !important;
+        padding-left: var(--graf-page-padding-x) !important;
+        padding-right: var(--graf-page-padding-x) !important;
+        padding-bottom: var(--graf-page-padding-bottom) !important;
+        overflow: hidden !important;
+        display: flex;
+        flex-direction: column;
+    }
+
+    body.graf-dashboard-screen .graf-dashboard-container {
+        flex: 1 1 auto;
+        height: 100%;
+        min-height: 0;
+        padding: 0 !important;
+        display: flex;
+        flex-direction: column;
+    }
+
+    body.graf-dashboard-screen .graf-dashboard-stack {
+        flex: 1 1 auto;
+        height: 100%;
+        min-height: 0;
+        gap: var(--graf-stack-gap) !important;
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+        margin-top: 0.35rem;
+    }
+
+    body.graf-dashboard-screen .graf-dashboard-stack .card {
+        height: 100%;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        padding: var(--graf-card-padding) !important;
+    }
+
+    body.graf-dashboard-screen .chart-header {
+        flex: 0 0 auto;
+        padding: 0.2rem 0.3rem;
+    }
+
+    body.graf-dashboard-screen #resizable_breakDownOnline.chart-container,
+    body.graf-dashboard-screen #resizable_availabilityOnline.chart-container {
+        flex: 1 1 auto;
+        height: 100% !important;
+        min-height: var(--graf-chart-min-height) !important;
+        padding: 0.3rem !important;
+        overflow: hidden !important;
+    }
+}
+
+body.graf-dashboard-screen #breakDown,
+body.graf-dashboard-screen #availabilityOnline {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+body.graf-dashboard-screen .btn-toggle-all {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+}
+
+@media (min-width: 1025px) and (max-width: 1365px) {
+    body.graf-dashboard-screen {
+        --graf-header-offset: 4.4rem;
+        --graf-page-padding-x: 0.45rem;
+        --graf-page-padding-bottom: 0.18rem;
+        --graf-stack-gap: 0.35rem;
+        --graf-card-padding: 0.28rem;
+        --graf-chart-min-height: 12.5rem;
+    }
+}
+
+@media (min-width: 1025px) and (max-height: 760px) {
+    body.graf-dashboard-screen {
+        --graf-header-offset: 4.25rem;
+        --graf-page-padding-bottom: 0.12rem;
+        --graf-stack-gap: 0.28rem;
+        --graf-card-padding: 0.22rem;
+        --graf-chart-min-height: 11.75rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    body.graf-dashboard-screen {
+        overflow: auto !important;
+        height: auto !important;
+    }
+
+    body.graf-dashboard-screen .total-content,
+    body.graf-dashboard-screen .main-content.graf-dashboard-page {
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        padding-top: 0.5rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    body.graf-dashboard-screen .graf-dashboard-stack {
+        height: auto !important;
+        gap: 0.5rem !important;
+        grid-template-rows: none;
+    }
+
+    body.graf-dashboard-screen #resizable_breakDownOnline.chart-container,
+    body.graf-dashboard-screen #resizable_availabilityOnline.chart-container {
+        height: 18rem !important;
+        min-height: 18rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    body.graf-dashboard-screen #resizable_breakDownOnline.chart-container,
+    body.graf-dashboard-screen #resizable_availabilityOnline.chart-container {
+        height: 16rem !important;
+        min-height: 16rem !important;
+    }
+}
+
+/* ===== index.html one-screen height stabilization ===== */
+@media (min-width: 1025px) {
+    body.index-dashboard-screen {
+        overflow: hidden !important;
+        height: 100dvh !important;
+    }
+
+    body.index-dashboard-screen .total-content {
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        overflow: hidden !important;
+    }
+
+    body.index-dashboard-screen .main-content {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        margin-top: 0 !important;
+        padding-top: 4.65rem !important;
+        padding-bottom: 0.35rem !important;
+        overflow: hidden !important;
+    }
+
+    body.index-dashboard-screen .dashboard-grid-index {
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        align-items: stretch;
+        gap: 0.35rem !important;
+        grid-template-columns: minmax(0, 1.76fr) minmax(23.5rem, 1.14fr) !important;
+        padding-top: 0.32rem !important;
+        box-sizing: border-box !important;
+    }
+
+    body.index-dashboard-screen .left-pane,
+    body.index-dashboard-screen .right-pane,
+    body.index-dashboard-screen .top-charts,
+    body.index-dashboard-screen .pm-holder,
+    body.index-dashboard-screen .table-container-metrics,
+    body.index-dashboard-screen .chart-container-metrics {
+        min-height: 0 !important;
+    }
+
+    body.index-dashboard-screen .left-pane,
+    body.index-dashboard-screen .right-pane,
+    body.index-dashboard-screen .pm-holder,
+    body.index-dashboard-screen .table-container-metrics {
+        height: 100% !important;
+        margin-top: 0 !important;
+    }
+
+    body.index-dashboard-screen .left-pane {
+        grid-template-rows: minmax(0, 1fr) minmax(0, 0.94fr);
+        gap: 0.35rem !important;
+    }
+
+    body.index-dashboard-screen .top-charts .chart-container {
+        padding: 0.62rem 0.42rem 0.95rem !important;
+        overflow: hidden !important;
+    }
+
+    body.index-dashboard-screen .pm-holder .table-container {
+        height: 100% !important;
+        max-height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        min-height: 0 !important;
+        position: relative !important;
+    }
+
+    body.index-dashboard-screen .pm-holder #resizablePm.chart-container {
+        flex: 1 1 auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin-top: 0 !important;
+        overflow: hidden !important;
+        padding: 1.9rem 0.22rem 0.22rem !important;
+    }
+
+    body.index-dashboard-screen .pm-holder #pmChart,
+    body.index-dashboard-screen .pm-holder #pmChart #pmChartJsWrapper,
+    body.index-dashboard-screen .pm-holder #pmChart canvas#pmChartCanvas {
+        height: 100% !important;
+        min-height: 0 !important;
+        max-height: none !important;
+    }
+
+    body.index-dashboard-screen .right-pane .chart-container-metrics {
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        padding: 0.26rem !important;
+        display: grid !important;
+        grid-template-rows: minmax(0, 1.52fr) auto minmax(0, 0.68fr) auto minmax(0, 0.68fr) !important;
+        gap: 0.04rem !important;
+    }
+
+    body.index-dashboard-screen .right-pane #metricsTable,
+    body.index-dashboard-screen .right-pane #topBreakdownsWeekKeyLinesTable,
+    body.index-dashboard-screen .right-pane #topBreakdownsWeekTable {
+        min-height: 0 !important;
+        overflow-y: hidden !important;
+        overflow-x: hidden !important;
+        height: 100% !important;
+    }
+
+    body.index-dashboard-screen .right-pane h3 {
+        margin: 0 !important;
+        font-size: clamp(0.76rem, 0.54vw, 0.94rem) !important;
+    }
+
+    body.index-dashboard-screen .right-pane .metrics-table,
+    body.index-dashboard-screen .right-pane .work-orders-table,
+    body.index-dashboard-screen .right-pane .breakdown-details-table {
+        font-size: clamp(0.74rem, 0.5vw, 0.9rem) !important;
+        line-height: 1.1 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
+    }
+
+    /* First table is denser to avoid clipping */
+    body.index-dashboard-screen .right-pane #metricsTable .metrics-table {
+        line-height: 1.04 !important;
+    }
+
+    body.index-dashboard-screen .right-pane .metrics-table th,
+    body.index-dashboard-screen .right-pane .metrics-table td,
+    body.index-dashboard-screen .right-pane .work-orders-table th,
+    body.index-dashboard-screen .right-pane .work-orders-table td,
+    body.index-dashboard-screen .right-pane .breakdown-details-table th,
+    body.index-dashboard-screen .right-pane .breakdown-details-table td {
+        padding: 0.08rem 0.1rem !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    body.index-dashboard-screen .right-pane #metricsTable .metrics-table th,
+    body.index-dashboard-screen .right-pane #metricsTable .metrics-table td {
+        padding-top: 0.06rem !important;
+        padding-bottom: 0.06rem !important;
+    }
+
+    body.index-dashboard-screen .right-pane .metrics-table th:nth-child(1),
+    body.index-dashboard-screen .right-pane .metrics-table td:nth-child(1) {
+    width: 25% !important;
+    }
+
+    body.index-dashboard-screen .right-pane .metrics-table th:nth-child(2),
+    body.index-dashboard-screen .right-pane .metrics-table td:nth-child(2) {
+    width: 19% !important;
+    }
+
+    body.index-dashboard-screen .right-pane .metrics-table th:nth-child(3),
+    body.index-dashboard-screen .right-pane .metrics-table td:nth-child(3),
+    body.index-dashboard-screen .right-pane .metrics-table th:nth-child(4),
+    body.index-dashboard-screen .right-pane .metrics-table td:nth-child(4) {
+    width: 28% !important;
+    }
+
+/* Weekly/monthly top tables (2 columns): tighten machine_name width */
+body.index-dashboard-screen .right-pane #topBreakdownsWeekKeyLinesTable .metrics-table th:nth-child(1),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekKeyLinesTable .metrics-table td:nth-child(1),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekTable .metrics-table th:nth-child(1),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekTable .metrics-table td:nth-child(1) {
+    width: 44% !important;
+}
+
+body.index-dashboard-screen .right-pane #topBreakdownsWeekKeyLinesTable .metrics-table th:nth-child(2),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekKeyLinesTable .metrics-table td:nth-child(2),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekTable .metrics-table th:nth-child(2),
+body.index-dashboard-screen .right-pane #topBreakdownsWeekTable .metrics-table td:nth-child(2) {
+    width: 56% !important;
+}
+
+    body.index-dashboard-screen .right-pane .breakdown-details-table th:nth-child(1),
+    body.index-dashboard-screen .right-pane .breakdown-details-table td:nth-child(1) {
+        width: 70% !important;
+    }
+
+    body.index-dashboard-screen .right-pane .breakdown-details-table th:nth-child(2),
+    body.index-dashboard-screen .right-pane .breakdown-details-table td:nth-child(2) {
+        width: 30% !important;
+    }
+
+    body.index-dashboard-screen .right-pane br {
+        display: none;
+    }
+
+    body.index-dashboard-screen .right-pane #keyLinesHeader,
+    body.index-dashboard-screen .right-pane #topBreakdownsHeader {
+        margin-top: 0 !important;
+        margin-bottom: 0.02rem !important;
+    }
+
+    body.index-dashboard-screen .table-container {
+        max-height: 100% !important;
+    }
+}
+
+/* Index: two-column adaptive mode (charts stacked vertically + page scroll) */
+@media (min-width: 1025px) and (max-width: 1680px) {
+    body.index-dashboard-screen {
+        overflow-y: auto !important;
+        height: auto !important;
+    }
+
+    body.index-dashboard-screen .total-content {
+        height: auto !important;
+        min-height: 100dvh !important;
+        overflow: visible !important;
+    }
+
+    body.index-dashboard-screen .main-content {
+        height: auto !important;
+        min-height: calc(100dvh - 4.8rem) !important;
+        overflow: visible !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    body.index-dashboard-screen .dashboard-grid-index {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        grid-template-columns: minmax(0, 1.62fr) minmax(22rem, 1fr) !important;
+        align-items: start !important;
+    }
+
+    body.index-dashboard-screen .left-pane,
+    body.index-dashboard-screen .right-pane {
+        height: auto !important;
+        min-height: 0 !important;
+    }
+
+    body.index-dashboard-screen .left-pane {
+        grid-template-rows: auto auto !important;
+        gap: 0.35rem !important;
+    }
+
+    body.index-dashboard-screen .top-charts {
+        grid-template-columns: 1fr !important;
+        height: auto !important;
+        gap: 0.35rem !important;
+    }
+
+    body.index-dashboard-screen .top-charts .chart-container {
+        height: 17.8rem !important;
+        min-height: 17.8rem !important;
+    }
+
+    body.index-dashboard-screen .pm-holder {
+        height: auto !important;
+        min-height: 17.5rem !important;
+    }
+
+    body.index-dashboard-screen .pm-holder #resizablePm.chart-container {
+        min-height: 16rem !important;
+    }
+
+    body.index-dashboard-screen .right-pane .chart-container-metrics {
+        height: auto !important;
+        min-height: 36rem !important;
+    }
+}
+
+/* Index: short desktop fallback to avoid clipping top table */
+@media (min-width: 1681px) and (max-height: 780px) {
+    body.index-dashboard-screen .right-pane .chart-container-metrics {
+        grid-template-rows: minmax(0, 1.65fr) auto minmax(0, 0.62fr) auto minmax(0, 0.62fr) !important;
+    }
+
+    body.index-dashboard-screen .right-pane #metricsTable {
+        overflow-y: auto !important;
+    }
+
+    body.index-dashboard-screen .right-pane .metrics-table,
+    body.index-dashboard-screen .right-pane .breakdown-details-table {
+        font-size: clamp(0.7rem, 0.45vw, 0.84rem) !important;
+    }
 }

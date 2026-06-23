@@ -73,6 +73,28 @@ public class DynamicsWebController {
         if (failureType != null && !failureType.isEmpty()) url.append("failureType=").append(String.join(",", failureType)).append('&');
         return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
     }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/type/data")
+    public List<Map<String, Object>> typeData(@RequestParam(required = false) List<String> year,
+                                               @RequestParam(required = false) List<String> month,
+                                               @RequestParam(required = false) List<String> week,
+                                               @RequestParam(required = false) List<String> area,
+                                               @RequestParam(required = false) List<String> equipment) {
+        StringBuilder url = new StringBuilder(coreServiceUrl + "/dynamics/type/data?");
+        if (year != null && !year.isEmpty()) url.append("year=").append(String.join(",", year)).append('&');
+        if (month != null && !month.isEmpty()) url.append("month=").append(String.join(",", month)).append('&');
+        if (week != null && !week.isEmpty()) url.append("week=").append(String.join(",", week)).append('&');
+        if (area != null && !area.isEmpty()) url.append("area=").append(String.join(",", area)).append('&');
+        if (equipment != null && !equipment.isEmpty()) url.append("equipment=").append(String.join(",", equipment)).append('&');
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(url.toString(), List.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    @GetMapping("/type/failure-types")
+    public List<Map<String, Object>> typeFailureTypes() {
+        return (List<Map<String, Object>>) (List<?>) restTemplate.getForObject(coreServiceUrl + "/dynamics/type/failure-types", List.class);
+    }
 }
 
 

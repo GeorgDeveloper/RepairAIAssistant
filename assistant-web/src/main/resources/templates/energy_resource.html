@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${energyTitleRu + ' — энергоресурсы'}">Энергоресурсы</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/energy-water.css">
+    <script src="/static/lib/chart.min.js"></script>
+</head>
+
+<body th:attr="data-energy-resource=${energyResourceCode},data-energy-title=${energyTitleRu}">
+
+<div th:replace="~{fragments/navigation :: nav}"></div>
+
+<div class="total-content">
+    <div class="header">
+        <div class="user_logo">
+            Привет, <a href="#">user</a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <h1 th:text="${energyTitleRu}">Энергия</h1>
+
+            <div class="filters energy-filters">
+                <div class="filter-group">
+                    <label for="erDateFrom">Дата с</label>
+                    <input type="date" id="erDateFrom" class="energy-date-input" required
+                           title="Начало периода">
+                </div>
+                <div class="filter-group">
+                    <label for="erDateTo">Дата по</label>
+                    <input type="date" id="erDateTo" class="energy-date-input" required
+                           title="Конец периода">
+                </div>
+                <div class="filter-group filter-group-actions">
+                    <button type="button" id="erApply" class="btn-apply">Показать</button>
+                </div>
+            </div>
+
+            <div class="chart-container energy-chart-wrap">
+                <canvas id="erChart"></canvas>
+            </div>
+
+            <h2>Таблица</h2>
+            <div class="table-container energy-table-wrap">
+                <table class="energy-table" id="erTable">
+                    <thead id="erThead"></thead>
+                    <tbody id="erTbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/scripts/energy-resource.js"></script>
+</body>
+</html>

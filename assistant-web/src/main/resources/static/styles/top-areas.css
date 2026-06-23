@@ -1,12 +1,63 @@
-.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 6px; }
+/* Breakdowns layout: растягиваем контент по высоте */
+.main-content {
+    height: calc(100vh - 5rem) !important;
+    overflow-y: auto !important;
+}
+
+.container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+:root {
+    /* Верхняя граница высоты, чтобы не появлялся лишний вертикальный скролл */
+    --breakdown-chart-height: clamp(22rem, 65vh, 48rem);
+}
+
+.chart-row {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+    max-height: var(--breakdown-chart-height);
+    height: auto;
+}
+
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 12px; margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 6px; }
 .filter-group { display: flex; flex-direction: column; }
 .filter-group label { font-weight: 600; margin-bottom: 6px; }
 .filter-control { padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
 .btn-apply { background: #e74c3c; color: #fff; border: 0; border-radius: 4px; padding: 9px 14px; cursor: pointer; grid-column: 1 / -1; }
 .chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-.chart-container { padding: 16px; background: #fff; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 560px; }
-.legend-container { padding: 16px; background: #fff; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-height: 560px; overflow-y: auto; }
-.legend-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #eee; cursor: pointer; }
+.chart-container {
+    padding: 16px;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+}
+.chart-container canvas { width: 100% !important; height: 100% !important; }
+.chart-container canvas, .modal-body canvas { 
+    image-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+.legend-container {
+    padding: 16px;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    flex: 1 1 auto;
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+    overflow-y: auto;
+}
+.legend-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #eee; }
 .legend-item:last-child { border-bottom: 0; }
 .legend-left { display: flex; align-items: center; gap: 8px; }
 .legend-color { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
@@ -27,3 +78,65 @@
 
 .btn-toggle-all { background: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 12px; width: 100%; }
 .btn-toggle-all:hover { background: #5a6268; }
+
+.legend-header { font-weight: 600; margin-bottom: 6px; }
+.modal-title { margin: 0; }
+.modal-actions { display: flex; gap: 8px; }
+.chart-canvas { width: 100%; height: 100%; }
+
+@media (max-width: 1024px) {
+    .chart-row,
+    .pm-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .chart-container,
+    .legend-container {
+        height: auto;
+        min-height: 18rem;
+        max-height: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .filters {
+        gap: 0.75rem;
+        padding: 0.875rem;
+        grid-template-columns: 1fr;
+    }
+
+    .filter-control {
+        font-size: 0.875rem;
+    }
+
+    .chart-container {
+        padding: 0.875rem;
+        min-height: 18.75rem;
+    }
+
+    .legend-container {
+        padding: 0.875rem;
+    }
+}
+
+/* Compact spacing overrides */
+.filters {
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+}
+
+.chart-row,
+.pm-row {
+    gap: 0.75rem;
+}
+
+.chart-container,
+.legend-container {
+    padding: 0.75rem;
+}
+
+.chart-container {
+    height: 100%;
+}

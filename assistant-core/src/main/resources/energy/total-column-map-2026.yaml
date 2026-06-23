@@ -1,0 +1,69 @@
+# Итого — сводные колонки листа «2026» файла «2026 год ЗАО ВШЗ.xlsx»
+# По требованию страницы: вес продукции и индекс потребления энергии на 1 т продукции.
+
+file: "2026 год  ЗАО ВШЗ.xlsx"
+sheet: "2026"
+data_first_excel_row: 3
+date_column:
+  excel_letter: A
+  zero_based_index: 0
+  format: "dd.MM"
+
+resource: TOTAL
+metrics:
+  - id: product_weight_plan_mr_t
+    label_ru: "Вес продукции — план (МР), т"
+    unit: "т"
+    excel_column_letter: B
+    zero_based_index: 1
+    row1_group: "вес продукции ( сдача готовой продукции), тонн"
+    row2_kind: "план(МР)"
+    chart_default: false
+
+  - id: product_weight_op_t
+    label_ru: "Вес продукции — OP, т"
+    unit: "т"
+    excel_column_letter: C
+    zero_based_index: 2
+    row1_group: "вес продукции ( сдача готовой продукции), тонн"
+    row2_kind: "OP"
+    chart_default: false
+
+  - id: product_weight_fact_t
+    label_ru: "Вес продукции — факт, т"
+    unit: "т"
+    excel_column_letter: D
+    zero_based_index: 3
+    row1_group: "вес продукции ( сдача готовой продукции), тонн"
+    row2_kind: "факт ц.300"
+    chart_default: true
+
+  - id: energy_index_op_gj_per_t
+    label_ru: "Индекс потребления энергии — OP, GJ/t"
+    unit: "GJ/t"
+    excel_column_letter: BG
+    zero_based_index: 58
+    row1_group: "Индекс потребления энергии на 1 т продукции, GJ/t"
+    row2_kind: "OP"
+    chart_default: true
+
+  - id: energy_index_act_gj_per_t
+    label_ru: "Индекс потребления энергии — ACT, GJ/t"
+    unit: "GJ/t"
+    excel_column_letter: BH
+    zero_based_index: 59
+    row1_group: "Индекс потребления энергии на 1 т продукции, GJ/t"
+    row2_kind: "ACT"
+    chart_default: true
+
+charts_recommended:
+  - id: total_summary
+    title_ru: "Итого: вес продукции и индекс энергии"
+    series:
+      - metric_id: product_weight_fact_t
+        role: fact
+      - metric_id: energy_index_op_gj_per_t
+        role: index_op
+      - metric_id: energy_index_act_gj_per_t
+        role: index_act
+    note: "Вес (т) и индекс (GJ/t) имеют разные единицы. Если нужно строго корректно — выводить на двух осях или в двух графиках."

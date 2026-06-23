@@ -60,3 +60,21 @@
 #resizablePm { 
     height: 100% !important; 
 }
+
+@media (max-width: 1024px) {
+    #messages {
+        padding: 0.875rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .container_dialog {
+        height: calc(100vh - 72px);
+    }
+
+    .input-group input[type="text"],
+    .input-group button {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.625rem;
+    }
+}

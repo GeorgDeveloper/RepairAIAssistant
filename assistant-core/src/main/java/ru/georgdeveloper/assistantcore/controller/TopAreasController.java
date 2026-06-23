@@ -33,8 +33,9 @@ public class TopAreasController {
     public List<Map<String, Object>> getCategories(@RequestParam String area,
                                                    @RequestParam(required = false) String dateFrom,
                                                    @RequestParam(required = false) String dateTo,
-                                                   @RequestParam(required = false) String week) {
-        return repository.getAreaTypeCategories(area, dateFrom, dateTo, week);
+                                                   @RequestParam(required = false) String week,
+                                                   @RequestParam(required = false) String failureType) {
+        return repository.getAreaTypeCategories(area, dateFrom, dateTo, week, failureType);
     }
 
     @GetMapping("/drilldown/causes")
@@ -42,8 +43,9 @@ public class TopAreasController {
                                                @RequestParam String category,
                                                @RequestParam(required = false) String dateFrom,
                                                @RequestParam(required = false) String dateTo,
-                                               @RequestParam(required = false) String week) {
-        return repository.getAreaCategoryCauses(area, category, dateFrom, dateTo, week);
+                                               @RequestParam(required = false) String week,
+                                               @RequestParam(required = false) String failureType) {
+        return repository.getAreaCategoryCauses(area, category, dateFrom, dateTo, week, failureType);
     }
 
     @GetMapping("/drilldown/events")
@@ -52,7 +54,8 @@ public class TopAreasController {
                                                @RequestParam String cause,
                                                @RequestParam(required = false) String dateFrom,
                                                @RequestParam(required = false) String dateTo,
-                                               @RequestParam(required = false) String week) {
-        return repository.getAreaCategoryEvents(area, category, cause, dateFrom, dateTo, week);
+                                               @RequestParam(required = false) String week,
+                                               @RequestParam(required = false) String failureType) {
+        return repository.getAreaCategoryEvents(area, category, cause, dateFrom, dateTo, week, failureType);
     }
 }
