@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пар, почасовой архив</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/energy-water.css">
+    <script src="/static/lib/chart.min.js"></script>
+</head>
+
+<body>
+
+<div th:replace="~{fragments/navigation :: nav}"></div>
+
+<div class="total-content">
+    <div class="header">
+        <div class="user_logo">
+            Привет, <a href="#">user</a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <h1>Пар, почасовой архив</h1>
+
+            <div class="filters energy-filters">
+                <div class="filter-group">
+                    <label for="eshDateFrom">Дата с</label>
+                    <input type="date" id="eshDateFrom" class="energy-date-input" required>
+                </div>
+                <div class="filter-group">
+                    <label for="eshDateTo">Дата по</label>
+                    <input type="date" id="eshDateTo" class="energy-date-input" required>
+                </div>
+                <div class="filter-group">
+                    <label for="eshMetric">Показатель на графике</label>
+                    <select id="eshMetric">
+                        <option value="flow">Расход (Qo / G)</option>
+                        <option value="temp">Температура, °C</option>
+                        <option value="pressure">Давление, МПа</option>
+                        <option value="mass">Масса, т</option>
+                    </select>
+                </div>
+                <div class="filter-group filter-group-actions">
+                    <button type="button" id="eshApply" class="btn-apply">Показать</button>
+                </div>
+            </div>
+
+            <div class="chart-container energy-chart-wrap">
+                <canvas id="eshChart"></canvas>
+            </div>
+
+            <h2>Таблица</h2>
+            <div class="table-container energy-table-wrap">
+                <table class="energy-table" id="eshTable">
+                    <thead id="eshThead"></thead>
+                    <tbody id="eshTbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/scripts/energy-steam-hourly.js"></script>
+</body>
+</html>

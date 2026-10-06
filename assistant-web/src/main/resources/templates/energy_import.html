@@ -76,6 +76,47 @@
                     </tbody>
                 </table>
             </div>
+
+            <hr style="margin: 28px 0; border: none; border-top: 1px solid #ddd;">
+
+            <h2>Импорт воздуха (отдельный файл)</h2>
+            <p class="energy-hint">
+                Файл прибора с листами <strong>СПГ742</strong> и <strong>СПГ742_2</strong>
+                (колонки «Время», «P1 МПа», «V1 м³»). Год не требуется — дата и время берутся из колонки «Время».
+            </p>
+            <div class="filters energy-filters">
+                <div class="filter-group filter-group-actions">
+                    <input type="file" id="eiAirFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+                    <button type="button" id="eiAirSelectBtn" class="btn-apply">Выбрать файл воздуха</button>
+                    <button type="button" id="eiAirImportBtn" class="btn-apply">Импортировать воздух</button>
+                </div>
+            </div>
+            <div class="energy-import-row" style="margin-top:0">
+                <span id="eiAirFileName" class="energy-file-name"></span>
+            </div>
+            <div id="energyAirImportMsg"></div>
+            <p class="energy-hint">После импорта данные доступны на странице <a href="/energy/air">Воздух</a>.</p>
+
+            <hr style="margin: 28px 0; border: none; border-top: 1px solid #ddd;">
+
+            <h2>Импорт пара, почасовой архив (отдельный файл)</h2>
+            <p class="energy-hint">
+                Файл архива с листом <strong>пар</strong>: колонка «Время» и по каждому потребителю
+                расход (Qo/G), температура (T), давление (P), масса (M).
+            </p>
+            <div class="filters energy-filters">
+                <div class="filter-group filter-group-actions">
+                    <input type="file" id="eiSteamHourlyFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+                    <button type="button" id="eiSteamHourlySelectBtn" class="btn-apply">Выбрать файл пара</button>
+                    <button type="button" id="eiSteamHourlyImportBtn" class="btn-apply">Импортировать пар (час.)</button>
+                </div>
+            </div>
+            <div class="energy-import-row" style="margin-top:0">
+                <span id="eiSteamHourlyFileName" class="energy-file-name"></span>
+            </div>
+            <div id="energySteamHourlyImportMsg"></div>
+            <p class="energy-hint">После импорта данные доступны на странице
+                <a href="/energy/steam-hourly">Пар, почасовой архив</a>.</p>
         </div>
     </div>
 </div>

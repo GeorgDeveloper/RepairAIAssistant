@@ -37,6 +37,16 @@ public class EnergyWebController {
         return energyPage(model, "TOTAL", "Итого");
     }
 
+    @GetMapping("/energy/air")
+    public String airPage() {
+        return "energy_air";
+    }
+
+    @GetMapping("/energy/steam-hourly")
+    public String steamHourlyPage() {
+        return "energy_steam_hourly";
+    }
+
     @GetMapping("/energy/import")
     public String importPage() {
         return "energy_import";

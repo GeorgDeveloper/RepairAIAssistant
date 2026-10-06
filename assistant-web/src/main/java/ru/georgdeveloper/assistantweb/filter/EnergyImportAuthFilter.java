@@ -22,6 +22,8 @@ public class EnergyImportAuthFilter extends OncePerRequestFilter {
     private static final String LOGIN_PATH = "/energy/import/login";
     private static final String PAGE_PATH = "/energy/import";
     private static final String API_PATH = "/api/energy/import";
+    private static final String AIR_API_PATH = "/api/energy/air/import";
+    private static final String STEAM_HOURLY_API_PATH = "/api/energy/steam-hourly/import";
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
@@ -38,7 +40,7 @@ public class EnergyImportAuthFilter extends OncePerRequestFilter {
         HttpSession session = request.getSession(false);
         boolean authenticated = session != null && Boolean.TRUE.equals(session.getAttribute(SESSION_ATTR));
         if (!authenticated) {
-            if (path.equals(API_PATH)) {
+            if (path.equals(API_PATH) || path.equals(AIR_API_PATH) || path.equals(STEAM_HOURLY_API_PATH)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json");
                 response.getWriter().write("{\"error\":\"Unauthorized\"}");
@@ -51,6 +53,10 @@ public class EnergyImportAuthFilter extends OncePerRequestFilter {
     }
 
     private boolean isProtectedPath(String path) {
-        return path.equals(PAGE_PATH) || path.equals(API_PATH) || path.equals(LOGIN_PATH);
+        return path.equals(PAGE_PATH)
+                || path.equals(API_PATH)
+                || path.equals(AIR_API_PATH)
+                || path.equals(STEAM_HOURLY_API_PATH)
+                || path.equals(LOGIN_PATH);
     }
 }

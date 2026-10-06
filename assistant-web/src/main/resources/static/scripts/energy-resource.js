@@ -178,24 +178,45 @@ function chartAxisLabels(dates) {
     });
 }
 
+function isChartMetric(m) {
+    return m.chart_default === true || m.chart_available === true;
+}
+
+/** Масштаб для графика: chart_scale=10 → рисуем value/10, в легенде «×10». */
+function chartScaleOf(m) {
+    const s = Number(m && m.chart_scale);
+    return Number.isFinite(s) && s > 0 ? s : 1;
+}
+
+function chartLabelOf(m) {
+    const base = m.label_ru || m.id;
+    const scale = chartScaleOf(m);
+    return scale === 1 ? base : `${base} ×${scale}`;
+}
+
 function renderChart(metricsDefs, byDate, dates) {
-    const chartMetrics = metricsDefs.filter((m) => m.chart_default === true);
+    // chart_default — сразу на графике; chart_available без default — в легенде, скрыт (клик включает).
+    const chartMetrics = metricsDefs.filter(isChartMetric);
     const canvas = document.getElementById('erChart');
     if (!canvas || typeof Chart === 'undefined') return;
 
     const labels = chartAxisLabels(dates);
-    const datasets = chartMetrics.map((m, i) => ({
-        label: m.label_ru || m.id,
-        data: dates.map((d) => {
-            const v = (byDate.get(d) || {})[m.id];
-            return v == null ? null : Number(v);
-        }),
-        borderColor: ER_COLORS[i % ER_COLORS.length],
-        backgroundColor: 'transparent',
-        tension: 0.15,
-        spanGaps: false,
-        pointRadius: 2,
-    }));
+    const datasets = chartMetrics.map((m, i) => {
+        const scale = chartScaleOf(m);
+        return {
+            label: chartLabelOf(m),
+            data: dates.map((d) => {
+                const v = (byDate.get(d) || {})[m.id];
+                return v == null ? null : Number(v) / scale;
+            }),
+            borderColor: ER_COLORS[i % ER_COLORS.length],
+            backgroundColor: 'transparent',
+            tension: 0.15,
+            spanGaps: false,
+            pointRadius: 2,
+            hidden: m.chart_default !== true,
+        };
+    });
 
     const ctx = canvas.getContext('2d');
     if (erChart) {

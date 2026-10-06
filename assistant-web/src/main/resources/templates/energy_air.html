@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Воздух — энергоресурсы</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/static/styles/energy-water.css">
+    <script src="/static/lib/chart.min.js"></script>
+</head>
+
+<body>
+
+<div th:replace="~{fragments/navigation :: nav}"></div>
+
+<div class="total-content">
+    <div class="header">
+        <div class="user_logo">
+            Привет, <a href="#">user</a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <h1>Воздух</h1>
+
+            <div class="filters energy-filters">
+                <div class="filter-group">
+                    <label for="eaDateFrom">Дата с</label>
+                    <input type="date" id="eaDateFrom" class="energy-date-input" required>
+                </div>
+                <div class="filter-group">
+                    <label for="eaDateTo">Дата по</label>
+                    <input type="date" id="eaDateTo" class="energy-date-input" required>
+                </div>
+                <div class="filter-group filter-group-actions">
+                    <button type="button" id="eaApply" class="btn-apply">Показать</button>
+                </div>
+            </div>
+
+            <div class="chart-container energy-chart-wrap">
+                <canvas id="eaChart"></canvas>
+            </div>
+
+            <h2>Таблица</h2>
+            <div class="table-container energy-table-wrap">
+                <table class="energy-table" id="eaTable">
+                    <thead id="eaThead"></thead>
+                    <tbody id="eaTbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/scripts/energy-air.js"></script>
+</body>
+</html>

@@ -2,6 +2,12 @@
     margin-bottom: 0.4em;
 }
 
+.energy-hint {
+    color: #555;
+    margin: 0 0 12px;
+    line-height: 1.4;
+}
+
 .energy-filters {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));

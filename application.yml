@@ -161,7 +161,7 @@ data-sync:
     - name: Plant
       working_time_table: working_time_of_plant
       wt_column: wt_p_min
-      default_wt: 74880.0
+      default_wt: 162720.0
       filter_column: null  # Для Plant нет фильтра
     - name: BuildingArea
       working_time_table: working_time_of_building_area
@@ -172,13 +172,13 @@ data-sync:
     - name: CuringArea
       working_time_table: working_time_of_curing_area
       wt_column: wt_ca_min
-      default_wt: 74880.0
+      default_wt: 79200.0
       filter_column: PlantDepartmentGeographicalCodeName
       filter_value: CuringArea
     - name: FinishigArea
       working_time_table: working_time_of_finishig_area
       wt_column: wt_fa_min
-      default_wt: 23040.0
+      default_wt: 27360.0
       filter_column: PlantDepartmentGeographicalCodeName
       filter_value: FinishigArea
     - name: SemifinishingArea
@@ -190,13 +190,13 @@ data-sync:
     - name: NewMixingArea
       working_time_table: working_time_of_new_mixing_area
       wt_column: wt_nma_min
-      default_wt: 23040.0
+      default_wt: 10080.0
       filter_column: PlantDepartmentGeographicalCodeName
       filter_value: NewMixingArea
     - name: Modules
       working_time_table: working_time_of_modules
       wt_column: wt_ma_min
-      default_wt: 23040.0
+      default_wt: 4320.0
       filter_column: null
       filter_value: null
   # Конфигурация ключевых линий

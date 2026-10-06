@@ -92,6 +92,16 @@ metrics:
     row2_kind: "количество сжатого воздуха, м³/мин"
     chart_default: false
 
+  - id: vulcan_autopress_count
+    label_ru: "Кол-во свулканизованных шин (вулк. а/п, шт.)"
+    unit: "шт"
+    excel_column_letter: CL
+    zero_based_index: 89
+    row1_group: "Кол-во свулканизованных шин"
+    row2_kind: "вулк. а/п, шт."
+    chart_default: false
+    chart_available: true
+
 charts_recommended:
   - id: electricity_main
     title_ru: "Электроэнергия: план / OP / факт"

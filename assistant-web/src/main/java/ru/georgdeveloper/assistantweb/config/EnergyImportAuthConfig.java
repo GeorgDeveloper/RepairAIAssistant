@@ -12,7 +12,12 @@ public class EnergyImportAuthConfig {
     public FilterRegistrationBean<EnergyImportAuthFilter> energyImportAuthFilter() {
         FilterRegistrationBean<EnergyImportAuthFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new EnergyImportAuthFilter());
-        registration.addUrlPatterns("/energy/import", "/energy/import/*", "/api/energy/import");
+        registration.addUrlPatterns(
+                "/energy/import",
+                "/energy/import/*",
+                "/api/energy/import",
+                "/api/energy/air/import",
+                "/api/energy/steam-hourly/import");
         registration.setOrder(1);
         return registration;
     }
